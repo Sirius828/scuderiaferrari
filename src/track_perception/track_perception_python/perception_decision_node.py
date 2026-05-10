@@ -84,10 +84,17 @@ class PerceptionDecisionNode(Node):
         # 分支选择参数
         self.declare_parameter('outer_side', 'left')
         self.declare_parameter('branch_lock_time', 2.0)
+        self.declare_parameter('min_branch_lock_time', 0.8)
         self.declare_parameter('exit_single_path_confirm_frames', 5)
+        self.declare_parameter('exit_single_path_min_ratio', 0.8)
         # 中心线拟合参数
         self.declare_parameter('fit_min_points', 4)
         self.declare_parameter('fit_order', 1)
+        self.declare_parameter('branch_fit_order', 2)
+        self.declare_parameter('enable_branch_bottom_anchor', True)
+        self.declare_parameter('branch_bottom_anchor_x_ratio', 0.5)
+        self.declare_parameter('branch_bottom_anchor_y_ratio', 0.98)
+        self.declare_parameter('branch_bottom_anchor_weight', 0.6)
         self.declare_parameter('use_heading_term', True)
         self.declare_parameter('heading_weight', 0.35)
         self.declare_parameter('near_offset_weight', 0.65)
@@ -150,9 +157,16 @@ class PerceptionDecisionNode(Node):
         self.branch_detect_far_band_ratio = self.get_parameter('branch_detect_far_band_ratio').get_parameter_value().double_value
         self.outer_side = self.get_parameter('outer_side').get_parameter_value().string_value
         self.branch_lock_time = self.get_parameter('branch_lock_time').get_parameter_value().double_value
+        self.min_branch_lock_time = self.get_parameter('min_branch_lock_time').get_parameter_value().double_value
         self.exit_single_path_confirm_frames = self.get_parameter('exit_single_path_confirm_frames').get_parameter_value().integer_value
+        self.exit_single_path_min_ratio = self.get_parameter('exit_single_path_min_ratio').get_parameter_value().double_value
         self.fit_min_points = self.get_parameter('fit_min_points').get_parameter_value().integer_value
         self.fit_order = self.get_parameter('fit_order').get_parameter_value().integer_value
+        self.branch_fit_order = self.get_parameter('branch_fit_order').get_parameter_value().integer_value
+        self.enable_branch_bottom_anchor = self.get_parameter('enable_branch_bottom_anchor').get_parameter_value().bool_value
+        self.branch_bottom_anchor_x_ratio = self.get_parameter('branch_bottom_anchor_x_ratio').get_parameter_value().double_value
+        self.branch_bottom_anchor_y_ratio = self.get_parameter('branch_bottom_anchor_y_ratio').get_parameter_value().double_value
+        self.branch_bottom_anchor_weight = self.get_parameter('branch_bottom_anchor_weight').get_parameter_value().double_value
         self.use_heading_term = self.get_parameter('use_heading_term').get_parameter_value().bool_value
         self.heading_weight = self.get_parameter('heading_weight').get_parameter_value().double_value
         self.near_offset_weight = self.get_parameter('near_offset_weight').get_parameter_value().double_value
@@ -254,6 +268,8 @@ class PerceptionDecisionNode(Node):
         self.get_logger().info(f'   🔍 GuideBoard Detect Range: y={self.guideboard_detect_y0_ratio:.1f}-{self.guideboard_detect_y1_ratio:.1f}')
         self.get_logger().info(f'   🛡️ Branch Mask Ratio: {self.branch_mask_ratio:.2f} (屏蔽{int(self.branch_mask_ratio*100)}%区域)')
         self.get_logger().info(f'   🎯 Segment Branch Logic: {self.enable_segment_branch_logic}')
+        self.get_logger().info(f'   🔒 Branch Lock: min={self.min_branch_lock_time:.2f}s, max={self.branch_lock_time:.2f}s, exit_ratio={self.exit_single_path_min_ratio:.2f}')
+        self.get_logger().info(f'   📈 Fit: normal_order={self.fit_order}, branch_order={self.branch_fit_order}, branch_anchor={self.enable_branch_bottom_anchor}')
         
         # 岔路口状态机（旧逻辑，已弃用）
         self.intersection_state = 'NORMAL'
@@ -500,20 +516,27 @@ class PerceptionDecisionNode(Node):
             else:
                 # LOCK_BRANCH 状态下检查退出条件
                 single_path_count = 0
-                far_bands_count = int(len(bands) * self.branch_detect_far_band_ratio)
+                far_bands_count = max(1, int(len(bands) * self.branch_detect_far_band_ratio))
                 for b in bands[:far_bands_count]:
                     if len(b['segments']) <= 1:
                         single_path_count += 1
                 
-                # 如果远处 band 中单路径数量足够，累加确认计数
-                if single_path_count >= self.branch_detect_min_bands:
+                lock_duration = current_time - self.lock_start_time
+                single_path_required = max(
+                    self.branch_detect_min_bands,
+                    int(np.ceil(far_bands_count * self.exit_single_path_min_ratio))
+                )
+                
+                # 先保证最短锁定时间；之后只有多数远端 band 回到单路径才开始计数退出
+                if lock_duration >= self.min_branch_lock_time and single_path_count >= single_path_required:
                     self.exit_confirm_count += 1
                 else:
                     self.exit_confirm_count = 0
                 
                 # 退出条件：连续确认帧数达到阈值 或 锁定时间超时
-                if self.exit_confirm_count >= self.exit_single_path_confirm_frames or \
-                   (current_time - self.lock_start_time > self.branch_lock_time):
+                if (lock_duration >= self.min_branch_lock_time and
+                    self.exit_confirm_count >= self.exit_single_path_confirm_frames) or \
+                   (lock_duration > self.branch_lock_time):
                     self.branch_locked = False
                     self.locked_branch_side = self.outer_side
                     self.exit_confirm_count = 0
@@ -523,11 +546,19 @@ class PerceptionDecisionNode(Node):
             target_side = self.locked_branch_side if self.branch_locked else self.outer_side
             points = self.collect_centerline_points(bands, self.branch_locked, target_side, 
                                                     last_center_x=(self.last_offset * w/2 + w/2))
-            raw_offset, coeffs = self.fit_centerline_and_compute_offset(points, h, w)
+            fit_order = self.branch_fit_order if self.branch_locked else self.fit_order
+            fit_points = list(points)
+            if self.branch_locked and self.enable_branch_bottom_anchor and fit_order >= 2:
+                fit_points.append((
+                    w * self.branch_bottom_anchor_x_ratio,
+                    h * self.branch_bottom_anchor_y_ratio,
+                    self.branch_bottom_anchor_weight
+                ))
+            raw_offset, coeffs = self.fit_centerline_and_compute_offset(fit_points, h, w, fit_order)
             
             # ⭐ 保存拟合结果用于可视化
             self.fit_coeffs = coeffs
-            self.fit_points = points
+            self.fit_points = fit_points
             
             if raw_offset is not None:
                 center_offset = self.smooth_offset(raw_offset)
@@ -896,16 +927,21 @@ class PerceptionDecisionNode(Node):
                 points.append((target_seg['center_x'], b['y_center']))
         return points
 
-    def fit_centerline_and_compute_offset(self, points, h, w):
+    def fit_centerline_and_compute_offset(self, points, h, w, fit_order=None):
         """拟合中心线并计算 Offset"""
         if len(points) < self.fit_min_points:
             return None, None
         
+        order = self.fit_order if fit_order is None else fit_order
+        if len(points) <= order:
+            return None, None
+        
         ys = np.array([p[1] for p in points])
         xs = np.array([p[0] for p in points])
+        weights = np.array([p[2] if len(p) > 2 else 1.0 for p in points])
         
         try:
-            coeffs = np.polyfit(ys, xs, self.fit_order)
+            coeffs = np.polyfit(ys, xs, order, w=weights)
             near_y = int(h * 0.7)
             near_x = np.polyval(coeffs, near_y)
             
@@ -969,7 +1005,7 @@ class PerceptionDecisionNode(Node):
                         cv2.line(display_frame, (x1, y0), (x1, y1), (0, 255, 0), 1)
                         
                         # Segment 中心点（黄色圆点，增大直径）
-                        cv2.circle(display_frame, (center_x, int((y0+y1)/2)), 5, (0, 255, 255), -1)
+                        cv2.circle(display_frame, (center_x, int((y0+y1)/2)), 3, (0, 255, 255), -1)
                 
                 # ⭐ 绘制拟合中心线（红色曲线）
                 if hasattr(self, 'fit_coeffs') and self.fit_coeffs is not None and len(self.fit_points) >= 2:
@@ -983,7 +1019,7 @@ class PerceptionDecisionNode(Node):
                         pt2 = (int(xs_fit[i+1]), int(ys_fit[i+1]))
                         # 确保点在图像范围内
                         if 0 <= pt1[0] < w and 0 <= pt1[1] < h and 0 <= pt2[0] < w and 0 <= pt2[1] < h:
-                            cv2.line(display_frame, pt1, pt2, (0, 0, 255), 3)
+                            cv2.line(display_frame, pt1, pt2, (0, 0, 255), 2)
             
             # 绘制目标检测结果
             if self.latest_detections:

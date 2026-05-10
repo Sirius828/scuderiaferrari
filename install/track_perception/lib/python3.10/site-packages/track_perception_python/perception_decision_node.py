@@ -84,7 +84,9 @@ class PerceptionDecisionNode(Node):
         # 分支选择参数
         self.declare_parameter('outer_side', 'left')
         self.declare_parameter('branch_lock_time', 2.0)
+        self.declare_parameter('min_branch_lock_time', 0.8)
         self.declare_parameter('exit_single_path_confirm_frames', 5)
+        self.declare_parameter('exit_single_path_min_ratio', 0.8)
         # 中心线拟合参数
         self.declare_parameter('fit_min_points', 4)
         self.declare_parameter('fit_order', 1)
@@ -150,7 +152,9 @@ class PerceptionDecisionNode(Node):
         self.branch_detect_far_band_ratio = self.get_parameter('branch_detect_far_band_ratio').get_parameter_value().double_value
         self.outer_side = self.get_parameter('outer_side').get_parameter_value().string_value
         self.branch_lock_time = self.get_parameter('branch_lock_time').get_parameter_value().double_value
+        self.min_branch_lock_time = self.get_parameter('min_branch_lock_time').get_parameter_value().double_value
         self.exit_single_path_confirm_frames = self.get_parameter('exit_single_path_confirm_frames').get_parameter_value().integer_value
+        self.exit_single_path_min_ratio = self.get_parameter('exit_single_path_min_ratio').get_parameter_value().double_value
         self.fit_min_points = self.get_parameter('fit_min_points').get_parameter_value().integer_value
         self.fit_order = self.get_parameter('fit_order').get_parameter_value().integer_value
         self.use_heading_term = self.get_parameter('use_heading_term').get_parameter_value().bool_value
@@ -254,6 +258,7 @@ class PerceptionDecisionNode(Node):
         self.get_logger().info(f'   🔍 GuideBoard Detect Range: y={self.guideboard_detect_y0_ratio:.1f}-{self.guideboard_detect_y1_ratio:.1f}')
         self.get_logger().info(f'   🛡️ Branch Mask Ratio: {self.branch_mask_ratio:.2f} (屏蔽{int(self.branch_mask_ratio*100)}%区域)')
         self.get_logger().info(f'   🎯 Segment Branch Logic: {self.enable_segment_branch_logic}')
+        self.get_logger().info(f'   🔒 Branch Lock: min={self.min_branch_lock_time:.2f}s, max={self.branch_lock_time:.2f}s, exit_ratio={self.exit_single_path_min_ratio:.2f}')
         
         # 岔路口状态机（旧逻辑，已弃用）
         self.intersection_state = 'NORMAL'
@@ -500,20 +505,27 @@ class PerceptionDecisionNode(Node):
             else:
                 # LOCK_BRANCH 状态下检查退出条件
                 single_path_count = 0
-                far_bands_count = int(len(bands) * self.branch_detect_far_band_ratio)
+                far_bands_count = max(1, int(len(bands) * self.branch_detect_far_band_ratio))
                 for b in bands[:far_bands_count]:
                     if len(b['segments']) <= 1:
                         single_path_count += 1
                 
-                # 如果远处 band 中单路径数量足够，累加确认计数
-                if single_path_count >= self.branch_detect_min_bands:
+                lock_duration = current_time - self.lock_start_time
+                single_path_required = max(
+                    self.branch_detect_min_bands,
+                    int(np.ceil(far_bands_count * self.exit_single_path_min_ratio))
+                )
+                
+                # 先保证最短锁定时间；之后只有多数远端 band 回到单路径才开始计数退出
+                if lock_duration >= self.min_branch_lock_time and single_path_count >= single_path_required:
                     self.exit_confirm_count += 1
                 else:
                     self.exit_confirm_count = 0
                 
                 # 退出条件：连续确认帧数达到阈值 或 锁定时间超时
-                if self.exit_confirm_count >= self.exit_single_path_confirm_frames or \
-                   (current_time - self.lock_start_time > self.branch_lock_time):
+                if (lock_duration >= self.min_branch_lock_time and
+                    self.exit_confirm_count >= self.exit_single_path_confirm_frames) or \
+                   (lock_duration > self.branch_lock_time):
                     self.branch_locked = False
                     self.locked_branch_side = self.outer_side
                     self.exit_confirm_count = 0

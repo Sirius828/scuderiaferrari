@@ -1,0 +1,598 @@
+[0.156s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build']
+[0.157s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='build', build_base='build', install_base='install', merge_install=False, symlink_install=False, test_result_base=None, continue_on_error=False, executor='parallel', parallel_workers=8, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['.'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=None, packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, verb_parser=<colcon_defaults.argument_parser.defaults.DefaultArgumentsDecorator object at 0x7fad75e5c0>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0x7fad8ffb20>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0x7fad8ffb20>>)
+[0.406s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.407s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.408s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.409s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.409s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) discover
+[0.410s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.411s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/orangepi/scuderiaferrari'
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[0.416s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[0.416s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['cmake', 'python']
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'cmake'
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python'
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['python_setup_py']
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python_setup_py'
+[0.438s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extensions ['ignore', 'ignore_ament_install']
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extension 'ignore'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(build) ignored
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extensions ['ignore', 'ignore_ament_install']
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extension 'ignore'
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(install) ignored
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extensions ['ignore', 'ignore_ament_install']
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extension 'ignore'
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(log) ignored
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI) by extensions ['ignore', 'ignore_ament_install']
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI) by extension 'ignore'
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI) by extension 'ignore_ament_install'
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI) by extensions ['colcon_pkg']
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI) by extension 'colcon_pkg'
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI) by extensions ['colcon_meta']
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI) by extension 'colcon_meta'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI) by extensions ['ros']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI) by extension 'ros'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI) by extensions ['cmake', 'python']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI) by extension 'cmake'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI) by extension 'python'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI) by extensions ['python_setup_py']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI) by extension 'python_setup_py'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/__pycache__) by extensions ['ignore', 'ignore_ament_install']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/__pycache__) by extension 'ignore'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/__pycache__) by extension 'ignore_ament_install'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/__pycache__) by extensions ['colcon_pkg']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/__pycache__) by extension 'colcon_pkg'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/__pycache__) by extensions ['colcon_meta']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/__pycache__) by extension 'colcon_meta'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/__pycache__) by extensions ['ros']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/__pycache__) by extension 'ros'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/__pycache__) by extensions ['cmake', 'python']
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/__pycache__) by extension 'cmake'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/__pycache__) by extension 'python'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/__pycache__) by extensions ['python_setup_py']
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/__pycache__) by extension 'python_setup_py'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build) by extensions ['ignore', 'ignore_ament_install']
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build) by extension 'ignore'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build) by extension 'ignore_ament_install'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build) by extensions ['colcon_pkg']
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build) by extension 'colcon_pkg'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build) by extensions ['colcon_meta']
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build) by extension 'colcon_meta'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build) by extensions ['ros']
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build) by extension 'ros'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build) by extensions ['cmake', 'python']
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build) by extension 'cmake'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build) by extension 'python'
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build) by extensions ['python_setup_py']
+[0.442s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build) by extension 'python_setup_py'
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui) by extensions ['ignore', 'ignore_ament_install']
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui) by extension 'ignore'
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui) by extension 'ignore_ament_install'
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui) by extensions ['colcon_pkg']
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui) by extension 'colcon_pkg'
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui) by extensions ['colcon_meta']
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui) by extension 'colcon_meta'
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui) by extensions ['ros']
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui) by extension 'ros'
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui) by extensions ['cmake', 'python']
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui) by extension 'cmake'
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui) by extension 'python'
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui) by extensions ['python_setup_py']
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui) by extension 'python_setup_py'
+[0.443s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/_pyi_gschema_compilation) by extensions ['ignore', 'ignore_ament_install']
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/_pyi_gschema_compilation) by extension 'ignore'
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/_pyi_gschema_compilation) by extension 'ignore_ament_install'
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/_pyi_gschema_compilation) by extensions ['colcon_pkg']
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/_pyi_gschema_compilation) by extension 'colcon_pkg'
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/_pyi_gschema_compilation) by extensions ['colcon_meta']
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/_pyi_gschema_compilation) by extension 'colcon_meta'
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/_pyi_gschema_compilation) by extensions ['ros']
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/_pyi_gschema_compilation) by extension 'ros'
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/_pyi_gschema_compilation) by extensions ['cmake', 'python']
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/_pyi_gschema_compilation) by extension 'cmake'
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/_pyi_gschema_compilation) by extension 'python'
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/_pyi_gschema_compilation) by extensions ['python_setup_py']
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/_pyi_gschema_compilation) by extension 'python_setup_py'
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/localpycs) by extensions ['ignore', 'ignore_ament_install']
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/localpycs) by extension 'ignore'
+[0.444s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/localpycs) by extension 'ignore_ament_install'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/localpycs) by extensions ['colcon_pkg']
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/localpycs) by extension 'colcon_pkg'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/localpycs) by extensions ['colcon_meta']
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/localpycs) by extension 'colcon_meta'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/localpycs) by extensions ['ros']
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/localpycs) by extension 'ros'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/localpycs) by extensions ['cmake', 'python']
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/localpycs) by extension 'cmake'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/localpycs) by extension 'python'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/localpycs) by extensions ['python_setup_py']
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/build/setup_webui/localpycs) by extension 'python_setup_py'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist) by extensions ['ignore', 'ignore_ament_install']
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist) by extension 'ignore'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist) by extension 'ignore_ament_install'
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist) by extensions ['colcon_pkg']
+[0.445s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist) by extension 'colcon_pkg'
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist) by extensions ['colcon_meta']
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist) by extension 'colcon_meta'
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist) by extensions ['ros']
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist) by extension 'ros'
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist) by extensions ['cmake', 'python']
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist) by extension 'cmake'
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist) by extension 'python'
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist) by extensions ['python_setup_py']
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist) by extension 'python_setup_py'
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist/models) by extensions ['ignore', 'ignore_ament_install']
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist/models) by extension 'ignore'
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist/models) by extension 'ignore_ament_install'
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist/models) by extensions ['colcon_pkg']
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist/models) by extension 'colcon_pkg'
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist/models) by extensions ['colcon_meta']
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist/models) by extension 'colcon_meta'
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist/models) by extensions ['ros']
+[0.446s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist/models) by extension 'ros'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist/models) by extensions ['cmake', 'python']
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist/models) by extension 'cmake'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist/models) by extension 'python'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist/models) by extensions ['python_setup_py']
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/dist/models) by extension 'python_setup_py'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap) by extensions ['ignore', 'ignore_ament_install']
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap) by extension 'ignore'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap) by extension 'ignore_ament_install'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap) by extensions ['colcon_pkg']
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap) by extension 'colcon_pkg'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap) by extensions ['colcon_meta']
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap) by extension 'colcon_meta'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap) by extensions ['ros']
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap) by extension 'ros'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap) by extensions ['cmake', 'python']
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap) by extension 'cmake'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap) by extension 'python'
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap) by extensions ['python_setup_py']
+[0.447s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap) by extension 'python_setup_py'
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/__pycache__) by extensions ['ignore', 'ignore_ament_install']
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/__pycache__) by extension 'ignore'
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/__pycache__) by extension 'ignore_ament_install'
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/__pycache__) by extensions ['colcon_pkg']
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/__pycache__) by extension 'colcon_pkg'
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/__pycache__) by extensions ['colcon_meta']
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/__pycache__) by extension 'colcon_meta'
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/__pycache__) by extensions ['ros']
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/__pycache__) by extension 'ros'
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/__pycache__) by extensions ['cmake', 'python']
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/__pycache__) by extension 'cmake'
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/__pycache__) by extension 'python'
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/__pycache__) by extensions ['python_setup_py']
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/__pycache__) by extension 'python_setup_py'
+[0.448s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base) by extensions ['ignore', 'ignore_ament_install']
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base) by extension 'ignore'
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base) by extension 'ignore_ament_install'
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base) by extensions ['colcon_pkg']
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base) by extension 'colcon_pkg'
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base) by extensions ['colcon_meta']
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base) by extension 'colcon_meta'
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base) by extensions ['ros']
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base) by extension 'ros'
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base) by extensions ['cmake', 'python']
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base) by extension 'cmake'
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base) by extension 'python'
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base) by extensions ['python_setup_py']
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base) by extension 'python_setup_py'
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/__pycache__) by extensions ['ignore', 'ignore_ament_install']
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/__pycache__) by extension 'ignore'
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/__pycache__) by extension 'ignore_ament_install'
+[0.449s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/__pycache__) by extensions ['colcon_pkg']
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/__pycache__) by extension 'colcon_pkg'
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/__pycache__) by extensions ['colcon_meta']
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/__pycache__) by extension 'colcon_meta'
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/__pycache__) by extensions ['ros']
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/__pycache__) by extension 'ros'
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/__pycache__) by extensions ['cmake', 'python']
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/__pycache__) by extension 'cmake'
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/__pycache__) by extension 'python'
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/__pycache__) by extensions ['python_setup_py']
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/__pycache__) by extension 'python_setup_py'
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/model) by extensions ['ignore', 'ignore_ament_install']
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/model) by extension 'ignore'
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/model) by extension 'ignore_ament_install'
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/model) by extensions ['colcon_pkg']
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/model) by extension 'colcon_pkg'
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/model) by extensions ['colcon_meta']
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/model) by extension 'colcon_meta'
+[0.450s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/model) by extensions ['ros']
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/model) by extension 'ros'
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/model) by extensions ['cmake', 'python']
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/model) by extension 'cmake'
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/model) by extension 'python'
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/model) by extensions ['python_setup_py']
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/model) by extension 'python_setup_py'
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/result) by extensions ['ignore', 'ignore_ament_install']
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/result) by extension 'ignore'
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/result) by extension 'ignore_ament_install'
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/result) by extensions ['colcon_pkg']
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/result) by extension 'colcon_pkg'
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/result) by extensions ['colcon_meta']
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/result) by extension 'colcon_meta'
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/result) by extensions ['ros']
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/result) by extension 'ros'
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/result) by extensions ['cmake', 'python']
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/result) by extension 'cmake'
+[0.451s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/result) by extension 'python'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/result) by extensions ['python_setup_py']
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/infer_wrap/base/result) by extension 'python_setup_py'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/templates) by extensions ['ignore', 'ignore_ament_install']
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/templates) by extension 'ignore'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/templates) by extension 'ignore_ament_install'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/templates) by extensions ['colcon_pkg']
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/templates) by extension 'colcon_pkg'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/templates) by extensions ['colcon_meta']
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/templates) by extension 'colcon_meta'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/templates) by extensions ['ros']
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/templates) by extension 'ros'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/templates) by extensions ['cmake', 'python']
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/templates) by extension 'cmake'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/templates) by extension 'python'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/templates) by extensions ['python_setup_py']
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(setupUI/templates) by extension 'python_setup_py'
+[0.452s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ignore', 'ignore_ament_install']
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ignore_ament_install'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_pkg']
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_pkg'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['colcon_meta']
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'colcon_meta'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['ros']
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'ros'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['cmake', 'python']
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'cmake'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extensions ['python_setup_py']
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src) by extension 'python_setup_py'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src/chassis_controller) by extensions ['ignore', 'ignore_ament_install']
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src/chassis_controller) by extension 'ignore'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src/chassis_controller) by extension 'ignore_ament_install'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src/chassis_controller) by extensions ['colcon_pkg']
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src/chassis_controller) by extension 'colcon_pkg'
+[0.453s] Level 1:colcon.colcon_core.package_identification:_identify(src/chassis_controller) by extensions ['colcon_meta']
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(src/chassis_controller) by extension 'colcon_meta'
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(src/chassis_controller) by extensions ['ros']
+[0.454s] Level 1:colcon.colcon_core.package_identification:_identify(src/chassis_controller) by extension 'ros'
+[0.459s] DEBUG:colcon.colcon_core.package_identification:Package 'src/chassis_controller' with type 'ros.ament_python' and name 'chassis_controller'
+[0.459s] Level 1:colcon.colcon_core.package_identification:_identify(src/keyboard_controller) by extensions ['ignore', 'ignore_ament_install']
+[0.459s] Level 1:colcon.colcon_core.package_identification:_identify(src/keyboard_controller) by extension 'ignore'
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(src/keyboard_controller) by extension 'ignore_ament_install'
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(src/keyboard_controller) by extensions ['colcon_pkg']
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(src/keyboard_controller) by extension 'colcon_pkg'
+[0.460s] Level 1:colcon.colcon_core.package_identification:_identify(src/keyboard_controller) by extensions ['colcon_meta']
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(src/keyboard_controller) by extension 'colcon_meta'
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(src/keyboard_controller) by extensions ['ros']
+[0.461s] Level 1:colcon.colcon_core.package_identification:_identify(src/keyboard_controller) by extension 'ros'
+[0.463s] DEBUG:colcon.colcon_core.package_identification:Package 'src/keyboard_controller' with type 'ros.ament_python' and name 'keyboard_controller'
+[0.463s] Level 1:colcon.colcon_core.package_identification:_identify(src/line_follower_control) by extensions ['ignore', 'ignore_ament_install']
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(src/line_follower_control) by extension 'ignore'
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(src/line_follower_control) by extension 'ignore_ament_install'
+[0.464s] Level 1:colcon.colcon_core.package_identification:_identify(src/line_follower_control) by extensions ['colcon_pkg']
+[0.465s] Level 1:colcon.colcon_core.package_identification:_identify(src/line_follower_control) by extension 'colcon_pkg'
+[0.465s] Level 1:colcon.colcon_core.package_identification:_identify(src/line_follower_control) by extensions ['colcon_meta']
+[0.465s] Level 1:colcon.colcon_core.package_identification:_identify(src/line_follower_control) by extension 'colcon_meta'
+[0.465s] Level 1:colcon.colcon_core.package_identification:_identify(src/line_follower_control) by extensions ['ros']
+[0.465s] Level 1:colcon.colcon_core.package_identification:_identify(src/line_follower_control) by extension 'ros'
+[0.467s] DEBUG:colcon.colcon_core.package_identification:Package 'src/line_follower_control' with type 'ros.ament_python' and name 'line_follower_control'
+[0.468s] Level 1:colcon.colcon_core.package_identification:_identify(src/position_udp_bridge) by extensions ['ignore', 'ignore_ament_install']
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(src/position_udp_bridge) by extension 'ignore'
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(src/position_udp_bridge) by extension 'ignore_ament_install'
+[0.469s] Level 1:colcon.colcon_core.package_identification:_identify(src/position_udp_bridge) by extensions ['colcon_pkg']
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(src/position_udp_bridge) by extension 'colcon_pkg'
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(src/position_udp_bridge) by extensions ['colcon_meta']
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(src/position_udp_bridge) by extension 'colcon_meta'
+[0.470s] Level 1:colcon.colcon_core.package_identification:_identify(src/position_udp_bridge) by extensions ['ros']
+[0.471s] Level 1:colcon.colcon_core.package_identification:_identify(src/position_udp_bridge) by extension 'ros'
+[0.473s] DEBUG:colcon.colcon_core.package_identification:Package 'src/position_udp_bridge' with type 'ros.ament_python' and name 'position_udp_bridge'
+[0.473s] Level 1:colcon.colcon_core.package_identification:_identify(src/track_perception) by extensions ['ignore', 'ignore_ament_install']
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(src/track_perception) by extension 'ignore'
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(src/track_perception) by extension 'ignore_ament_install'
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(src/track_perception) by extensions ['colcon_pkg']
+[0.474s] Level 1:colcon.colcon_core.package_identification:_identify(src/track_perception) by extension 'colcon_pkg'
+[0.475s] Level 1:colcon.colcon_core.package_identification:_identify(src/track_perception) by extensions ['colcon_meta']
+[0.475s] Level 1:colcon.colcon_core.package_identification:_identify(src/track_perception) by extension 'colcon_meta'
+[0.475s] Level 1:colcon.colcon_core.package_identification:_identify(src/track_perception) by extensions ['ros']
+[0.475s] Level 1:colcon.colcon_core.package_identification:_identify(src/track_perception) by extension 'ros'
+[0.477s] DEBUG:colcon.colcon_core.package_identification:Package 'src/track_perception' with type 'ros.ament_python' and name 'track_perception'
+[0.477s] Level 1:colcon.colcon_core.package_identification:_identify(src/uwb_locator) by extensions ['ignore', 'ignore_ament_install']
+[0.478s] Level 1:colcon.colcon_core.package_identification:_identify(src/uwb_locator) by extension 'ignore'
+[0.478s] Level 1:colcon.colcon_core.package_identification:_identify(src/uwb_locator) by extension 'ignore_ament_install'
+[0.478s] Level 1:colcon.colcon_core.package_identification:_identify(src/uwb_locator) by extensions ['colcon_pkg']
+[0.478s] Level 1:colcon.colcon_core.package_identification:_identify(src/uwb_locator) by extension 'colcon_pkg'
+[0.478s] Level 1:colcon.colcon_core.package_identification:_identify(src/uwb_locator) by extensions ['colcon_meta']
+[0.478s] Level 1:colcon.colcon_core.package_identification:_identify(src/uwb_locator) by extension 'colcon_meta'
+[0.479s] Level 1:colcon.colcon_core.package_identification:_identify(src/uwb_locator) by extensions ['ros']
+[0.479s] Level 1:colcon.colcon_core.package_identification:_identify(src/uwb_locator) by extension 'ros'
+[0.481s] DEBUG:colcon.colcon_core.package_identification:Package 'src/uwb_locator' with type 'ros.ament_python' and name 'uwb_locator'
+[0.481s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.481s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) discover
+[0.481s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) using defaults
+[0.482s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) discover
+[0.482s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) using defaults
+[0.545s] Level 5:colcon.colcon_core.verb:set package 'chassis_controller' build argument 'cmake_args' from command line to 'None'
+[0.546s] Level 5:colcon.colcon_core.verb:set package 'chassis_controller' build argument 'cmake_target' from command line to 'None'
+[0.546s] Level 5:colcon.colcon_core.verb:set package 'chassis_controller' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.546s] Level 5:colcon.colcon_core.verb:set package 'chassis_controller' build argument 'cmake_clean_cache' from command line to 'False'
+[0.546s] Level 5:colcon.colcon_core.verb:set package 'chassis_controller' build argument 'cmake_clean_first' from command line to 'False'
+[0.546s] Level 5:colcon.colcon_core.verb:set package 'chassis_controller' build argument 'cmake_force_configure' from command line to 'False'
+[0.546s] Level 5:colcon.colcon_core.verb:set package 'chassis_controller' build argument 'ament_cmake_args' from command line to 'None'
+[0.546s] Level 5:colcon.colcon_core.verb:set package 'chassis_controller' build argument 'catkin_cmake_args' from command line to 'None'
+[0.546s] Level 5:colcon.colcon_core.verb:set package 'chassis_controller' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.546s] DEBUG:colcon.colcon_core.verb:Building package 'chassis_controller' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/orangepi/scuderiaferrari/build/chassis_controller', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/orangepi/scuderiaferrari/install/chassis_controller', 'merge_install': False, 'path': '/home/orangepi/scuderiaferrari/src/chassis_controller', 'symlink_install': False, 'test_result_base': None}
+[0.547s] Level 5:colcon.colcon_core.verb:set package 'keyboard_controller' build argument 'cmake_args' from command line to 'None'
+[0.547s] Level 5:colcon.colcon_core.verb:set package 'keyboard_controller' build argument 'cmake_target' from command line to 'None'
+[0.547s] Level 5:colcon.colcon_core.verb:set package 'keyboard_controller' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.547s] Level 5:colcon.colcon_core.verb:set package 'keyboard_controller' build argument 'cmake_clean_cache' from command line to 'False'
+[0.547s] Level 5:colcon.colcon_core.verb:set package 'keyboard_controller' build argument 'cmake_clean_first' from command line to 'False'
+[0.547s] Level 5:colcon.colcon_core.verb:set package 'keyboard_controller' build argument 'cmake_force_configure' from command line to 'False'
+[0.547s] Level 5:colcon.colcon_core.verb:set package 'keyboard_controller' build argument 'ament_cmake_args' from command line to 'None'
+[0.547s] Level 5:colcon.colcon_core.verb:set package 'keyboard_controller' build argument 'catkin_cmake_args' from command line to 'None'
+[0.547s] Level 5:colcon.colcon_core.verb:set package 'keyboard_controller' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.547s] DEBUG:colcon.colcon_core.verb:Building package 'keyboard_controller' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/orangepi/scuderiaferrari/build/keyboard_controller', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/orangepi/scuderiaferrari/install/keyboard_controller', 'merge_install': False, 'path': '/home/orangepi/scuderiaferrari/src/keyboard_controller', 'symlink_install': False, 'test_result_base': None}
+[0.548s] Level 5:colcon.colcon_core.verb:set package 'line_follower_control' build argument 'cmake_args' from command line to 'None'
+[0.548s] Level 5:colcon.colcon_core.verb:set package 'line_follower_control' build argument 'cmake_target' from command line to 'None'
+[0.548s] Level 5:colcon.colcon_core.verb:set package 'line_follower_control' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.548s] Level 5:colcon.colcon_core.verb:set package 'line_follower_control' build argument 'cmake_clean_cache' from command line to 'False'
+[0.548s] Level 5:colcon.colcon_core.verb:set package 'line_follower_control' build argument 'cmake_clean_first' from command line to 'False'
+[0.548s] Level 5:colcon.colcon_core.verb:set package 'line_follower_control' build argument 'cmake_force_configure' from command line to 'False'
+[0.548s] Level 5:colcon.colcon_core.verb:set package 'line_follower_control' build argument 'ament_cmake_args' from command line to 'None'
+[0.548s] Level 5:colcon.colcon_core.verb:set package 'line_follower_control' build argument 'catkin_cmake_args' from command line to 'None'
+[0.548s] Level 5:colcon.colcon_core.verb:set package 'line_follower_control' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.548s] DEBUG:colcon.colcon_core.verb:Building package 'line_follower_control' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/orangepi/scuderiaferrari/build/line_follower_control', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/orangepi/scuderiaferrari/install/line_follower_control', 'merge_install': False, 'path': '/home/orangepi/scuderiaferrari/src/line_follower_control', 'symlink_install': False, 'test_result_base': None}
+[0.548s] Level 5:colcon.colcon_core.verb:set package 'position_udp_bridge' build argument 'cmake_args' from command line to 'None'
+[0.548s] Level 5:colcon.colcon_core.verb:set package 'position_udp_bridge' build argument 'cmake_target' from command line to 'None'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'position_udp_bridge' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'position_udp_bridge' build argument 'cmake_clean_cache' from command line to 'False'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'position_udp_bridge' build argument 'cmake_clean_first' from command line to 'False'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'position_udp_bridge' build argument 'cmake_force_configure' from command line to 'False'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'position_udp_bridge' build argument 'ament_cmake_args' from command line to 'None'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'position_udp_bridge' build argument 'catkin_cmake_args' from command line to 'None'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'position_udp_bridge' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.549s] DEBUG:colcon.colcon_core.verb:Building package 'position_udp_bridge' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/orangepi/scuderiaferrari/build/position_udp_bridge', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/orangepi/scuderiaferrari/install/position_udp_bridge', 'merge_install': False, 'path': '/home/orangepi/scuderiaferrari/src/position_udp_bridge', 'symlink_install': False, 'test_result_base': None}
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'track_perception' build argument 'cmake_args' from command line to 'None'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'track_perception' build argument 'cmake_target' from command line to 'None'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'track_perception' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'track_perception' build argument 'cmake_clean_cache' from command line to 'False'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'track_perception' build argument 'cmake_clean_first' from command line to 'False'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'track_perception' build argument 'cmake_force_configure' from command line to 'False'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'track_perception' build argument 'ament_cmake_args' from command line to 'None'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'track_perception' build argument 'catkin_cmake_args' from command line to 'None'
+[0.549s] Level 5:colcon.colcon_core.verb:set package 'track_perception' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.549s] DEBUG:colcon.colcon_core.verb:Building package 'track_perception' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/orangepi/scuderiaferrari/build/track_perception', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/orangepi/scuderiaferrari/install/track_perception', 'merge_install': False, 'path': '/home/orangepi/scuderiaferrari/src/track_perception', 'symlink_install': False, 'test_result_base': None}
+[0.550s] Level 5:colcon.colcon_core.verb:set package 'uwb_locator' build argument 'cmake_args' from command line to 'None'
+[0.550s] Level 5:colcon.colcon_core.verb:set package 'uwb_locator' build argument 'cmake_target' from command line to 'None'
+[0.550s] Level 5:colcon.colcon_core.verb:set package 'uwb_locator' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.550s] Level 5:colcon.colcon_core.verb:set package 'uwb_locator' build argument 'cmake_clean_cache' from command line to 'False'
+[0.550s] Level 5:colcon.colcon_core.verb:set package 'uwb_locator' build argument 'cmake_clean_first' from command line to 'False'
+[0.550s] Level 5:colcon.colcon_core.verb:set package 'uwb_locator' build argument 'cmake_force_configure' from command line to 'False'
+[0.550s] Level 5:colcon.colcon_core.verb:set package 'uwb_locator' build argument 'ament_cmake_args' from command line to 'None'
+[0.550s] Level 5:colcon.colcon_core.verb:set package 'uwb_locator' build argument 'catkin_cmake_args' from command line to 'None'
+[0.550s] Level 5:colcon.colcon_core.verb:set package 'uwb_locator' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.550s] DEBUG:colcon.colcon_core.verb:Building package 'uwb_locator' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/orangepi/scuderiaferrari/build/uwb_locator', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/orangepi/scuderiaferrari/install/uwb_locator', 'merge_install': False, 'path': '/home/orangepi/scuderiaferrari/src/uwb_locator', 'symlink_install': False, 'test_result_base': None}
+[0.550s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[0.552s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[0.552s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/orangepi/scuderiaferrari/src/chassis_controller' with build type 'ament_python'
+[0.553s] Level 1:colcon.colcon_core.shell:create_environment_hook('chassis_controller', 'ament_prefix_path')
+[0.556s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[0.556s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/chassis_controller/share/chassis_controller/hook/ament_prefix_path.ps1'
+[0.562s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/chassis_controller/share/chassis_controller/hook/ament_prefix_path.dsv'
+[0.567s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/chassis_controller/share/chassis_controller/hook/ament_prefix_path.sh'
+[0.576s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.576s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.588s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/orangepi/scuderiaferrari/src/keyboard_controller' with build type 'ament_python'
+[0.588s] Level 1:colcon.colcon_core.shell:create_environment_hook('keyboard_controller', 'ament_prefix_path')
+[0.589s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/keyboard_controller/share/keyboard_controller/hook/ament_prefix_path.ps1'
+[0.594s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/keyboard_controller/share/keyboard_controller/hook/ament_prefix_path.dsv'
+[0.599s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/keyboard_controller/share/keyboard_controller/hook/ament_prefix_path.sh'
+[0.612s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.612s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.622s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/orangepi/scuderiaferrari/src/line_follower_control' with build type 'ament_python'
+[0.622s] Level 1:colcon.colcon_core.shell:create_environment_hook('line_follower_control', 'ament_prefix_path')
+[0.623s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/line_follower_control/share/line_follower_control/hook/ament_prefix_path.ps1'
+[0.630s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/line_follower_control/share/line_follower_control/hook/ament_prefix_path.dsv'
+[0.639s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/line_follower_control/share/line_follower_control/hook/ament_prefix_path.sh'
+[0.645s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.645s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.656s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/orangepi/scuderiaferrari/src/position_udp_bridge' with build type 'ament_python'
+[0.657s] Level 1:colcon.colcon_core.shell:create_environment_hook('position_udp_bridge', 'ament_prefix_path')
+[0.658s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/position_udp_bridge/share/position_udp_bridge/hook/ament_prefix_path.ps1'
+[0.664s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/position_udp_bridge/share/position_udp_bridge/hook/ament_prefix_path.dsv'
+[0.669s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/position_udp_bridge/share/position_udp_bridge/hook/ament_prefix_path.sh'
+[0.675s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.675s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.684s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/orangepi/scuderiaferrari/src/track_perception' with build type 'ament_python'
+[0.684s] Level 1:colcon.colcon_core.shell:create_environment_hook('track_perception', 'ament_prefix_path')
+[0.686s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/hook/ament_prefix_path.ps1'
+[0.691s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/hook/ament_prefix_path.dsv'
+[0.696s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/hook/ament_prefix_path.sh'
+[0.703s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.704s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.723s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/home/orangepi/scuderiaferrari/src/uwb_locator' with build type 'ament_python'
+[0.723s] Level 1:colcon.colcon_core.shell:create_environment_hook('uwb_locator', 'ament_prefix_path')
+[0.724s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/hook/ament_prefix_path.ps1'
+[0.729s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/hook/ament_prefix_path.dsv'
+[0.734s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/hook/ament_prefix_path.sh'
+[0.742s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.742s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.231s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/orangepi/scuderiaferrari/src/chassis_controller'
+[1.232s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.232s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.636s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/orangepi/scuderiaferrari/src/keyboard_controller'
+[1.636s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.636s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[2.036s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/orangepi/scuderiaferrari/src/line_follower_control'
+[2.037s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[2.037s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[2.457s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/orangepi/scuderiaferrari/src/position_udp_bridge'
+[2.458s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[2.458s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[2.941s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/orangepi/scuderiaferrari/src/track_perception'
+[2.941s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[2.941s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[3.388s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/home/orangepi/scuderiaferrari/src/uwb_locator'
+[3.388s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[3.388s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[4.362s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/orangepi/scuderiaferrari/src/chassis_controller': PYTHONPATH=/home/orangepi/scuderiaferrari/build/chassis_controller/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/chassis_controller build --build-base /home/orangepi/scuderiaferrari/build/chassis_controller/build install --record /home/orangepi/scuderiaferrari/build/chassis_controller/install.log --single-version-externally-managed install_data
+[4.702s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/orangepi/scuderiaferrari/src/track_perception': PYTHONPATH=/home/orangepi/scuderiaferrari/build/track_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/track_perception build --build-base /home/orangepi/scuderiaferrari/build/track_perception/build install --record /home/orangepi/scuderiaferrari/build/track_perception/install.log --single-version-externally-managed install_data
+[4.777s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/orangepi/scuderiaferrari/src/keyboard_controller': PYTHONPATH=/home/orangepi/scuderiaferrari/build/keyboard_controller/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/keyboard_controller build --build-base /home/orangepi/scuderiaferrari/build/keyboard_controller/build install --record /home/orangepi/scuderiaferrari/build/keyboard_controller/install.log --single-version-externally-managed install_data
+[5.242s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/orangepi/scuderiaferrari/src/uwb_locator': PYTHONPATH=/home/orangepi/scuderiaferrari/build/uwb_locator/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/uwb_locator build --build-base /home/orangepi/scuderiaferrari/build/uwb_locator/build install --record /home/orangepi/scuderiaferrari/build/uwb_locator/install.log --single-version-externally-managed install_data
+[5.281s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/orangepi/scuderiaferrari/src/position_udp_bridge': PYTHONPATH=/home/orangepi/scuderiaferrari/build/position_udp_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/position_udp_bridge build --build-base /home/orangepi/scuderiaferrari/build/position_udp_bridge/build install --record /home/orangepi/scuderiaferrari/build/position_udp_bridge/install.log --single-version-externally-managed install_data
+[5.429s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/orangepi/scuderiaferrari/src/line_follower_control': PYTHONPATH=/home/orangepi/scuderiaferrari/build/line_follower_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/line_follower_control build --build-base /home/orangepi/scuderiaferrari/build/line_follower_control/build install --record /home/orangepi/scuderiaferrari/build/line_follower_control/install.log --single-version-externally-managed install_data
+[5.725s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/track_perception' for CMake module files
+[5.725s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/track_perception' for CMake config files
+[5.726s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/track_perception/lib'
+[5.726s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/track_perception/bin'
+[5.727s] Level 1:colcon.colcon_core.shell:create_environment_hook('track_perception', 'path')
+[5.727s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/hook/path.ps1'
+[5.728s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/orangepi/scuderiaferrari/src/track_perception' returned '0': PYTHONPATH=/home/orangepi/scuderiaferrari/build/track_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/track_perception build --build-base /home/orangepi/scuderiaferrari/build/track_perception/build install --record /home/orangepi/scuderiaferrari/build/track_perception/install.log --single-version-externally-managed install_data
+[5.737s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/hook/path.dsv'
+[5.759s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/hook/path.sh'
+[5.774s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/track_perception/lib/pkgconfig/track_perception.pc'
+[5.774s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages'
+[5.774s] Level 1:colcon.colcon_core.shell:create_environment_hook('track_perception', 'pythonpath')
+[5.775s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/hook/pythonpath.ps1'
+[5.786s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/hook/pythonpath.dsv'
+[5.793s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/hook/pythonpath.sh'
+[5.820s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/track_perception/bin'
+[5.821s] Level 1:colcon.colcon_core.shell:create_environment_hook('track_perception', 'pythonscriptspath')
+[5.821s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/hook/pythonscriptspath.ps1'
+[5.837s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/hook/pythonscriptspath.dsv'
+[5.845s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/hook/pythonscriptspath.sh'
+[5.852s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(track_perception)
+[5.853s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/package.ps1'
+[5.863s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/package.dsv'
+[5.869s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/package.sh'
+[5.873s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/package.bash'
+[5.879s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/package.zsh'
+[5.886s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/orangepi/scuderiaferrari/install/track_perception/share/colcon-core/packages/track_perception)
+[6.232s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/keyboard_controller' for CMake module files
+[6.232s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/keyboard_controller' for CMake config files
+[6.233s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/keyboard_controller/lib'
+[6.233s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/keyboard_controller/bin'
+[6.233s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/pkgconfig/keyboard_controller.pc'
+[6.234s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages'
+[6.234s] Level 1:colcon.colcon_core.shell:create_environment_hook('keyboard_controller', 'pythonpath')
+[6.235s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/keyboard_controller/share/keyboard_controller/hook/pythonpath.ps1'
+[6.236s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/orangepi/scuderiaferrari/src/keyboard_controller' returned '0': PYTHONPATH=/home/orangepi/scuderiaferrari/build/keyboard_controller/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/keyboard_controller build --build-base /home/orangepi/scuderiaferrari/build/keyboard_controller/build install --record /home/orangepi/scuderiaferrari/build/keyboard_controller/install.log --single-version-externally-managed install_data
+[6.358s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/keyboard_controller/share/keyboard_controller/hook/pythonpath.dsv'
+[6.378s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/keyboard_controller/share/keyboard_controller/hook/pythonpath.sh'
+[6.382s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/keyboard_controller/bin'
+[6.383s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(keyboard_controller)
+[6.383s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/keyboard_controller/share/keyboard_controller/package.ps1'
+[6.395s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/orangepi/scuderiaferrari/install/keyboard_controller/share/keyboard_controller/package.dsv'
+[6.400s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/keyboard_controller/share/keyboard_controller/package.sh'
+[6.405s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/keyboard_controller/share/keyboard_controller/package.bash'
+[6.415s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/keyboard_controller/share/keyboard_controller/package.zsh'
+[6.423s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/orangepi/scuderiaferrari/install/keyboard_controller/share/colcon-core/packages/keyboard_controller)
+[6.528s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/position_udp_bridge' for CMake module files
+[6.529s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/position_udp_bridge' for CMake config files
+[6.530s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib'
+[6.530s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/position_udp_bridge/bin'
+[6.530s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/pkgconfig/position_udp_bridge.pc'
+[6.531s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages'
+[6.531s] Level 1:colcon.colcon_core.shell:create_environment_hook('position_udp_bridge', 'pythonpath')
+[6.531s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/position_udp_bridge/share/position_udp_bridge/hook/pythonpath.ps1'
+[6.533s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/orangepi/scuderiaferrari/src/position_udp_bridge' returned '0': PYTHONPATH=/home/orangepi/scuderiaferrari/build/position_udp_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/position_udp_bridge build --build-base /home/orangepi/scuderiaferrari/build/position_udp_bridge/build install --record /home/orangepi/scuderiaferrari/build/position_udp_bridge/install.log --single-version-externally-managed install_data
+[6.537s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/position_udp_bridge/share/position_udp_bridge/hook/pythonpath.dsv'
+[6.540s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/position_udp_bridge/share/position_udp_bridge/hook/pythonpath.sh'
+[6.544s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/position_udp_bridge/bin'
+[6.545s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(position_udp_bridge)
+[6.546s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/position_udp_bridge/share/position_udp_bridge/package.ps1'
+[6.558s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/orangepi/scuderiaferrari/install/position_udp_bridge/share/position_udp_bridge/package.dsv'
+[6.563s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/position_udp_bridge/share/position_udp_bridge/package.sh'
+[6.566s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/position_udp_bridge/share/position_udp_bridge/package.bash'
+[6.570s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/position_udp_bridge/share/position_udp_bridge/package.zsh'
+[6.577s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/orangepi/scuderiaferrari/install/position_udp_bridge/share/colcon-core/packages/position_udp_bridge)
+[6.593s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/line_follower_control' for CMake module files
+[6.594s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/orangepi/scuderiaferrari/src/line_follower_control' returned '0': PYTHONPATH=/home/orangepi/scuderiaferrari/build/line_follower_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/line_follower_control build --build-base /home/orangepi/scuderiaferrari/build/line_follower_control/build install --record /home/orangepi/scuderiaferrari/build/line_follower_control/install.log --single-version-externally-managed install_data
+[6.595s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/line_follower_control' for CMake config files
+[6.601s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/line_follower_control/lib'
+[6.602s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/line_follower_control/bin'
+[6.603s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/line_follower_control/lib/pkgconfig/line_follower_control.pc'
+[6.605s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages'
+[6.606s] Level 1:colcon.colcon_core.shell:create_environment_hook('line_follower_control', 'pythonpath')
+[6.608s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/line_follower_control/share/line_follower_control/hook/pythonpath.ps1'
+[6.614s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/line_follower_control/share/line_follower_control/hook/pythonpath.dsv'
+[6.627s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/line_follower_control/share/line_follower_control/hook/pythonpath.sh'
+[6.643s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/line_follower_control/bin'
+[6.644s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(line_follower_control)
+[6.646s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/line_follower_control/share/line_follower_control/package.ps1'
+[6.655s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/orangepi/scuderiaferrari/install/line_follower_control/share/line_follower_control/package.dsv'
+[6.664s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/line_follower_control/share/line_follower_control/package.sh'
+[6.668s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/line_follower_control/share/line_follower_control/package.bash'
+[6.671s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/line_follower_control/share/line_follower_control/package.zsh'
+[6.684s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/orangepi/scuderiaferrari/install/line_follower_control/share/colcon-core/packages/line_follower_control)
+[6.699s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/chassis_controller' for CMake module files
+[6.700s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/orangepi/scuderiaferrari/src/chassis_controller' returned '0': PYTHONPATH=/home/orangepi/scuderiaferrari/build/chassis_controller/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/chassis_controller build --build-base /home/orangepi/scuderiaferrari/build/chassis_controller/build install --record /home/orangepi/scuderiaferrari/build/chassis_controller/install.log --single-version-externally-managed install_data
+[6.707s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/chassis_controller' for CMake config files
+[6.711s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/chassis_controller/lib'
+[6.712s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/chassis_controller/bin'
+[6.713s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/chassis_controller/lib/pkgconfig/chassis_controller.pc'
+[6.714s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages'
+[6.717s] Level 1:colcon.colcon_core.shell:create_environment_hook('chassis_controller', 'pythonpath')
+[6.718s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/chassis_controller/share/chassis_controller/hook/pythonpath.ps1'
+[6.728s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/chassis_controller/share/chassis_controller/hook/pythonpath.dsv'
+[6.742s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/chassis_controller/share/chassis_controller/hook/pythonpath.sh'
+[6.751s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/chassis_controller/bin'
+[6.753s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(chassis_controller)
+[6.755s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/chassis_controller/share/chassis_controller/package.ps1'
+[6.765s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/orangepi/scuderiaferrari/install/chassis_controller/share/chassis_controller/package.dsv'
+[6.773s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/chassis_controller/share/chassis_controller/package.sh'
+[6.781s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/chassis_controller/share/chassis_controller/package.bash'
+[6.784s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/chassis_controller/share/chassis_controller/package.zsh'
+[6.792s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/orangepi/scuderiaferrari/install/chassis_controller/share/colcon-core/packages/chassis_controller)
+[6.797s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/uwb_locator' for CMake module files
+[6.798s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/uwb_locator' for CMake config files
+[6.800s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/orangepi/scuderiaferrari/src/uwb_locator' returned '0': PYTHONPATH=/home/orangepi/scuderiaferrari/build/uwb_locator/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/uwb_locator build --build-base /home/orangepi/scuderiaferrari/build/uwb_locator/build install --record /home/orangepi/scuderiaferrari/build/uwb_locator/install.log --single-version-externally-managed install_data
+[6.801s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/uwb_locator/lib'
+[6.801s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/uwb_locator/bin'
+[6.801s] Level 1:colcon.colcon_core.shell:create_environment_hook('uwb_locator', 'path')
+[6.802s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/hook/path.ps1'
+[6.807s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/hook/path.dsv'
+[6.813s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/hook/path.sh'
+[6.816s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/uwb_locator/lib/pkgconfig/uwb_locator.pc'
+[6.817s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages'
+[6.817s] Level 1:colcon.colcon_core.shell:create_environment_hook('uwb_locator', 'pythonpath')
+[6.817s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/hook/pythonpath.ps1'
+[6.820s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/hook/pythonpath.dsv'
+[6.824s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/hook/pythonpath.sh'
+[6.827s] Level 1:colcon.colcon_core.environment:checking '/home/orangepi/scuderiaferrari/install/uwb_locator/bin'
+[6.827s] Level 1:colcon.colcon_core.shell:create_environment_hook('uwb_locator', 'pythonscriptspath')
+[6.828s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/hook/pythonscriptspath.ps1'
+[6.832s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/hook/pythonscriptspath.dsv'
+[6.837s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/hook/pythonscriptspath.sh'
+[6.841s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(uwb_locator)
+[6.844s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/package.ps1'
+[6.854s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/package.dsv'
+[6.864s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/package.sh'
+[6.870s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/package.bash'
+[6.874s] INFO:colcon.colcon_core.shell:Creating package script '/home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/package.zsh'
+[6.877s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/orangepi/scuderiaferrari/install/uwb_locator/share/colcon-core/packages/uwb_locator)
+[6.884s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[6.884s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[6.885s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[6.885s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[6.912s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[6.913s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[6.913s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[6.955s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[6.955s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/orangepi/scuderiaferrari/install/local_setup.ps1'
+[6.961s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/orangepi/scuderiaferrari/install/_local_setup_util_ps1.py'
+[6.967s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/orangepi/scuderiaferrari/install/setup.ps1'
+[6.971s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/orangepi/scuderiaferrari/install/local_setup.sh'
+[6.975s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/orangepi/scuderiaferrari/install/_local_setup_util_sh.py'
+[6.979s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/orangepi/scuderiaferrari/install/setup.sh'
+[6.987s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/orangepi/scuderiaferrari/install/local_setup.bash'
+[6.991s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/orangepi/scuderiaferrari/install/setup.bash'
+[6.996s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/orangepi/scuderiaferrari/install/local_setup.zsh'
+[7.003s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/orangepi/scuderiaferrari/install/setup.zsh'

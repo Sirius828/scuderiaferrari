@@ -117,7 +117,9 @@ perception_decision_node:
     
     # 分支选择参数（outer_side 已在上面定义，这里不需要重复）
     branch_lock_time: 2.0  # 分支锁定的最大持续时间（秒）
+    min_branch_lock_time: 0.8  # 分支锁定的最短持续时间（秒），避免LOCK/NORMAL频繁切换
     exit_single_path_confirm_frames: 5  # 连续多少帧检测到单路径才退出LOCK状态
+    exit_single_path_min_ratio: 0.8  # 远端Band中至少多少比例为单路径才允许退出LOCK
     
     # 中心线拟合参数
     fit_min_points: 2  # 拟合所需的最少点数，岔路需要看
