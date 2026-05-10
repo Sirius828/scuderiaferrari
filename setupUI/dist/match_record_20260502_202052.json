@@ -1,0 +1,17 @@
+{
+    "match_date": "2026-05-02 20:20:56",
+    "total_events": 1,
+    "events": [
+        {
+            "index": 1,
+            "time_str": "20:20:56.564",
+            "elapsed_seconds": 3.78,
+            "type": "COLLISION",
+            "obj_id": 1012,
+            "message": "收集金币/动态奖励",
+            "data": {
+                "name": "coin.glb"
+            }
+        }
+    ]
+}

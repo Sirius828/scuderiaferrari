@@ -1,0 +1,46 @@
+{
+    "match_date": "2026-05-06 22:44:36",
+    "total_events": 4,
+    "events": [
+        {
+            "index": 1,
+            "time_str": "22:44:00.529",
+            "elapsed_seconds": 29.35,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 2,
+            "time_str": "22:44:34.093",
+            "elapsed_seconds": 62.91,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 3,
+            "time_str": "22:44:35.269",
+            "elapsed_seconds": 64.09,
+            "type": "COLLISION",
+            "obj_id": 1008,
+            "message": "收集金币/动态奖励",
+            "data": {
+                "name": "coin.glb"
+            }
+        },
+        {
+            "index": 4,
+            "time_str": "22:44:36.706",
+            "elapsed_seconds": 65.52,
+            "type": "COLLISION",
+            "obj_id": 1006,
+            "message": "收集金币/动态奖励",
+            "data": {
+                "name": "coin.glb"
+            }
+        }
+    ]
+}

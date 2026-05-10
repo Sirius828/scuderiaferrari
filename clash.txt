@@ -1,0 +1,8 @@
+https://liangxin.xyz/api/v1/liangxin?OwO=624e5de4fa5b3228378cf6f79b369542
+export HTTP_PROXY=http://127.0.0.1:7897
+export HTTPS_PROXY=http://127.0.0.1:7897
+export ALL_PROXY=http://127.0.0.1:7897
+nc -vz 你的Mac局域网IP 7897
+curl -I https://api.openai.com
+curl -I https://chatgpt.com
+Token exchange failed: error sending request for url (https://auth.openai.com/oauth/token)

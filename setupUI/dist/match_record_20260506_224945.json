@@ -1,0 +1,826 @@
+{
+    "match_date": "2026-05-06 22:54:12",
+    "total_events": 82,
+    "events": [
+        {
+            "index": 1,
+            "time_str": "22:49:49.178",
+            "elapsed_seconds": 4.07,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 2,
+            "time_str": "22:49:51.194",
+            "elapsed_seconds": 6.09,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 3,
+            "time_str": "22:49:53.209",
+            "elapsed_seconds": 8.1,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 4,
+            "time_str": "22:49:55.234",
+            "elapsed_seconds": 10.13,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 5,
+            "time_str": "22:49:57.239",
+            "elapsed_seconds": 12.13,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 6,
+            "time_str": "22:49:59.255",
+            "elapsed_seconds": 14.15,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 7,
+            "time_str": "22:50:01.268",
+            "elapsed_seconds": 16.16,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 8,
+            "time_str": "22:50:03.292",
+            "elapsed_seconds": 18.19,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 9,
+            "time_str": "22:50:05.310",
+            "elapsed_seconds": 20.2,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 10,
+            "time_str": "22:50:07.320",
+            "elapsed_seconds": 22.22,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 11,
+            "time_str": "22:50:09.347",
+            "elapsed_seconds": 24.24,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 12,
+            "time_str": "22:50:11.348",
+            "elapsed_seconds": 26.24,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 13,
+            "time_str": "22:50:13.395",
+            "elapsed_seconds": 28.29,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 14,
+            "time_str": "22:50:15.396",
+            "elapsed_seconds": 30.29,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 15,
+            "time_str": "22:50:17.410",
+            "elapsed_seconds": 32.31,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 16,
+            "time_str": "22:50:19.414",
+            "elapsed_seconds": 34.31,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 17,
+            "time_str": "22:50:21.433",
+            "elapsed_seconds": 36.33,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 18,
+            "time_str": "22:50:23.454",
+            "elapsed_seconds": 38.35,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 19,
+            "time_str": "22:50:25.463",
+            "elapsed_seconds": 40.36,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 20,
+            "time_str": "22:50:27.478",
+            "elapsed_seconds": 42.37,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 21,
+            "time_str": "22:50:29.499",
+            "elapsed_seconds": 44.39,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 22,
+            "time_str": "22:50:31.512",
+            "elapsed_seconds": 46.41,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 23,
+            "time_str": "22:50:33.532",
+            "elapsed_seconds": 48.43,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 24,
+            "time_str": "22:50:35.564",
+            "elapsed_seconds": 50.46,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 25,
+            "time_str": "22:50:37.577",
+            "elapsed_seconds": 52.47,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 26,
+            "time_str": "22:50:39.581",
+            "elapsed_seconds": 54.48,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 27,
+            "time_str": "22:50:41.587",
+            "elapsed_seconds": 56.48,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 28,
+            "time_str": "22:50:43.603",
+            "elapsed_seconds": 58.5,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 29,
+            "time_str": "22:50:45.621",
+            "elapsed_seconds": 60.52,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 30,
+            "time_str": "22:50:47.668",
+            "elapsed_seconds": 62.56,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 31,
+            "time_str": "22:50:49.674",
+            "elapsed_seconds": 64.57,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 32,
+            "time_str": "22:50:51.695",
+            "elapsed_seconds": 66.59,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 33,
+            "time_str": "22:50:53.713",
+            "elapsed_seconds": 68.61,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 34,
+            "time_str": "22:50:55.717",
+            "elapsed_seconds": 70.61,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 35,
+            "time_str": "22:50:57.733",
+            "elapsed_seconds": 72.63,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 36,
+            "time_str": "22:50:59.769",
+            "elapsed_seconds": 74.66,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 37,
+            "time_str": "22:51:01.795",
+            "elapsed_seconds": 76.69,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 2",
+            "data": {}
+        },
+        {
+            "index": 38,
+            "time_str": "22:51:13.384",
+            "elapsed_seconds": 88.28,
+            "type": "COLLISION",
+            "obj_id": 1015,
+            "message": "收集金币/动态奖励",
+            "data": {
+                "name": "coin.glb"
+            }
+        },
+        {
+            "index": 39,
+            "time_str": "22:51:15.649",
+            "elapsed_seconds": 90.54,
+            "type": "COLLISION",
+            "obj_id": 1016,
+            "message": "收集金币/动态奖励",
+            "data": {
+                "name": "coin.glb"
+            }
+        },
+        {
+            "index": 40,
+            "time_str": "22:51:15.740",
+            "elapsed_seconds": 90.64,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 3",
+            "data": {}
+        },
+        {
+            "index": 41,
+            "time_str": "22:51:27.450",
+            "elapsed_seconds": 102.34,
+            "type": "COLLISION",
+            "obj_id": 1009,
+            "message": "撞击障碍",
+            "data": {
+                "name": "model.glb"
+            }
+        },
+        {
+            "index": 42,
+            "time_str": "22:51:30.513",
+            "elapsed_seconds": 105.41,
+            "type": "COLLISION",
+            "obj_id": 1009,
+            "message": "撞击障碍",
+            "data": {
+                "name": "model.glb"
+            }
+        },
+        {
+            "index": 43,
+            "time_str": "22:51:34.287",
+            "elapsed_seconds": 109.18,
+            "type": "COLLISION",
+            "obj_id": 1009,
+            "message": "撞击障碍",
+            "data": {
+                "name": "model.glb"
+            }
+        },
+        {
+            "index": 44,
+            "time_str": "22:51:37.372",
+            "elapsed_seconds": 112.27,
+            "type": "COLLISION",
+            "obj_id": 1009,
+            "message": "撞击障碍",
+            "data": {
+                "name": "model.glb"
+            }
+        },
+        {
+            "index": 45,
+            "time_str": "22:51:41.367",
+            "elapsed_seconds": 116.26,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 4",
+            "data": {}
+        },
+        {
+            "index": 46,
+            "time_str": "22:51:43.888",
+            "elapsed_seconds": 118.78,
+            "type": "COLLISION",
+            "obj_id": 1010,
+            "message": "撞击障碍",
+            "data": {
+                "name": "model.glb"
+            }
+        },
+        {
+            "index": 47,
+            "time_str": "22:51:44.349",
+            "elapsed_seconds": 119.24,
+            "type": "COLLISION",
+            "obj_id": 1011,
+            "message": "收集金币/动态奖励",
+            "data": {
+                "name": "coin.glb"
+            }
+        },
+        {
+            "index": 48,
+            "time_str": "22:51:45.855",
+            "elapsed_seconds": 120.75,
+            "type": "COLLISION",
+            "obj_id": 1012,
+            "message": "收集金币/动态奖励",
+            "data": {
+                "name": "coin.glb"
+            }
+        },
+        {
+            "index": 49,
+            "time_str": "22:51:46.318",
+            "elapsed_seconds": 121.21,
+            "type": "COLLISION",
+            "obj_id": 1013,
+            "message": "收集金币/动态奖励",
+            "data": {
+                "name": "coin.glb"
+            }
+        },
+        {
+            "index": 50,
+            "time_str": "22:51:46.712",
+            "elapsed_seconds": 121.61,
+            "type": "COLLISION",
+            "obj_id": 1005,
+            "message": "收集金币/动态奖励",
+            "data": {
+                "name": "coin.glb"
+            }
+        },
+        {
+            "index": 51,
+            "time_str": "22:51:47.117",
+            "elapsed_seconds": 122.01,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 5",
+            "data": {}
+        },
+        {
+            "index": 52,
+            "time_str": "22:51:48.123",
+            "elapsed_seconds": 123.02,
+            "type": "COLLISION",
+            "obj_id": 1014,
+            "message": "收集金币/动态奖励",
+            "data": {
+                "name": "coin.glb"
+            }
+        },
+        {
+            "index": 53,
+            "time_str": "22:52:59.879",
+            "elapsed_seconds": 194.77,
+            "type": "COLLISION",
+            "obj_id": 4566,
+            "message": "撞击障碍",
+            "data": {
+                "name": "beginsign.glb"
+            }
+        },
+        {
+            "index": 54,
+            "time_str": "22:52:59.978",
+            "elapsed_seconds": 194.87,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 55,
+            "time_str": "22:53:00.509",
+            "elapsed_seconds": 195.4,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 0",
+            "data": {}
+        },
+        {
+            "index": 56,
+            "time_str": "22:53:00.515",
+            "elapsed_seconds": 195.41,
+            "type": "LAP_TIME",
+            "obj_id": 0,
+            "message": "比赛开始，计时启动",
+            "data": {
+                "lap": 0,
+                "lap_time_s": 0.0,
+                "total_time_s": 0.0,
+                "lap_time_str": "00:00.00",
+                "total_time_str": "00:00.00"
+            }
+        },
+        {
+            "index": 57,
+            "time_str": "22:53:00.523",
+            "elapsed_seconds": 195.42,
+            "type": "LAP_UPDATE",
+            "obj_id": 0,
+            "message": "当前进入第 1 圈",
+            "data": {
+                "lap": 1
+            }
+        },
+        {
+            "index": 58,
+            "time_str": "22:53:00.983",
+            "elapsed_seconds": 195.88,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 59,
+            "time_str": "22:53:02.014",
+            "elapsed_seconds": 196.91,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 60,
+            "time_str": "22:53:03.042",
+            "elapsed_seconds": 197.94,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 61,
+            "time_str": "22:53:04.056",
+            "elapsed_seconds": 198.95,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 62,
+            "time_str": "22:53:05.067",
+            "elapsed_seconds": 199.96,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 63,
+            "time_str": "22:53:05.654",
+            "elapsed_seconds": 200.55,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 0",
+            "data": {}
+        },
+        {
+            "index": 64,
+            "time_str": "22:53:06.107",
+            "elapsed_seconds": 201.0,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 65,
+            "time_str": "22:53:07.132",
+            "elapsed_seconds": 202.03,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 66,
+            "time_str": "22:53:49.431",
+            "elapsed_seconds": 244.33,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 67,
+            "time_str": "22:53:50.184",
+            "elapsed_seconds": 245.08,
+            "type": "LAP_CHECKPOINT",
+            "obj_id": 0,
+            "message": "经过 [组0] 记录点 0",
+            "data": {}
+        },
+        {
+            "index": 68,
+            "time_str": "22:53:50.476",
+            "elapsed_seconds": 245.37,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 69,
+            "time_str": "22:53:51.503",
+            "elapsed_seconds": 246.4,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 70,
+            "time_str": "22:53:52.505",
+            "elapsed_seconds": 247.4,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 71,
+            "time_str": "22:53:53.527",
+            "elapsed_seconds": 248.42,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 72,
+            "time_str": "22:53:54.537",
+            "elapsed_seconds": 249.43,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 73,
+            "time_str": "22:53:55.562",
+            "elapsed_seconds": 250.46,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 74,
+            "time_str": "22:53:56.574",
+            "elapsed_seconds": 251.47,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 75,
+            "time_str": "22:54:03.904",
+            "elapsed_seconds": 258.8,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 76,
+            "time_str": "22:54:05.268",
+            "elapsed_seconds": 260.16,
+            "type": "COLLISION",
+            "obj_id": 1001,
+            "message": "收集金币/动态奖励",
+            "data": {
+                "name": "coin.glb"
+            }
+        },
+        {
+            "index": 77,
+            "time_str": "22:54:07.490",
+            "elapsed_seconds": 262.38,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 78,
+            "time_str": "22:54:08.492",
+            "elapsed_seconds": 263.39,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 79,
+            "time_str": "22:54:09.533",
+            "elapsed_seconds": 264.43,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 80,
+            "time_str": "22:54:10.540",
+            "elapsed_seconds": 265.43,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 81,
+            "time_str": "22:54:11.567",
+            "elapsed_seconds": 266.46,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        },
+        {
+            "index": 82,
+            "time_str": "22:54:12.597",
+            "elapsed_seconds": 267.49,
+            "type": "COLLISION",
+            "obj_id": 5048,
+            "message": "撞击障碍",
+            "data": {
+                "name": "begindoor.glb"
+            }
+        }
+    ]
+}

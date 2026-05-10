@@ -1,0 +1,204 @@
+# 感知决策节点配置文件
+# 包含岔路口检测与外圈锁定参数
+
+# ========================================
+# 目标检测节点配置
+# ========================================
+object_detection_node:
+  ros__parameters:
+    shm_name: "shm_ar_video"
+    model_path: "model/rknn_lt_v2.rknn"  # ⭐ 目标检测模型路径
+    label_list_path: "model/label_list.txt"
+    tpes: 3
+    enable_flip: true
+    flip_code: 0
+    input_format: "RGB"
+    publish_detections: true
+    publish_rate: 30  # ⭐ 发布频率 (Hz)
+
+# ========================================
+# 感知决策节点配置
+# ========================================
+perception_decision_node:
+  ros__parameters:
+    # ========================================
+    # 基础参数
+    # ========================================
+    shm_name: "shm_ar_video"
+    
+    # ⭐ 模型路径参数
+    seg_model_dir: "model"  # 语义分割模型目录
+    seg_model_filename: "pp_liteseg_v3.rknn"  # ⭐ 语义分割模型文件名
+    
+    tpes: 3
+    blend_alpha: -1.0  # -1表示只显示分割结果，不混合原图
+    show_window: true
+    show_debug_window: false
+    enable_perf_stats: false
+    
+    # 图像预处理参数
+    enable_flip: true
+    flip_code: 0  # 0=垂直翻转, 1=水平翻转, -1=两者
+    input_format: "RGB"
+    model_input_format: "RGB"
+    
+    # Mask发布参数
+    publish_mask: false  # false表示发布Float32 offset而非Image mask
+    publish_mask_every_n: 1
+    
+    # ========================================
+    # ⭐ 岔路口检测与外圈锁定参数
+    # ========================================
+    
+    # 总开关
+    enable_intersection_logic: true
+    
+    # 外圈方向配置
+    outer_side: "left"  # "left" 或 "right"，取决于赛道布局
+    
+    # --- 远处检测ROI (用于提前发现岔路口) ---
+    # ⭐ 注意：地平线在图像上半部分，Far ROI应该在上半部分
+    # ROI范围: y = 0.10h ~ 0.45h (图像高度的10%~45%，地平线附近)
+    far_roi_y0_ratio: 0.60  # 远处ROI起始y比例（靠近顶部）
+    far_roi_y1_ratio: 0.75  # 远处ROI结束y比例（中线之前）
+    far_width_threshold: 0.55  # 远处岔路宽度阈值 (道路宽度/图像宽度 > 0.55判定为岔路)
+    
+    # --- 近处检测ROI (用于判断岔路是否进入控制区域) ---
+    # ⭐ 注意：赛道在图像下半部分，Near ROI应该在下半部分
+    # ROI范围: y = 0.50h ~ 0.95h (图像高度的50%~95%，赛道区域)
+    near_roi_y0_ratio: 0.77  # 近处ROI起始y比例（从中线开始）
+    near_roi_y1_ratio: 0.95  # 近处ROI结束y比例（接近底部）
+    near_width_threshold: 0.70  # 近处岔路宽度阈值 (道路宽度/图像宽度 > 0.55判定为岔路)
+    
+    # --- 退出锁定条件 ---
+    exit_width_threshold: 0.45  # 退出锁定的宽度阈值 (道路宽度/图像宽度 < 0.45认为回到单路)
+    exit_confirm_frames: 5  # 连续N帧满足退出条件才确认退出
+    max_lock_time: 2.0  # 最大锁定时间(秒)，超时强制退出
+    
+    # --- 检测灵敏度 ---
+    min_road_pixels: 300  # 最小道路像素数，低于此值认为检测无效
+    
+    # ========================================
+    # ⭐ GuideBoard 岔路选择参数
+    # ========================================
+    enable_guideboard_branch_selection: true  # 是否启用GuideBoard岔路选择
+    guideboard_branch: "right"  # 检测到GuideBoard时选择的岔路方向
+    guideboard_detect_y0_ratio: 0.2  # GuideBoard检测起始y比例（0.0=顶部，1.0=底部）
+    guideboard_detect_y1_ratio: 0.7  # GuideBoard检测结束y比例（默认检测上半部分70%区域）
+                                     # 如需全画面检测，设置为 0.0 和 1.0
+    
+    # ========================================
+    # ⭐ 分支掩码屏蔽比例参数
+    # ========================================
+    branch_mask_ratio: 0.47  # 分支屏蔽比例（0.5=屏蔽50%，0.6=屏蔽60%）
+                               # 增大此值可以更激进地屏蔽另一侧分支，避免在未分开时被吸引
+    
+    # ========================================
+    # ⭐ 高级岔路检测与中心线拟合参数（新逻辑）
+    # ========================================
+    
+    # 功能开关
+    enable_segment_branch_logic: true  # 启用多层Band扫描逻辑
+    
+    # Band 扫描参数
+    band_count: 13  # 扫描Band的数量
+    band_y_min_ratio: 0.65  # Band扫描起始y比例（0.0=顶部，1.0=底部）
+    band_y_max_ratio: 1.00  # Band扫描结束y比例
+    band_height_ratio: 0.02  # 每个Band的高度比例
+    
+    # Segment 提取参数
+    min_segment_width_px: 25  # Segment最小宽度（像素）
+    min_segment_gap_px: 40  # 两个Segment之间的最小间隙（像素）
+    min_pixels_per_band: 80  # 每个Band中Segment的最小像素数量
+    
+    # 岔路确认参数
+    branch_detect_min_bands: 2  # 至少需要多少个Band检测到2+个Segment才判定为岔路
+    branch_detect_far_band_ratio: 0.7  # 只用较远的多少比例Band判断岔路
+    
+    # 分支选择参数（outer_side 已在上面定义，这里不需要重复）
+    branch_lock_time: 2.0  # 分支锁定的最大持续时间（秒）
+    exit_single_path_confirm_frames: 5  # 连续多少帧检测到单路径才退出LOCK状态
+    
+    # 中心线拟合参数
+    fit_min_points: 2  # 拟合所需的最少点数，岔路需要看
+    fit_order: 1  # 拟合阶数，1=线性拟合，2=二次拟合
+    use_heading_term: true  # 是否使用航向角误差项
+    heading_weight: 0.35  # 航向角误差的权重
+    near_offset_weight: 0.65  # 近处偏移量的权重
+    
+    # 安全参数
+    max_offset_jump: 0.8  # Offset最大跳变幅度
+    offset_smoothing_alpha: 0.5  # 一阶低通滤波系数
+    
+    # 调试参数
+    publish_debug_info: true  # 是否发布调试信息
+    show_branch_debug: true  # 是否在可视化窗口中绘制Band和Segment
+
+
+# ========================================
+# 参数调优指南
+# ========================================
+#
+# 1. 如果车应该走外圈但走了内圈：
+#    → 修改 outer_side: "left" ↔ "right"
+#
+# 2. 如果过早进入 LOCK_OUTER_BRANCH 状态：
+#    → 增大 near_width_threshold (例如 0.60 → 0.70)
+#    → 或增大 near_roi_y0_ratio (例如 0.50 → 0.60)
+#
+# 3. 如果检测不到岔路：
+#    → 减小 far_width_threshold (例如 0.65 → 0.55)
+#    → 或扩大 far_roi 范围 (例如 0.20~0.60 → 0.15~0.65)
+#
+# 4. 如果锁定时间太长，过了岔路口还在屏蔽：
+#    → 减小 max_lock_time (例如 2.0 → 1.5)
+#    → 或增大 exit_width_threshold (例如 0.45 → 0.50)
+#
+# 5. 如果频繁在NORMAL和LOCK之间切换：
+#    → 增大 exit_confirm_frames (例如 5 → 8)
+#
+# 6. 如果检测不稳定（偶尔误判）：
+#    → 增大 min_road_pixels (例如 300 → 500)
+#
+# 7. ⭐ GuideBoard 岔路选择功能：
+#    → enable_guideboard_branch_selection: true  # 启用GuideBoard检测
+#    → guideboard_branch: "right"  # 检测到GuideBoard时走右侧岔路
+#    → 默认情况下（无GuideBoard），走 outer_side 指定的方向
+#
+# 8. ⭐ 分支掩码屏蔽比例调优：
+#    → branch_mask_ratio: 0.60  # 默认屏蔽60%区域
+#    → 如果在岔路未分开时被右侧吸引：增大此值（例如 0.60 → 0.65 或 0.70）
+#    → 如果屏蔽过度导致偏移量异常：减小此值（例如 0.60 → 0.55）
+#
+# ========================================
+# ROI可视化说明
+# ========================================
+#
+# 图像坐标系 (假设图像高度 h=480，地平线在上半部分):
+# 
+# y=0   ┌─────────────────────┐
+#       │                     │
+# y=48  │  (far_roi starts)   │ ← far_roi_y0_ratio=0.10
+#       │                     │
+#       │   Far ROI           │ ⭐ 远处检测区（地平线附近）
+#       │   (提前发现岔路)     │
+#       │                     │
+# y=216 ├─────────────────────┤ ← far_roi_y1_ratio=0.45
+#       │                     │
+# y=240 ├─────────────────────┤ ← 图像中线 (h/2)
+#       │                     │
+# y=240 ├─────────────────────┤ ← near_roi_y0_ratio=0.50
+#       │                     │
+#       │   Near ROI          │ ⭐ 近处控制区（赛道区域）
+#       │   (影响舵机转向)     │
+#       │                     │
+# y=456 ├─────────────────────┤ ← near_roi_y1_ratio=0.95
+#       │                     │
+#       │   车前近距离         │
+#       │                     │
+# y=480 └─────────────────────┘
+#
+# 注意：
+# - Far ROI 在上半部分（地平线附近），用于提前检测岔路
+# - Near ROI 在下半部分（赛道区域），用于计算offset控制舵机
+# - 两个ROI不重叠，分别对应远处和近处

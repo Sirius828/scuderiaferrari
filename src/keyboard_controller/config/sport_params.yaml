@@ -1,0 +1,11 @@
+# 运动模式参数 - 适合开阔场地和熟练用户
+# 特点：速度快、响应灵敏、转向迅速
+
+keyboard_controller:
+  ros__parameters:
+    max_speed: 15.0          # 较高的最大速度
+    reverse_speed: 3.0       # 较快的后退速度
+    acceleration: 8.0        # 较快的加速度
+    deceleration: 8.0        # 较快的减速度
+    turn_rate: 2.0           # 快速的转向速率（0.5秒满舵）
+    update_rate: 30.0        # 更高的更新频率

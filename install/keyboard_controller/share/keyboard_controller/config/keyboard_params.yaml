@@ -1,0 +1,18 @@
+# 键盘控制节点参数配置文件
+# 使用方式: ros2 run keyboard_controller keyboard_control_node --ros-args --params-file config/keyboard_params.yaml
+
+keyboard_controller:
+  ros__parameters:
+    # 速度参数
+    max_speed: 10.0          # 最大前进速度 (rad/s)
+    reverse_speed: 2.0       # 后退速度 (rad/s)
+    
+    # 加速度参数
+    acceleration: 5.0        # 前进加速度 (rad/s²)
+    deceleration: 5.0        # 前进减速度 (rad/s²)
+    
+    # 转向速率 (比例/s, -1.0到1.0)
+    turn_rate: 1.0           # 从0到满舵需要1秒
+    
+    # 更新频率
+    update_rate: 20.0        # 控制更新频率 (Hz)

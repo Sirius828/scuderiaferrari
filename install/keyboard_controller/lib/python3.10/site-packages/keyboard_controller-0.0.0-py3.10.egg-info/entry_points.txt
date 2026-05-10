@@ -1,0 +1,4 @@
+[console_scripts]
+keyboard_control_node = keyboard_controller.keyboard_control_node:main
+terminal_keyboard_node = keyboard_controller.terminal_keyboard_node:main
+

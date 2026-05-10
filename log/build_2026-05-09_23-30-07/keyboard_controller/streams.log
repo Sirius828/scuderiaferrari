@@ -1,0 +1,22 @@
+[5.469s] Invoking command in '/home/orangepi/scuderiaferrari/src/keyboard_controller': PYTHONPATH=/home/orangepi/scuderiaferrari/build/keyboard_controller/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/keyboard_controller build --build-base /home/orangepi/scuderiaferrari/build/keyboard_controller/build install --record /home/orangepi/scuderiaferrari/build/keyboard_controller/install.log --single-version-externally-managed install_data
+[6.188s] running egg_info
+[6.191s] writing ../../build/keyboard_controller/keyboard_controller.egg-info/PKG-INFO
+[6.197s] writing dependency_links to ../../build/keyboard_controller/keyboard_controller.egg-info/dependency_links.txt
+[6.216s] writing entry points to ../../build/keyboard_controller/keyboard_controller.egg-info/entry_points.txt
+[6.216s] writing requirements to ../../build/keyboard_controller/keyboard_controller.egg-info/requires.txt
+[6.222s] writing top-level names to ../../build/keyboard_controller/keyboard_controller.egg-info/top_level.txt
+[6.247s] reading manifest file '../../build/keyboard_controller/keyboard_controller.egg-info/SOURCES.txt'
+[6.251s] writing manifest file '../../build/keyboard_controller/keyboard_controller.egg-info/SOURCES.txt'
+[6.256s] running build
+[6.257s] running build_py
+[6.258s] running install
+[6.262s] running install_lib
+[6.268s] running install_data
+[6.270s] running install_egg_info
+[6.283s] removing '/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages/keyboard_controller-0.0.0-py3.10.egg-info' (and everything under it)
+[6.322s] Copying ../../build/keyboard_controller/keyboard_controller.egg-info to /home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages/keyboard_controller-0.0.0-py3.10.egg-info
+[6.324s] running install_scripts
+[6.370s] Installing keyboard_control_node script to /home/orangepi/scuderiaferrari/install/keyboard_controller/lib/keyboard_controller
+[6.383s] Installing terminal_keyboard_node script to /home/orangepi/scuderiaferrari/install/keyboard_controller/lib/keyboard_controller
+[6.390s] writing list of installed files to '/home/orangepi/scuderiaferrari/build/keyboard_controller/install.log'
+[6.633s] Invoked command in '/home/orangepi/scuderiaferrari/src/keyboard_controller' returned '0': PYTHONPATH=/home/orangepi/scuderiaferrari/build/keyboard_controller/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/keyboard_controller build --build-base /home/orangepi/scuderiaferrari/build/keyboard_controller/build install --record /home/orangepi/scuderiaferrari/build/keyboard_controller/install.log --single-version-externally-managed install_data

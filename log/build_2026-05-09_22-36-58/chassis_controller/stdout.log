@@ -1,0 +1,37 @@
+running egg_info
+creating ../../build/chassis_controller/chassis_controller.egg-info
+writing ../../build/chassis_controller/chassis_controller.egg-info/PKG-INFO
+writing dependency_links to ../../build/chassis_controller/chassis_controller.egg-info/dependency_links.txt
+writing entry points to ../../build/chassis_controller/chassis_controller.egg-info/entry_points.txt
+writing requirements to ../../build/chassis_controller/chassis_controller.egg-info/requires.txt
+writing top-level names to ../../build/chassis_controller/chassis_controller.egg-info/top_level.txt
+writing manifest file '../../build/chassis_controller/chassis_controller.egg-info/SOURCES.txt'
+reading manifest file '../../build/chassis_controller/chassis_controller.egg-info/SOURCES.txt'
+writing manifest file '../../build/chassis_controller/chassis_controller.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/orangepi/scuderiaferrari/build/chassis_controller/build
+creating /home/orangepi/scuderiaferrari/build/chassis_controller/build/lib
+creating /home/orangepi/scuderiaferrari/build/chassis_controller/build/lib/chassis_controller
+copying chassis_controller/__init__.py -> /home/orangepi/scuderiaferrari/build/chassis_controller/build/lib/chassis_controller
+copying chassis_controller/chassis_controller_node.py -> /home/orangepi/scuderiaferrari/build/chassis_controller/build/lib/chassis_controller
+running install
+running install_lib
+creating /home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages/chassis_controller
+copying /home/orangepi/scuderiaferrari/build/chassis_controller/build/lib/chassis_controller/__init__.py -> /home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages/chassis_controller
+copying /home/orangepi/scuderiaferrari/build/chassis_controller/build/lib/chassis_controller/chassis_controller_node.py -> /home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages/chassis_controller
+byte-compiling /home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages/chassis_controller/__init__.py to __init__.cpython-310.pyc
+byte-compiling /home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages/chassis_controller/chassis_controller_node.py to chassis_controller_node.cpython-310.pyc
+running install_data
+creating /home/orangepi/scuderiaferrari/install/chassis_controller/share/ament_index
+creating /home/orangepi/scuderiaferrari/install/chassis_controller/share/ament_index/resource_index
+creating /home/orangepi/scuderiaferrari/install/chassis_controller/share/ament_index/resource_index/packages
+copying resource/chassis_controller -> /home/orangepi/scuderiaferrari/install/chassis_controller/share/ament_index/resource_index/packages
+copying package.xml -> /home/orangepi/scuderiaferrari/install/chassis_controller/share/chassis_controller
+creating /home/orangepi/scuderiaferrari/install/chassis_controller/share/chassis_controller/launch
+copying launch/chassis_controller.launch.py -> /home/orangepi/scuderiaferrari/install/chassis_controller/share/chassis_controller/launch
+running install_egg_info
+Copying ../../build/chassis_controller/chassis_controller.egg-info to /home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages/chassis_controller-0.0.0-py3.10.egg-info
+running install_scripts
+Installing chassis_controller_node script to /home/orangepi/scuderiaferrari/install/chassis_controller/lib/chassis_controller
+writing list of installed files to '/home/orangepi/scuderiaferrari/build/chassis_controller/install.log'

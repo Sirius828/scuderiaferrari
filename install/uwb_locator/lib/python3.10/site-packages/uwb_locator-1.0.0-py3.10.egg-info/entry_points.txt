@@ -1,0 +1,3 @@
+[console_scripts]
+uwb_tag_node = uwb_locator.uwb_tag_node:main
+

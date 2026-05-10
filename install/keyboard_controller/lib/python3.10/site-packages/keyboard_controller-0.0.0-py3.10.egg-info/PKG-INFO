@@ -1,0 +1,13 @@
+Metadata-Version: 2.1
+Name: keyboard-controller
+Version: 0.0.0
+Summary: 键盘控制节点 - 使用pygame实现交互式底盘控制
+Home-page: UNKNOWN
+Maintainer: orangepi
+Maintainer-email: orangepi@todo.todo
+License: MIT
+Platform: UNKNOWN
+Provides-Extra: test
+
+UNKNOWN
+

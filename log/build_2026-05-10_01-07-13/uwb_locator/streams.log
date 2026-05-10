@@ -1,0 +1,21 @@
+[4.575s] Invoking command in '/home/orangepi/scuderiaferrari/src/uwb_locator': PYTHONPATH=/home/orangepi/scuderiaferrari/build/uwb_locator/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/uwb_locator build --build-base /home/orangepi/scuderiaferrari/build/uwb_locator/build install --record /home/orangepi/scuderiaferrari/build/uwb_locator/install.log --single-version-externally-managed install_data
+[5.481s] running egg_info
+[5.484s] writing ../../build/uwb_locator/uwb_locator.egg-info/PKG-INFO
+[5.487s] writing dependency_links to ../../build/uwb_locator/uwb_locator.egg-info/dependency_links.txt
+[5.493s] writing entry points to ../../build/uwb_locator/uwb_locator.egg-info/entry_points.txt
+[5.496s] writing requirements to ../../build/uwb_locator/uwb_locator.egg-info/requires.txt
+[5.499s] writing top-level names to ../../build/uwb_locator/uwb_locator.egg-info/top_level.txt
+[5.505s] reading manifest file '../../build/uwb_locator/uwb_locator.egg-info/SOURCES.txt'
+[5.506s] writing manifest file '../../build/uwb_locator/uwb_locator.egg-info/SOURCES.txt'
+[5.508s] running build
+[5.508s] running build_py
+[5.509s] running install
+[5.510s] running install_lib
+[5.512s] running install_data
+[5.514s] running install_egg_info
+[5.516s] removing '/home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages/uwb_locator-1.0.0-py3.10.egg-info' (and everything under it)
+[5.535s] Copying ../../build/uwb_locator/uwb_locator.egg-info to /home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages/uwb_locator-1.0.0-py3.10.egg-info
+[5.537s] running install_scripts
+[5.572s] Installing uwb_tag_node script to /home/orangepi/scuderiaferrari/install/uwb_locator/bin
+[5.575s] writing list of installed files to '/home/orangepi/scuderiaferrari/build/uwb_locator/install.log'
+[6.117s] Invoked command in '/home/orangepi/scuderiaferrari/src/uwb_locator' returned '0': PYTHONPATH=/home/orangepi/scuderiaferrari/build/uwb_locator/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/uwb_locator build --build-base /home/orangepi/scuderiaferrari/build/uwb_locator/build install --record /home/orangepi/scuderiaferrari/build/uwb_locator/install.log --single-version-externally-managed install_data

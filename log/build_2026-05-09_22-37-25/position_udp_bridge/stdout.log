@@ -1,0 +1,37 @@
+running egg_info
+creating ../../build/position_udp_bridge/position_udp_bridge.egg-info
+writing ../../build/position_udp_bridge/position_udp_bridge.egg-info/PKG-INFO
+writing dependency_links to ../../build/position_udp_bridge/position_udp_bridge.egg-info/dependency_links.txt
+writing entry points to ../../build/position_udp_bridge/position_udp_bridge.egg-info/entry_points.txt
+writing requirements to ../../build/position_udp_bridge/position_udp_bridge.egg-info/requires.txt
+writing top-level names to ../../build/position_udp_bridge/position_udp_bridge.egg-info/top_level.txt
+writing manifest file '../../build/position_udp_bridge/position_udp_bridge.egg-info/SOURCES.txt'
+reading manifest file '../../build/position_udp_bridge/position_udp_bridge.egg-info/SOURCES.txt'
+writing manifest file '../../build/position_udp_bridge/position_udp_bridge.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/orangepi/scuderiaferrari/build/position_udp_bridge/build
+creating /home/orangepi/scuderiaferrari/build/position_udp_bridge/build/lib
+creating /home/orangepi/scuderiaferrari/build/position_udp_bridge/build/lib/position_udp_bridge
+copying position_udp_bridge/__init__.py -> /home/orangepi/scuderiaferrari/build/position_udp_bridge/build/lib/position_udp_bridge
+copying position_udp_bridge/udp_sender_node.py -> /home/orangepi/scuderiaferrari/build/position_udp_bridge/build/lib/position_udp_bridge
+running install
+running install_lib
+creating /home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages/position_udp_bridge
+copying /home/orangepi/scuderiaferrari/build/position_udp_bridge/build/lib/position_udp_bridge/__init__.py -> /home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages/position_udp_bridge
+copying /home/orangepi/scuderiaferrari/build/position_udp_bridge/build/lib/position_udp_bridge/udp_sender_node.py -> /home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages/position_udp_bridge
+byte-compiling /home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages/position_udp_bridge/__init__.py to __init__.cpython-310.pyc
+byte-compiling /home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages/position_udp_bridge/udp_sender_node.py to udp_sender_node.cpython-310.pyc
+running install_data
+creating /home/orangepi/scuderiaferrari/install/position_udp_bridge/share/ament_index
+creating /home/orangepi/scuderiaferrari/install/position_udp_bridge/share/ament_index/resource_index
+creating /home/orangepi/scuderiaferrari/install/position_udp_bridge/share/ament_index/resource_index/packages
+copying resource/position_udp_bridge -> /home/orangepi/scuderiaferrari/install/position_udp_bridge/share/ament_index/resource_index/packages
+copying package.xml -> /home/orangepi/scuderiaferrari/install/position_udp_bridge/share/position_udp_bridge
+creating /home/orangepi/scuderiaferrari/install/position_udp_bridge/share/position_udp_bridge/launch
+copying launch/udp_sender.launch.py -> /home/orangepi/scuderiaferrari/install/position_udp_bridge/share/position_udp_bridge/launch
+running install_egg_info
+Copying ../../build/position_udp_bridge/position_udp_bridge.egg-info to /home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages/position_udp_bridge-1.0.0-py3.10.egg-info
+running install_scripts
+Installing udp_sender_node script to /home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/position_udp_bridge
+writing list of installed files to '/home/orangepi/scuderiaferrari/build/position_udp_bridge/install.log'

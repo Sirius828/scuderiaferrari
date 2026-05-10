@@ -1,0 +1,21 @@
+[3.592s] Invoking command in '/home/orangepi/scuderiaferrari/src/position_udp_bridge': PYTHONPATH=/home/orangepi/scuderiaferrari/build/position_udp_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/position_udp_bridge build --build-base /home/orangepi/scuderiaferrari/build/position_udp_bridge/build install --record /home/orangepi/scuderiaferrari/build/position_udp_bridge/install.log --single-version-externally-managed install_data
+[3.925s] running egg_info
+[3.926s] writing ../../build/position_udp_bridge/position_udp_bridge.egg-info/PKG-INFO
+[3.955s] writing dependency_links to ../../build/position_udp_bridge/position_udp_bridge.egg-info/dependency_links.txt
+[4.032s] writing entry points to ../../build/position_udp_bridge/position_udp_bridge.egg-info/entry_points.txt
+[4.126s] writing requirements to ../../build/position_udp_bridge/position_udp_bridge.egg-info/requires.txt
+[4.210s] writing top-level names to ../../build/position_udp_bridge/position_udp_bridge.egg-info/top_level.txt
+[4.229s] reading manifest file '../../build/position_udp_bridge/position_udp_bridge.egg-info/SOURCES.txt'
+[4.229s] writing manifest file '../../build/position_udp_bridge/position_udp_bridge.egg-info/SOURCES.txt'
+[4.235s] running build
+[4.235s] running build_py
+[4.235s] running install
+[4.235s] running install_lib
+[4.238s] running install_data
+[4.238s] running install_egg_info
+[4.243s] removing '/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages/position_udp_bridge-1.0.0-py3.10.egg-info' (and everything under it)
+[4.243s] Copying ../../build/position_udp_bridge/position_udp_bridge.egg-info to /home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages/position_udp_bridge-1.0.0-py3.10.egg-info
+[4.245s] running install_scripts
+[4.299s] Installing udp_sender_node script to /home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/position_udp_bridge
+[4.303s] writing list of installed files to '/home/orangepi/scuderiaferrari/build/position_udp_bridge/install.log'
+[4.468s] Invoked command in '/home/orangepi/scuderiaferrari/src/position_udp_bridge' returned '0': PYTHONPATH=/home/orangepi/scuderiaferrari/build/position_udp_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/position_udp_bridge build --build-base /home/orangepi/scuderiaferrari/build/position_udp_bridge/build install --record /home/orangepi/scuderiaferrari/build/position_udp_bridge/install.log --single-version-externally-managed install_data

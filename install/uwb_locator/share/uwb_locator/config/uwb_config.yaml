@@ -1,0 +1,11 @@
+# UWB定位节点配置
+
+# 串口配置
+port: "/dev/ttyUSB0"
+baudrate: 115200  # LinkTrack默认波特率
+
+# ROS坐标帧配置
+frame_id: "uwb_link"
+
+# 调试配置
+publish_debug: true

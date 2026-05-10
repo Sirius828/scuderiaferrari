@@ -1,0 +1,12 @@
+source;share/uwb_locator/hook/path.ps1
+source;share/uwb_locator/hook/path.dsv
+source;share/uwb_locator/hook/path.sh
+source;share/uwb_locator/hook/pythonpath.ps1
+source;share/uwb_locator/hook/pythonpath.dsv
+source;share/uwb_locator/hook/pythonpath.sh
+source;share/uwb_locator/hook/pythonscriptspath.ps1
+source;share/uwb_locator/hook/pythonscriptspath.dsv
+source;share/uwb_locator/hook/pythonscriptspath.sh
+source;share/uwb_locator/hook/ament_prefix_path.ps1
+source;share/uwb_locator/hook/ament_prefix_path.dsv
+source;share/uwb_locator/hook/ament_prefix_path.sh

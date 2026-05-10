@@ -1,0 +1,80 @@
+[0.909s] Invoking command in '/home/orangepi/scuderiaferrari/src/track_perception': PYTHONPATH=/home/orangepi/scuderiaferrari/build/track_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/track_perception build --build-base /home/orangepi/scuderiaferrari/build/track_perception/build install --record /home/orangepi/scuderiaferrari/build/track_perception/install.log --single-version-externally-managed install_data
+[1.229s] running egg_info
+[1.230s] creating ../../build/track_perception/track_perception.egg-info
+[1.230s] writing ../../build/track_perception/track_perception.egg-info/PKG-INFO
+[1.231s] writing dependency_links to ../../build/track_perception/track_perception.egg-info/dependency_links.txt
+[1.232s] writing entry points to ../../build/track_perception/track_perception.egg-info/entry_points.txt
+[1.232s] writing requirements to ../../build/track_perception/track_perception.egg-info/requires.txt
+[1.232s] writing top-level names to ../../build/track_perception/track_perception.egg-info/top_level.txt
+[1.233s] writing manifest file '../../build/track_perception/track_perception.egg-info/SOURCES.txt'
+[1.234s] reading manifest file '../../build/track_perception/track_perception.egg-info/SOURCES.txt'
+[1.235s] writing manifest file '../../build/track_perception/track_perception.egg-info/SOURCES.txt'
+[1.236s] running build
+[1.236s] running build_py
+[1.236s] creating /home/orangepi/scuderiaferrari/build/track_perception/build
+[1.237s] creating /home/orangepi/scuderiaferrari/build/track_perception/build/lib
+[1.237s] creating /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python
+[1.237s] copying track_perception_python/rknnpool.py -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python
+[1.238s] copying track_perception_python/ppseg_infer.py -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python
+[1.238s] copying track_perception_python/rknn_pool.py -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python
+[1.238s] copying track_perception_python/object_detection_node.py -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python
+[1.239s] copying track_perception_python/__init__.py -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python
+[1.239s] copying track_perception_python/perception_decision_node.py -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python
+[1.240s] copying track_perception_python/object_detection_infer.py -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python
+[1.240s] creating /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/model
+[1.240s] copying track_perception_python/model/pp_liteseg_v2.rknn -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/model
+[1.488s] copying track_perception_python/model/pp_liteseg_v3.rknn -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/model
+[1.745s] copying track_perception_python/model/rknn_lt_v2.rknn -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/model
+[2.191s] copying track_perception_python/model/rknn_lt.rknn -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/model
+[2.630s] copying track_perception_python/model/pp_liteseg.rknn -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/model
+[2.876s] copying track_perception_python/model/label_list.txt -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/model
+[2.877s] running install
+[2.880s] running install_lib
+[2.884s] creating /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python
+[2.884s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/rknnpool.py -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python
+[2.884s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/ppseg_infer.py -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python
+[2.885s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/rknn_pool.py -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python
+[2.886s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/object_detection_node.py -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python
+[2.886s] creating /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/model
+[2.887s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/model/pp_liteseg_v2.rknn -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/model
+[2.928s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/model/pp_liteseg_v3.rknn -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/model
+[2.941s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/model/label_list.txt -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/model
+[2.941s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/model/rknn_lt_v2.rknn -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/model
+[2.964s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/model/rknn_lt.rknn -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/model
+[2.988s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/model/pp_liteseg.rknn -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/model
+[3.002s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/__init__.py -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python
+[3.002s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/perception_decision_node.py -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python
+[3.002s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/object_detection_infer.py -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python
+[3.003s] byte-compiling /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/rknnpool.py to rknnpool.cpython-310.pyc
+[3.004s] byte-compiling /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/ppseg_infer.py to ppseg_infer.cpython-310.pyc
+[3.008s] byte-compiling /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/rknn_pool.py to rknn_pool.cpython-310.pyc
+[3.009s] byte-compiling /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/object_detection_node.py to object_detection_node.cpython-310.pyc
+[3.011s] byte-compiling /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/__init__.py to __init__.cpython-310.pyc
+[3.011s] byte-compiling /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/perception_decision_node.py to perception_decision_node.cpython-310.pyc
+[3.020s] byte-compiling /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/object_detection_infer.py to object_detection_infer.cpython-310.pyc
+[3.023s] running install_data
+[3.024s] creating /home/orangepi/scuderiaferrari/install/track_perception/share/ament_index
+[3.025s] creating /home/orangepi/scuderiaferrari/install/track_perception/share/ament_index/resource_index
+[3.025s] creating /home/orangepi/scuderiaferrari/install/track_perception/share/ament_index/resource_index/packages
+[3.025s] copying resource/track_perception -> /home/orangepi/scuderiaferrari/install/track_perception/share/ament_index/resource_index/packages
+[3.026s] copying package.xml -> /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception
+[3.026s] creating /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/launch
+[3.026s] copying track_perception_python/launch/perception.launch.py -> /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/launch
+[3.027s] copying track_perception_python/launch/segmentation.launch.py -> /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/launch
+[3.027s] creating /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/config
+[3.028s] copying track_perception_python/config/intersection_params.yaml -> /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/config
+[3.028s] creating /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/track_perception_python
+[3.028s] creating /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/track_perception_python/model
+[3.029s] copying track_perception_python/model/pp_liteseg_v2.rknn -> /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/track_perception_python/model
+[3.039s] copying track_perception_python/model/pp_liteseg_v3.rknn -> /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/track_perception_python/model
+[3.052s] copying track_perception_python/model/rknn_lt_v2.rknn -> /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/track_perception_python/model
+[3.076s] copying track_perception_python/model/rknn_lt.rknn -> /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/track_perception_python/model
+[3.102s] copying track_perception_python/model/pp_liteseg.rknn -> /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/track_perception_python/model
+[3.115s] copying track_perception_python/model/label_list.txt -> /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/track_perception_python/model
+[3.115s] running install_egg_info
+[3.118s] Copying ../../build/track_perception/track_perception.egg-info to /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception-2.0.0-py3.10.egg-info
+[3.119s] running install_scripts
+[3.152s] Installing object_detection_node script to /home/orangepi/scuderiaferrari/install/track_perception/bin
+[3.152s] Installing perception_decision_node script to /home/orangepi/scuderiaferrari/install/track_perception/bin
+[3.153s] writing list of installed files to '/home/orangepi/scuderiaferrari/build/track_perception/install.log'
+[3.214s] Invoked command in '/home/orangepi/scuderiaferrari/src/track_perception' returned '0': PYTHONPATH=/home/orangepi/scuderiaferrari/build/track_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/track_perception build --build-base /home/orangepi/scuderiaferrari/build/track_perception/build install --record /home/orangepi/scuderiaferrari/build/track_perception/install.log --single-version-externally-managed install_data

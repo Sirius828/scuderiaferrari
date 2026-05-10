@@ -1,0 +1,307 @@
+[0.000000] (-) TimerEvent: {}
+[0.000931] (chassis_controller) JobQueued: {'identifier': 'chassis_controller', 'dependencies': OrderedDict()}
+[0.001104] (keyboard_controller) JobQueued: {'identifier': 'keyboard_controller', 'dependencies': OrderedDict()}
+[0.001296] (line_follower_control) JobQueued: {'identifier': 'line_follower_control', 'dependencies': OrderedDict()}
+[0.001360] (position_udp_bridge) JobQueued: {'identifier': 'position_udp_bridge', 'dependencies': OrderedDict()}
+[0.001402] (track_perception) JobQueued: {'identifier': 'track_perception', 'dependencies': OrderedDict()}
+[0.001448] (uwb_locator) JobQueued: {'identifier': 'uwb_locator', 'dependencies': OrderedDict()}
+[0.001490] (chassis_controller) JobStarted: {'identifier': 'chassis_controller'}
+[0.045049] (keyboard_controller) JobStarted: {'identifier': 'keyboard_controller'}
+[0.073328] (line_follower_control) JobStarted: {'identifier': 'line_follower_control'}
+[0.099544] (-) TimerEvent: {}
+[0.106336] (position_udp_bridge) JobStarted: {'identifier': 'position_udp_bridge'}
+[0.130750] (track_perception) JobStarted: {'identifier': 'track_perception'}
+[0.154250] (uwb_locator) JobStarted: {'identifier': 'uwb_locator'}
+[0.199888] (-) TimerEvent: {}
+[0.301038] (-) TimerEvent: {}
+[0.402021] (-) TimerEvent: {}
+[0.502779] (-) TimerEvent: {}
+[0.603377] (-) TimerEvent: {}
+[0.703955] (-) TimerEvent: {}
+[0.804579] (-) TimerEvent: {}
+[0.905438] (-) TimerEvent: {}
+[1.006438] (-) TimerEvent: {}
+[1.107006] (-) TimerEvent: {}
+[1.207570] (-) TimerEvent: {}
+[1.308246] (-) TimerEvent: {}
+[1.409888] (-) TimerEvent: {}
+[1.511007] (-) TimerEvent: {}
+[1.612038] (-) TimerEvent: {}
+[1.713291] (-) TimerEvent: {}
+[1.814564] (-) TimerEvent: {}
+[1.915743] (-) TimerEvent: {}
+[2.016917] (-) TimerEvent: {}
+[2.118162] (-) TimerEvent: {}
+[2.219330] (-) TimerEvent: {}
+[2.320512] (-) TimerEvent: {}
+[2.421705] (-) TimerEvent: {}
+[2.522829] (-) TimerEvent: {}
+[2.623972] (-) TimerEvent: {}
+[2.725086] (-) TimerEvent: {}
+[2.826325] (-) TimerEvent: {}
+[2.927519] (-) TimerEvent: {}
+[3.028693] (-) TimerEvent: {}
+[3.130255] (-) TimerEvent: {}
+[3.230823] (-) TimerEvent: {}
+[3.331745] (-) TimerEvent: {}
+[3.432713] (-) TimerEvent: {}
+[3.534119] (-) TimerEvent: {}
+[3.635459] (-) TimerEvent: {}
+[3.666908] (chassis_controller) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/chassis_controller', 'build', '--build-base', '/home/orangepi/scuderiaferrari/build/chassis_controller/build', 'install', '--record', '/home/orangepi/scuderiaferrari/build/chassis_controller/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/orangepi/scuderiaferrari/src/chassis_controller', 'env': {'PYTHON_BASIC_REPL': '1', 'LESSOPEN': '| /usr/bin/lesspipe %s', 'LANGUAGE': 'en_US:en', 'USER': 'orangepi', 'SSH_CLIENT': '172.20.10.3 51388 22', 'LC_TIME': 'zh_CN.UTF-8', 'XDG_SESSION_TYPE': 'tty', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/aarch64-linux-gnu:/opt/ros/humble/lib', 'BROWSER': '/home/orangepi/.lingma-server/bin/a178c8342101d547ad3821c8042ec7771d68eefd/bin/helpers/browser.sh', 'MOTD_SHOWN': 'pam', 'HOME': '/home/orangepi', 'TERM_PROGRAM_VERSION': '1.106.3', 'VSCODE_IPC_HOOK_CLI': '/run/user/1000/vscode-ipc-ac68b940-d373-475e-8521-b1f801658e4d.sock', 'ROS_PYTHON_VERSION': '3', 'LC_MONETARY': 'zh_CN.UTF-8', 'PYDEVD_DISABLE_FILE_VALIDATION': '1', 'BUNDLED_DEBUGPY_PATH': '/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/bundled/libs/debugpy', 'VSCODE_PYTHON_AUTOACTIVATE_GUARD': '1', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'LINGMA_IDE': '1', 'COLORTERM': 'truecolor', 'COLCON_PREFIX_PATH': '/home/orangepi/scuderiaferrari/install', 'ROS_DISTRO': 'humble', 'LOGNAME': 'orangepi', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '6', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/home/orangepi/scuderiaferrari/install/uwb_locator/bin:/home/orangepi/scuderiaferrari/install/track_perception/bin:/home/orangepi/scuderiaferrari/install/semantic_segmentation/bin:/opt/ros/humble/bin:/home/orangepi/.lingma-server/bin/a178c8342101d547ad3821c8042ec7771d68eefd/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/bundled/scripts/noConfigScripts', 'PAPERSIZE': 'a4', 'LC_ADDRESS': 'zh_CN.UTF-8', 'XDG_RUNTIME_DIR': '/run/user/1000', 'DISPLAY': ':0', 'VSCODE_DEBUGPY_ADAPTER_ENDPOINTS': '/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/.noConfigDebugAdapterEndpoints/endpoint-00c70bbd22ad4759.txt', 'LANG': 'en_US.UTF-8', 'PYTHONSTARTUP': '/home/orangepi/.lingma-server/data/User/workspaceStorage/f98115156051ac6c09a6e793621e3766/ms-python.python/pythonrc.py', 'LC_TELEPHONE': 'zh_CN.UTF-8', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:', 'TERM_PROGRAM': 'vscode', 'AMENT_PREFIX_PATH': '/home/orangepi/scuderiaferrari/install/uwb_locator:/home/orangepi/scuderiaferrari/install/track_perception:/home/orangepi/scuderiaferrari/install/semantic_segmentation:/home/orangepi/scuderiaferrari/install/position_udp_bridge:/home/orangepi/scuderiaferrari/install/line_follower_control:/home/orangepi/scuderiaferrari/install/keyboard_controller:/home/orangepi/scuderiaferrari/install/chassis_controller:/opt/ros/humble', 'LC_MESSAGES': 'en_US.UTF-8', 'SHELL': '/bin/bash', 'LC_NAME': 'zh_CN.UTF-8', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'LC_MEASUREMENT': 'zh_CN.UTF-8', 'LC_IDENTIFICATION': 'zh_CN.UTF-8', 'PWD': '/home/orangepi/scuderiaferrari/build/chassis_controller', 'LC_ALL': 'zh_CN.UTF-8', 'SSH_CONNECTION': '172.20.10.3 51388 172.20.10.2 22', 'PYTHONPATH': '/home/orangepi/scuderiaferrari/build/chassis_controller/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/semantic_segmentation/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages', 'LC_NUMERIC': 'zh_CN.UTF-8', 'LC_PAPER': 'zh_CN.UTF-8', 'COLCON': '1'}, 'shell': False}
+[3.700873] (keyboard_controller) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/keyboard_controller', 'build', '--build-base', '/home/orangepi/scuderiaferrari/build/keyboard_controller/build', 'install', '--record', '/home/orangepi/scuderiaferrari/build/keyboard_controller/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/orangepi/scuderiaferrari/src/keyboard_controller', 'env': {'PYTHON_BASIC_REPL': '1', 'LESSOPEN': '| /usr/bin/lesspipe %s', 'LANGUAGE': 'en_US:en', 'USER': 'orangepi', 'SSH_CLIENT': '172.20.10.3 51388 22', 'LC_TIME': 'zh_CN.UTF-8', 'XDG_SESSION_TYPE': 'tty', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/aarch64-linux-gnu:/opt/ros/humble/lib', 'BROWSER': '/home/orangepi/.lingma-server/bin/a178c8342101d547ad3821c8042ec7771d68eefd/bin/helpers/browser.sh', 'MOTD_SHOWN': 'pam', 'HOME': '/home/orangepi', 'TERM_PROGRAM_VERSION': '1.106.3', 'VSCODE_IPC_HOOK_CLI': '/run/user/1000/vscode-ipc-ac68b940-d373-475e-8521-b1f801658e4d.sock', 'ROS_PYTHON_VERSION': '3', 'LC_MONETARY': 'zh_CN.UTF-8', 'PYDEVD_DISABLE_FILE_VALIDATION': '1', 'BUNDLED_DEBUGPY_PATH': '/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/bundled/libs/debugpy', 'VSCODE_PYTHON_AUTOACTIVATE_GUARD': '1', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'LINGMA_IDE': '1', 'COLORTERM': 'truecolor', 'COLCON_PREFIX_PATH': '/home/orangepi/scuderiaferrari/install', 'ROS_DISTRO': 'humble', 'LOGNAME': 'orangepi', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '6', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/home/orangepi/scuderiaferrari/install/uwb_locator/bin:/home/orangepi/scuderiaferrari/install/track_perception/bin:/home/orangepi/scuderiaferrari/install/semantic_segmentation/bin:/opt/ros/humble/bin:/home/orangepi/.lingma-server/bin/a178c8342101d547ad3821c8042ec7771d68eefd/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/bundled/scripts/noConfigScripts', 'PAPERSIZE': 'a4', 'LC_ADDRESS': 'zh_CN.UTF-8', 'XDG_RUNTIME_DIR': '/run/user/1000', 'DISPLAY': ':0', 'VSCODE_DEBUGPY_ADAPTER_ENDPOINTS': '/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/.noConfigDebugAdapterEndpoints/endpoint-00c70bbd22ad4759.txt', 'LANG': 'en_US.UTF-8', 'PYTHONSTARTUP': '/home/orangepi/.lingma-server/data/User/workspaceStorage/f98115156051ac6c09a6e793621e3766/ms-python.python/pythonrc.py', 'LC_TELEPHONE': 'zh_CN.UTF-8', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:', 'TERM_PROGRAM': 'vscode', 'AMENT_PREFIX_PATH': '/home/orangepi/scuderiaferrari/install/uwb_locator:/home/orangepi/scuderiaferrari/install/track_perception:/home/orangepi/scuderiaferrari/install/semantic_segmentation:/home/orangepi/scuderiaferrari/install/position_udp_bridge:/home/orangepi/scuderiaferrari/install/line_follower_control:/home/orangepi/scuderiaferrari/install/keyboard_controller:/home/orangepi/scuderiaferrari/install/chassis_controller:/opt/ros/humble', 'LC_MESSAGES': 'en_US.UTF-8', 'SHELL': '/bin/bash', 'LC_NAME': 'zh_CN.UTF-8', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'LC_MEASUREMENT': 'zh_CN.UTF-8', 'LC_IDENTIFICATION': 'zh_CN.UTF-8', 'PWD': '/home/orangepi/scuderiaferrari/build/keyboard_controller', 'LC_ALL': 'zh_CN.UTF-8', 'SSH_CONNECTION': '172.20.10.3 51388 172.20.10.2 22', 'PYTHONPATH': '/home/orangepi/scuderiaferrari/build/keyboard_controller/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/semantic_segmentation/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages', 'LC_NUMERIC': 'zh_CN.UTF-8', 'LC_PAPER': 'zh_CN.UTF-8', 'COLCON': '1'}, 'shell': False}
+[3.727195] (track_perception) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/track_perception', 'build', '--build-base', '/home/orangepi/scuderiaferrari/build/track_perception/build', 'install', '--record', '/home/orangepi/scuderiaferrari/build/track_perception/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/orangepi/scuderiaferrari/src/track_perception', 'env': {'PYTHON_BASIC_REPL': '1', 'LESSOPEN': '| /usr/bin/lesspipe %s', 'LANGUAGE': 'en_US:en', 'USER': 'orangepi', 'SSH_CLIENT': '172.20.10.3 51388 22', 'LC_TIME': 'zh_CN.UTF-8', 'XDG_SESSION_TYPE': 'tty', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/aarch64-linux-gnu:/opt/ros/humble/lib', 'BROWSER': '/home/orangepi/.lingma-server/bin/a178c8342101d547ad3821c8042ec7771d68eefd/bin/helpers/browser.sh', 'MOTD_SHOWN': 'pam', 'HOME': '/home/orangepi', 'TERM_PROGRAM_VERSION': '1.106.3', 'VSCODE_IPC_HOOK_CLI': '/run/user/1000/vscode-ipc-ac68b940-d373-475e-8521-b1f801658e4d.sock', 'ROS_PYTHON_VERSION': '3', 'LC_MONETARY': 'zh_CN.UTF-8', 'PYDEVD_DISABLE_FILE_VALIDATION': '1', 'BUNDLED_DEBUGPY_PATH': '/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/bundled/libs/debugpy', 'VSCODE_PYTHON_AUTOACTIVATE_GUARD': '1', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'LINGMA_IDE': '1', 'COLORTERM': 'truecolor', 'COLCON_PREFIX_PATH': '/home/orangepi/scuderiaferrari/install', 'ROS_DISTRO': 'humble', 'LOGNAME': 'orangepi', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '6', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/home/orangepi/scuderiaferrari/install/uwb_locator/bin:/home/orangepi/scuderiaferrari/install/track_perception/bin:/home/orangepi/scuderiaferrari/install/semantic_segmentation/bin:/opt/ros/humble/bin:/home/orangepi/.lingma-server/bin/a178c8342101d547ad3821c8042ec7771d68eefd/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/bundled/scripts/noConfigScripts', 'PAPERSIZE': 'a4', 'LC_ADDRESS': 'zh_CN.UTF-8', 'XDG_RUNTIME_DIR': '/run/user/1000', 'DISPLAY': ':0', 'VSCODE_DEBUGPY_ADAPTER_ENDPOINTS': '/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/.noConfigDebugAdapterEndpoints/endpoint-00c70bbd22ad4759.txt', 'LANG': 'en_US.UTF-8', 'PYTHONSTARTUP': '/home/orangepi/.lingma-server/data/User/workspaceStorage/f98115156051ac6c09a6e793621e3766/ms-python.python/pythonrc.py', 'LC_TELEPHONE': 'zh_CN.UTF-8', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:', 'TERM_PROGRAM': 'vscode', 'AMENT_PREFIX_PATH': '/home/orangepi/scuderiaferrari/install/uwb_locator:/home/orangepi/scuderiaferrari/install/track_perception:/home/orangepi/scuderiaferrari/install/semantic_segmentation:/home/orangepi/scuderiaferrari/install/position_udp_bridge:/home/orangepi/scuderiaferrari/install/line_follower_control:/home/orangepi/scuderiaferrari/install/keyboard_controller:/home/orangepi/scuderiaferrari/install/chassis_controller:/opt/ros/humble', 'LC_MESSAGES': 'en_US.UTF-8', 'SHELL': '/bin/bash', 'LC_NAME': 'zh_CN.UTF-8', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'LC_MEASUREMENT': 'zh_CN.UTF-8', 'LC_IDENTIFICATION': 'zh_CN.UTF-8', 'PWD': '/home/orangepi/scuderiaferrari/build/track_perception', 'LC_ALL': 'zh_CN.UTF-8', 'SSH_CONNECTION': '172.20.10.3 51388 172.20.10.2 22', 'PYTHONPATH': '/home/orangepi/scuderiaferrari/build/track_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/semantic_segmentation/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages', 'LC_NUMERIC': 'zh_CN.UTF-8', 'LC_PAPER': 'zh_CN.UTF-8', 'COLCON': '1'}, 'shell': False}
+[3.735860] (-) TimerEvent: {}
+[3.739813] (line_follower_control) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/line_follower_control', 'build', '--build-base', '/home/orangepi/scuderiaferrari/build/line_follower_control/build', 'install', '--record', '/home/orangepi/scuderiaferrari/build/line_follower_control/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/orangepi/scuderiaferrari/src/line_follower_control', 'env': {'PYTHON_BASIC_REPL': '1', 'LESSOPEN': '| /usr/bin/lesspipe %s', 'LANGUAGE': 'en_US:en', 'USER': 'orangepi', 'SSH_CLIENT': '172.20.10.3 51388 22', 'LC_TIME': 'zh_CN.UTF-8', 'XDG_SESSION_TYPE': 'tty', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/aarch64-linux-gnu:/opt/ros/humble/lib', 'BROWSER': '/home/orangepi/.lingma-server/bin/a178c8342101d547ad3821c8042ec7771d68eefd/bin/helpers/browser.sh', 'MOTD_SHOWN': 'pam', 'HOME': '/home/orangepi', 'TERM_PROGRAM_VERSION': '1.106.3', 'VSCODE_IPC_HOOK_CLI': '/run/user/1000/vscode-ipc-ac68b940-d373-475e-8521-b1f801658e4d.sock', 'ROS_PYTHON_VERSION': '3', 'LC_MONETARY': 'zh_CN.UTF-8', 'PYDEVD_DISABLE_FILE_VALIDATION': '1', 'BUNDLED_DEBUGPY_PATH': '/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/bundled/libs/debugpy', 'VSCODE_PYTHON_AUTOACTIVATE_GUARD': '1', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'LINGMA_IDE': '1', 'COLORTERM': 'truecolor', 'COLCON_PREFIX_PATH': '/home/orangepi/scuderiaferrari/install', 'ROS_DISTRO': 'humble', 'LOGNAME': 'orangepi', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '6', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/home/orangepi/scuderiaferrari/install/uwb_locator/bin:/home/orangepi/scuderiaferrari/install/track_perception/bin:/home/orangepi/scuderiaferrari/install/semantic_segmentation/bin:/opt/ros/humble/bin:/home/orangepi/.lingma-server/bin/a178c8342101d547ad3821c8042ec7771d68eefd/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/bundled/scripts/noConfigScripts', 'PAPERSIZE': 'a4', 'LC_ADDRESS': 'zh_CN.UTF-8', 'XDG_RUNTIME_DIR': '/run/user/1000', 'DISPLAY': ':0', 'VSCODE_DEBUGPY_ADAPTER_ENDPOINTS': '/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/.noConfigDebugAdapterEndpoints/endpoint-00c70bbd22ad4759.txt', 'LANG': 'en_US.UTF-8', 'PYTHONSTARTUP': '/home/orangepi/.lingma-server/data/User/workspaceStorage/f98115156051ac6c09a6e793621e3766/ms-python.python/pythonrc.py', 'LC_TELEPHONE': 'zh_CN.UTF-8', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:', 'TERM_PROGRAM': 'vscode', 'AMENT_PREFIX_PATH': '/home/orangepi/scuderiaferrari/install/uwb_locator:/home/orangepi/scuderiaferrari/install/track_perception:/home/orangepi/scuderiaferrari/install/semantic_segmentation:/home/orangepi/scuderiaferrari/install/position_udp_bridge:/home/orangepi/scuderiaferrari/install/line_follower_control:/home/orangepi/scuderiaferrari/install/keyboard_controller:/home/orangepi/scuderiaferrari/install/chassis_controller:/opt/ros/humble', 'LC_MESSAGES': 'en_US.UTF-8', 'SHELL': '/bin/bash', 'LC_NAME': 'zh_CN.UTF-8', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'LC_MEASUREMENT': 'zh_CN.UTF-8', 'LC_IDENTIFICATION': 'zh_CN.UTF-8', 'PWD': '/home/orangepi/scuderiaferrari/build/line_follower_control', 'LC_ALL': 'zh_CN.UTF-8', 'SSH_CONNECTION': '172.20.10.3 51388 172.20.10.2 22', 'PYTHONPATH': '/home/orangepi/scuderiaferrari/build/line_follower_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/semantic_segmentation/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages', 'LC_NUMERIC': 'zh_CN.UTF-8', 'LC_PAPER': 'zh_CN.UTF-8', 'COLCON': '1'}, 'shell': False}
+[3.836149] (-) TimerEvent: {}
+[3.937876] (-) TimerEvent: {}
+[4.038992] (-) TimerEvent: {}
+[4.044473] (chassis_controller) StdoutLine: {'line': b'running egg_info\n'}
+[4.046403] (chassis_controller) StdoutLine: {'line': b'writing ../../build/chassis_controller/chassis_controller.egg-info/PKG-INFO\n'}
+[4.062622] (keyboard_controller) StdoutLine: {'line': b'running egg_info\n'}
+[4.067333] (position_udp_bridge) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/position_udp_bridge', 'build', '--build-base', '/home/orangepi/scuderiaferrari/build/position_udp_bridge/build', 'install', '--record', '/home/orangepi/scuderiaferrari/build/position_udp_bridge/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/orangepi/scuderiaferrari/src/position_udp_bridge', 'env': {'PYTHON_BASIC_REPL': '1', 'LESSOPEN': '| /usr/bin/lesspipe %s', 'LANGUAGE': 'en_US:en', 'USER': 'orangepi', 'SSH_CLIENT': '172.20.10.3 51388 22', 'LC_TIME': 'zh_CN.UTF-8', 'XDG_SESSION_TYPE': 'tty', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/aarch64-linux-gnu:/opt/ros/humble/lib', 'BROWSER': '/home/orangepi/.lingma-server/bin/a178c8342101d547ad3821c8042ec7771d68eefd/bin/helpers/browser.sh', 'MOTD_SHOWN': 'pam', 'HOME': '/home/orangepi', 'TERM_PROGRAM_VERSION': '1.106.3', 'VSCODE_IPC_HOOK_CLI': '/run/user/1000/vscode-ipc-ac68b940-d373-475e-8521-b1f801658e4d.sock', 'ROS_PYTHON_VERSION': '3', 'LC_MONETARY': 'zh_CN.UTF-8', 'PYDEVD_DISABLE_FILE_VALIDATION': '1', 'BUNDLED_DEBUGPY_PATH': '/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/bundled/libs/debugpy', 'VSCODE_PYTHON_AUTOACTIVATE_GUARD': '1', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'LINGMA_IDE': '1', 'COLORTERM': 'truecolor', 'COLCON_PREFIX_PATH': '/home/orangepi/scuderiaferrari/install', 'ROS_DISTRO': 'humble', 'LOGNAME': 'orangepi', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '6', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/home/orangepi/scuderiaferrari/install/uwb_locator/bin:/home/orangepi/scuderiaferrari/install/track_perception/bin:/home/orangepi/scuderiaferrari/install/semantic_segmentation/bin:/opt/ros/humble/bin:/home/orangepi/.lingma-server/bin/a178c8342101d547ad3821c8042ec7771d68eefd/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/bundled/scripts/noConfigScripts', 'PAPERSIZE': 'a4', 'LC_ADDRESS': 'zh_CN.UTF-8', 'XDG_RUNTIME_DIR': '/run/user/1000', 'DISPLAY': ':0', 'VSCODE_DEBUGPY_ADAPTER_ENDPOINTS': '/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/.noConfigDebugAdapterEndpoints/endpoint-00c70bbd22ad4759.txt', 'LANG': 'en_US.UTF-8', 'PYTHONSTARTUP': '/home/orangepi/.lingma-server/data/User/workspaceStorage/f98115156051ac6c09a6e793621e3766/ms-python.python/pythonrc.py', 'LC_TELEPHONE': 'zh_CN.UTF-8', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:', 'TERM_PROGRAM': 'vscode', 'AMENT_PREFIX_PATH': '/home/orangepi/scuderiaferrari/install/uwb_locator:/home/orangepi/scuderiaferrari/install/track_perception:/home/orangepi/scuderiaferrari/install/semantic_segmentation:/home/orangepi/scuderiaferrari/install/position_udp_bridge:/home/orangepi/scuderiaferrari/install/line_follower_control:/home/orangepi/scuderiaferrari/install/keyboard_controller:/home/orangepi/scuderiaferrari/install/chassis_controller:/opt/ros/humble', 'LC_MESSAGES': 'en_US.UTF-8', 'SHELL': '/bin/bash', 'LC_NAME': 'zh_CN.UTF-8', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'LC_MEASUREMENT': 'zh_CN.UTF-8', 'LC_IDENTIFICATION': 'zh_CN.UTF-8', 'PWD': '/home/orangepi/scuderiaferrari/build/position_udp_bridge', 'LC_ALL': 'zh_CN.UTF-8', 'SSH_CONNECTION': '172.20.10.3 51388 172.20.10.2 22', 'PYTHONPATH': '/home/orangepi/scuderiaferrari/build/position_udp_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/semantic_segmentation/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages', 'LC_NUMERIC': 'zh_CN.UTF-8', 'LC_PAPER': 'zh_CN.UTF-8', 'COLCON': '1'}, 'shell': False}
+[4.071435] (keyboard_controller) StdoutLine: {'line': b'writing ../../build/keyboard_controller/keyboard_controller.egg-info/PKG-INFO\n'}
+[4.095356] (uwb_locator) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../build/uwb_locator', 'build', '--build-base', '/home/orangepi/scuderiaferrari/build/uwb_locator/build', 'install', '--record', '/home/orangepi/scuderiaferrari/build/uwb_locator/install.log', '--single-version-externally-managed', 'install_data'], 'cwd': '/home/orangepi/scuderiaferrari/src/uwb_locator', 'env': {'PYTHON_BASIC_REPL': '1', 'LESSOPEN': '| /usr/bin/lesspipe %s', 'LANGUAGE': 'en_US:en', 'USER': 'orangepi', 'SSH_CLIENT': '172.20.10.3 51388 22', 'LC_TIME': 'zh_CN.UTF-8', 'XDG_SESSION_TYPE': 'tty', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/aarch64-linux-gnu:/opt/ros/humble/lib', 'BROWSER': '/home/orangepi/.lingma-server/bin/a178c8342101d547ad3821c8042ec7771d68eefd/bin/helpers/browser.sh', 'MOTD_SHOWN': 'pam', 'HOME': '/home/orangepi', 'TERM_PROGRAM_VERSION': '1.106.3', 'VSCODE_IPC_HOOK_CLI': '/run/user/1000/vscode-ipc-ac68b940-d373-475e-8521-b1f801658e4d.sock', 'ROS_PYTHON_VERSION': '3', 'LC_MONETARY': 'zh_CN.UTF-8', 'PYDEVD_DISABLE_FILE_VALIDATION': '1', 'BUNDLED_DEBUGPY_PATH': '/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/bundled/libs/debugpy', 'VSCODE_PYTHON_AUTOACTIVATE_GUARD': '1', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'LINGMA_IDE': '1', 'COLORTERM': 'truecolor', 'COLCON_PREFIX_PATH': '/home/orangepi/scuderiaferrari/install', 'ROS_DISTRO': 'humble', 'LOGNAME': 'orangepi', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'XDG_SESSION_CLASS': 'user', 'TERM': 'xterm-256color', 'XDG_SESSION_ID': '6', 'ROS_LOCALHOST_ONLY': '0', 'PATH': '/home/orangepi/scuderiaferrari/install/uwb_locator/bin:/home/orangepi/scuderiaferrari/install/track_perception/bin:/home/orangepi/scuderiaferrari/install/semantic_segmentation/bin:/opt/ros/humble/bin:/home/orangepi/.lingma-server/bin/a178c8342101d547ad3821c8042ec7771d68eefd/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/bundled/scripts/noConfigScripts', 'PAPERSIZE': 'a4', 'LC_ADDRESS': 'zh_CN.UTF-8', 'XDG_RUNTIME_DIR': '/run/user/1000', 'DISPLAY': ':0', 'VSCODE_DEBUGPY_ADAPTER_ENDPOINTS': '/home/orangepi/.lingma-server/extensions/ms-python.debugpy-2025.18.0-linux-arm64/.noConfigDebugAdapterEndpoints/endpoint-00c70bbd22ad4759.txt', 'LANG': 'en_US.UTF-8', 'PYTHONSTARTUP': '/home/orangepi/.lingma-server/data/User/workspaceStorage/f98115156051ac6c09a6e793621e3766/ms-python.python/pythonrc.py', 'LC_TELEPHONE': 'zh_CN.UTF-8', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:', 'TERM_PROGRAM': 'vscode', 'AMENT_PREFIX_PATH': '/home/orangepi/scuderiaferrari/install/uwb_locator:/home/orangepi/scuderiaferrari/install/track_perception:/home/orangepi/scuderiaferrari/install/semantic_segmentation:/home/orangepi/scuderiaferrari/install/position_udp_bridge:/home/orangepi/scuderiaferrari/install/line_follower_control:/home/orangepi/scuderiaferrari/install/keyboard_controller:/home/orangepi/scuderiaferrari/install/chassis_controller:/opt/ros/humble', 'LC_MESSAGES': 'en_US.UTF-8', 'SHELL': '/bin/bash', 'LC_NAME': 'zh_CN.UTF-8', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'LC_MEASUREMENT': 'zh_CN.UTF-8', 'LC_IDENTIFICATION': 'zh_CN.UTF-8', 'PWD': '/home/orangepi/scuderiaferrari/build/uwb_locator', 'LC_ALL': 'zh_CN.UTF-8', 'SSH_CONNECTION': '172.20.10.3 51388 172.20.10.2 22', 'PYTHONPATH': '/home/orangepi/scuderiaferrari/build/uwb_locator/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/semantic_segmentation/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages:/home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages', 'LC_NUMERIC': 'zh_CN.UTF-8', 'LC_PAPER': 'zh_CN.UTF-8', 'COLCON': '1'}, 'shell': False}
+[4.103117] (chassis_controller) StdoutLine: {'line': b'writing dependency_links to ../../build/chassis_controller/chassis_controller.egg-info/dependency_links.txt\n'}
+[4.139160] (-) TimerEvent: {}
+[4.240093] (-) TimerEvent: {}
+[4.296536] (track_perception) StdoutLine: {'line': b'running egg_info\n'}
+[4.298026] (track_perception) StdoutLine: {'line': b'writing ../../build/track_perception/track_perception.egg-info/PKG-INFO\n'}
+[4.315836] (line_follower_control) StdoutLine: {'line': b'running egg_info\n'}
+[4.317202] (line_follower_control) StdoutLine: {'line': b'writing ../../build/line_follower_control/line_follower_control.egg-info/PKG-INFO\n'}
+[4.340420] (-) TimerEvent: {}
+[4.409729] (position_udp_bridge) StdoutLine: {'line': b'running egg_info\n'}
+[4.411360] (position_udp_bridge) StdoutLine: {'line': b'writing ../../build/position_udp_bridge/position_udp_bridge.egg-info/PKG-INFO\n'}
+[4.422913] (uwb_locator) StdoutLine: {'line': b'running egg_info\n'}
+[4.424059] (uwb_locator) StdoutLine: {'line': b'writing ../../build/uwb_locator/uwb_locator.egg-info/PKG-INFO\n'}
+[4.440528] (-) TimerEvent: {}
+[4.541433] (-) TimerEvent: {}
+[4.642607] (-) TimerEvent: {}
+[4.743737] (-) TimerEvent: {}
+[4.844900] (-) TimerEvent: {}
+[4.946055] (-) TimerEvent: {}
+[5.047286] (-) TimerEvent: {}
+[5.148505] (-) TimerEvent: {}
+[5.249727] (-) TimerEvent: {}
+[5.350959] (-) TimerEvent: {}
+[5.452215] (-) TimerEvent: {}
+[5.553447] (-) TimerEvent: {}
+[5.654717] (-) TimerEvent: {}
+[5.755989] (-) TimerEvent: {}
+[5.857270] (-) TimerEvent: {}
+[5.958485] (-) TimerEvent: {}
+[6.059726] (-) TimerEvent: {}
+[6.160998] (-) TimerEvent: {}
+[6.262284] (-) TimerEvent: {}
+[6.363582] (-) TimerEvent: {}
+[6.464820] (-) TimerEvent: {}
+[6.566134] (-) TimerEvent: {}
+[6.667344] (-) TimerEvent: {}
+[6.768549] (-) TimerEvent: {}
+[6.869845] (-) TimerEvent: {}
+[6.971089] (-) TimerEvent: {}
+[7.072384] (-) TimerEvent: {}
+[7.173675] (-) TimerEvent: {}
+[7.274905] (-) TimerEvent: {}
+[7.376235] (-) TimerEvent: {}
+[7.477516] (-) TimerEvent: {}
+[7.578811] (-) TimerEvent: {}
+[7.680079] (-) TimerEvent: {}
+[7.781338] (-) TimerEvent: {}
+[7.882666] (-) TimerEvent: {}
+[7.983958] (-) TimerEvent: {}
+[8.085233] (-) TimerEvent: {}
+[8.186522] (-) TimerEvent: {}
+[8.287811] (-) TimerEvent: {}
+[8.389123] (-) TimerEvent: {}
+[8.490396] (-) TimerEvent: {}
+[8.591694] (-) TimerEvent: {}
+[8.693016] (-) TimerEvent: {}
+[8.794289] (-) TimerEvent: {}
+[8.895613] (-) TimerEvent: {}
+[8.996911] (-) TimerEvent: {}
+[9.098148] (-) TimerEvent: {}
+[9.199434] (-) TimerEvent: {}
+[9.300775] (-) TimerEvent: {}
+[9.402123] (-) TimerEvent: {}
+[9.503476] (-) TimerEvent: {}
+[9.604768] (-) TimerEvent: {}
+[9.706174] (-) TimerEvent: {}
+[9.807503] (-) TimerEvent: {}
+[9.908850] (-) TimerEvent: {}
+[10.010373] (-) TimerEvent: {}
+[10.111855] (-) TimerEvent: {}
+[10.213219] (-) TimerEvent: {}
+[10.314531] (-) TimerEvent: {}
+[10.415868] (-) TimerEvent: {}
+[10.517151] (-) TimerEvent: {}
+[10.618477] (-) TimerEvent: {}
+[10.719886] (-) TimerEvent: {}
+[10.821204] (-) TimerEvent: {}
+[10.922550] (-) TimerEvent: {}
+[11.023845] (-) TimerEvent: {}
+[11.125172] (-) TimerEvent: {}
+[11.226516] (-) TimerEvent: {}
+[11.327793] (-) TimerEvent: {}
+[11.429088] (-) TimerEvent: {}
+[11.530382] (-) TimerEvent: {}
+[11.631771] (-) TimerEvent: {}
+[11.733137] (-) TimerEvent: {}
+[11.834489] (-) TimerEvent: {}
+[11.935835] (-) TimerEvent: {}
+[12.037170] (-) TimerEvent: {}
+[12.138492] (-) TimerEvent: {}
+[12.239841] (-) TimerEvent: {}
+[12.341156] (-) TimerEvent: {}
+[12.442504] (-) TimerEvent: {}
+[12.544029] (-) TimerEvent: {}
+[12.645376] (-) TimerEvent: {}
+[12.746729] (-) TimerEvent: {}
+[12.848016] (-) TimerEvent: {}
+[12.949435] (-) TimerEvent: {}
+[13.050659] (-) TimerEvent: {}
+[13.151927] (-) TimerEvent: {}
+[13.253225] (-) TimerEvent: {}
+[13.354539] (-) TimerEvent: {}
+[13.455859] (-) TimerEvent: {}
+[13.557196] (-) TimerEvent: {}
+[13.658527] (-) TimerEvent: {}
+[13.759835] (-) TimerEvent: {}
+[13.844479] (track_perception) StdoutLine: {'line': b'writing dependency_links to ../../build/track_perception/track_perception.egg-info/dependency_links.txt\n'}
+[13.845736] (uwb_locator) StdoutLine: {'line': b'writing dependency_links to ../../build/uwb_locator/uwb_locator.egg-info/dependency_links.txt\n'}
+[13.851878] (chassis_controller) StdoutLine: {'line': b'writing entry points to ../../build/chassis_controller/chassis_controller.egg-info/entry_points.txt\n'}
+[13.859895] (-) TimerEvent: {}
+[13.872189] (line_follower_control) StdoutLine: {'line': b'writing dependency_links to ../../build/line_follower_control/line_follower_control.egg-info/dependency_links.txt\n'}
+[13.876256] (keyboard_controller) StdoutLine: {'line': b'writing dependency_links to ../../build/keyboard_controller/keyboard_controller.egg-info/dependency_links.txt\n'}
+[13.883485] (track_perception) StdoutLine: {'line': b'writing entry points to ../../build/track_perception/track_perception.egg-info/entry_points.txt\n'}
+[13.891542] (uwb_locator) StdoutLine: {'line': b'writing entry points to ../../build/uwb_locator/uwb_locator.egg-info/entry_points.txt\n'}
+[13.960228] (-) TimerEvent: {}
+[13.969243] (chassis_controller) StdoutLine: {'line': b'writing requirements to ../../build/chassis_controller/chassis_controller.egg-info/requires.txt\n'}
+[13.973252] (position_udp_bridge) StdoutLine: {'line': b'writing dependency_links to ../../build/position_udp_bridge/position_udp_bridge.egg-info/dependency_links.txt\n'}
+[13.980004] (track_perception) StdoutLine: {'line': b'writing requirements to ../../build/track_perception/track_perception.egg-info/requires.txt\n'}
+[13.984985] (uwb_locator) StdoutLine: {'line': b'writing requirements to ../../build/uwb_locator/uwb_locator.egg-info/requires.txt\n'}
+[14.028564] (line_follower_control) StdoutLine: {'line': b'writing entry points to ../../build/line_follower_control/line_follower_control.egg-info/entry_points.txt\n'}
+[14.030736] (keyboard_controller) StdoutLine: {'line': b'writing entry points to ../../build/keyboard_controller/keyboard_controller.egg-info/entry_points.txt\n'}
+[14.035531] (track_perception) StdoutLine: {'line': b'writing top-level names to ../../build/track_perception/track_perception.egg-info/top_level.txt\n'}
+[14.060358] (-) TimerEvent: {}
+[14.137304] (chassis_controller) StdoutLine: {'line': b'writing top-level names to ../../build/chassis_controller/chassis_controller.egg-info/top_level.txt\n'}
+[14.141849] (position_udp_bridge) StdoutLine: {'line': b'writing entry points to ../../build/position_udp_bridge/position_udp_bridge.egg-info/entry_points.txt\n'}
+[14.149791] (uwb_locator) StdoutLine: {'line': b'writing top-level names to ../../build/uwb_locator/uwb_locator.egg-info/top_level.txt\n'}
+[14.160519] (-) TimerEvent: {}
+[14.194187] (line_follower_control) StdoutLine: {'line': b'writing requirements to ../../build/line_follower_control/line_follower_control.egg-info/requires.txt\n'}
+[14.198306] (keyboard_controller) StdoutLine: {'line': b'writing requirements to ../../build/keyboard_controller/keyboard_controller.egg-info/requires.txt\n'}
+[14.213053] (track_perception) StdoutLine: {'line': b"reading manifest file '../../build/track_perception/track_perception.egg-info/SOURCES.txt'\n"}
+[14.216521] (track_perception) StdoutLine: {'line': b"writing manifest file '../../build/track_perception/track_perception.egg-info/SOURCES.txt'\n"}
+[14.218207] (chassis_controller) StdoutLine: {'line': b"reading manifest file '../../build/chassis_controller/chassis_controller.egg-info/SOURCES.txt'\n"}
+[14.218853] (position_udp_bridge) StdoutLine: {'line': b'writing requirements to ../../build/position_udp_bridge/position_udp_bridge.egg-info/requires.txt\n'}
+[14.219396] (chassis_controller) StdoutLine: {'line': b"writing manifest file '../../build/chassis_controller/chassis_controller.egg-info/SOURCES.txt'\n"}
+[14.230284] (uwb_locator) StdoutLine: {'line': b"reading manifest file '../../build/uwb_locator/uwb_locator.egg-info/SOURCES.txt'\n"}
+[14.231767] (uwb_locator) StdoutLine: {'line': b"writing manifest file '../../build/uwb_locator/uwb_locator.egg-info/SOURCES.txt'\n"}
+[14.260711] (-) TimerEvent: {}
+[14.267794] (line_follower_control) StdoutLine: {'line': b'writing top-level names to ../../build/line_follower_control/line_follower_control.egg-info/top_level.txt\n'}
+[14.271550] (keyboard_controller) StdoutLine: {'line': b'writing top-level names to ../../build/keyboard_controller/keyboard_controller.egg-info/top_level.txt\n'}
+[14.278469] (track_perception) StdoutLine: {'line': b'running build\n'}
+[14.279042] (track_perception) StdoutLine: {'line': b'running build_py\n'}
+[14.283006] (track_perception) StdoutLine: {'line': b'running install\n'}
+[14.284531] (track_perception) StdoutLine: {'line': b'running install_lib\n'}
+[14.291510] (track_perception) StdoutLine: {'line': b'running install_data\n'}
+[14.292683] (track_perception) StdoutLine: {'line': b'running install_egg_info\n'}
+[14.299292] (track_perception) StdoutLine: {'line': b"removing '/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception-2.0.0-py3.10.egg-info' (and everything under it)\n"}
+[14.320253] (chassis_controller) StdoutLine: {'line': b'running build\n'}
+[14.320725] (chassis_controller) StdoutLine: {'line': b'running build_py\n'}
+[14.321128] (chassis_controller) StdoutLine: {'line': b'running install\n'}
+[14.321481] (chassis_controller) StdoutLine: {'line': b'running install_lib\n'}
+[14.323873] (chassis_controller) StdoutLine: {'line': b'running install_data\n'}
+[14.324592] (chassis_controller) StdoutLine: {'line': b'running install_egg_info\n'}
+[14.324956] (position_udp_bridge) StdoutLine: {'line': b'writing top-level names to ../../build/position_udp_bridge/position_udp_bridge.egg-info/top_level.txt\n'}
+[14.327345] (chassis_controller) StdoutLine: {'line': b"removing '/home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages/chassis_controller-0.0.0-py3.10.egg-info' (and everything under it)\n"}
+[14.331524] (uwb_locator) StdoutLine: {'line': b'running build\n'}
+[14.332022] (uwb_locator) StdoutLine: {'line': b'running build_py\n'}
+[14.333411] (uwb_locator) StdoutLine: {'line': b'running install\n'}
+[14.334919] (uwb_locator) StdoutLine: {'line': b'running install_lib\n'}
+[14.340762] (uwb_locator) StdoutLine: {'line': b'running install_data\n'}
+[14.341470] (uwb_locator) StdoutLine: {'line': b'running install_egg_info\n'}
+[14.347770] (uwb_locator) StdoutLine: {'line': b"removing '/home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages/uwb_locator-1.0.0-py3.10.egg-info' (and everything under it)\n"}
+[14.360885] (-) TimerEvent: {}
+[14.375919] (line_follower_control) StdoutLine: {'line': b"reading manifest file '../../build/line_follower_control/line_follower_control.egg-info/SOURCES.txt'\n"}
+[14.377220] (line_follower_control) StdoutLine: {'line': b"writing manifest file '../../build/line_follower_control/line_follower_control.egg-info/SOURCES.txt'\n"}
+[14.377943] (keyboard_controller) StdoutLine: {'line': b"reading manifest file '../../build/keyboard_controller/keyboard_controller.egg-info/SOURCES.txt'\n"}
+[14.379688] (keyboard_controller) StdoutLine: {'line': b"writing manifest file '../../build/keyboard_controller/keyboard_controller.egg-info/SOURCES.txt'\n"}
+[14.418690] (position_udp_bridge) StdoutLine: {'line': b"reading manifest file '../../build/position_udp_bridge/position_udp_bridge.egg-info/SOURCES.txt'\n"}
+[14.419981] (position_udp_bridge) StdoutLine: {'line': b"writing manifest file '../../build/position_udp_bridge/position_udp_bridge.egg-info/SOURCES.txt'\n"}
+[14.458302] (line_follower_control) StdoutLine: {'line': b'running build\n'}
+[14.459004] (line_follower_control) StdoutLine: {'line': b'running build_py\n'}
+[14.459445] (line_follower_control) StdoutLine: {'line': b'running install\n'}
+[14.459943] (line_follower_control) StdoutLine: {'line': b'running install_lib\n'}
+[14.461000] (-) TimerEvent: {}
+[14.462124] (line_follower_control) StdoutLine: {'line': b'running install_data\n'}
+[14.462937] (line_follower_control) StdoutLine: {'line': b'running install_egg_info\n'}
+[14.463281] (keyboard_controller) StdoutLine: {'line': b'running build\n'}
+[14.464044] (keyboard_controller) StdoutLine: {'line': b'running build_py\n'}
+[14.464417] (keyboard_controller) StdoutLine: {'line': b'running install\n'}
+[14.464684] (keyboard_controller) StdoutLine: {'line': b'running install_lib\n'}
+[14.465627] (line_follower_control) StdoutLine: {'line': b"removing '/home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages/line_follower_control-1.0.0-py3.10.egg-info' (and everything under it)\n"}
+[14.466845] (keyboard_controller) StdoutLine: {'line': b'running install_data\n'}
+[14.467483] (keyboard_controller) StdoutLine: {'line': b'running install_egg_info\n'}
+[14.472845] (keyboard_controller) StdoutLine: {'line': b"removing '/home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages/keyboard_controller-0.0.0-py3.10.egg-info' (and everything under it)\n"}
+[14.504707] (position_udp_bridge) StdoutLine: {'line': b'running build\n'}
+[14.505370] (position_udp_bridge) StdoutLine: {'line': b'running build_py\n'}
+[14.505704] (position_udp_bridge) StdoutLine: {'line': b'running install\n'}
+[14.506204] (position_udp_bridge) StdoutLine: {'line': b'running install_lib\n'}
+[14.508719] (position_udp_bridge) StdoutLine: {'line': b'running install_data\n'}
+[14.509218] (position_udp_bridge) StdoutLine: {'line': b'running install_egg_info\n'}
+[14.512104] (position_udp_bridge) StdoutLine: {'line': b"removing '/home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages/position_udp_bridge-1.0.0-py3.10.egg-info' (and everything under it)\n"}
+[14.561322] (-) TimerEvent: {}
+[14.662343] (-) TimerEvent: {}
+[14.763269] (-) TimerEvent: {}
+[14.837905] (uwb_locator) StdoutLine: {'line': b'Copying ../../build/uwb_locator/uwb_locator.egg-info to /home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages/uwb_locator-1.0.0-py3.10.egg-info\n'}
+[14.840366] (uwb_locator) StdoutLine: {'line': b'running install_scripts\n'}
+[14.863393] (-) TimerEvent: {}
+[14.885680] (uwb_locator) StdoutLine: {'line': b'Installing uwb_tag_node script to /home/orangepi/scuderiaferrari/install/uwb_locator/bin\n'}
+[14.963601] (-) TimerEvent: {}
+[15.048454] (uwb_locator) StdoutLine: {'line': b"writing list of installed files to '/home/orangepi/scuderiaferrari/build/uwb_locator/install.log'\n"}
+[15.063673] (-) TimerEvent: {}
+[15.164365] (-) TimerEvent: {}
+[15.264852] (uwb_locator) CommandEnded: {'returncode': 0}
+[15.265788] (-) TimerEvent: {}
+[15.366409] (-) TimerEvent: {}
+[15.467641] (-) TimerEvent: {}
+[15.568791] (-) TimerEvent: {}
+[15.669941] (-) TimerEvent: {}
+[15.771156] (-) TimerEvent: {}
+[15.799854] (track_perception) StdoutLine: {'line': b'Copying ../../build/track_perception/track_perception.egg-info to /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception-2.0.0-py3.10.egg-info\n'}
+[15.800581] (track_perception) StdoutLine: {'line': b'running install_scripts\n'}
+[15.802516] (keyboard_controller) StdoutLine: {'line': b'Copying ../../build/keyboard_controller/keyboard_controller.egg-info to /home/orangepi/scuderiaferrari/install/keyboard_controller/lib/python3.10/site-packages/keyboard_controller-0.0.0-py3.10.egg-info\n'}
+[15.803597] (keyboard_controller) StdoutLine: {'line': b'running install_scripts\n'}
+[15.809140] (chassis_controller) StdoutLine: {'line': b'Copying ../../build/chassis_controller/chassis_controller.egg-info to /home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages/chassis_controller-0.0.0-py3.10.egg-info\n'}
+[15.811093] (chassis_controller) StdoutLine: {'line': b'running install_scripts\n'}
+[15.812096] (position_udp_bridge) StdoutLine: {'line': b'Copying ../../build/position_udp_bridge/position_udp_bridge.egg-info to /home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/python3.10/site-packages/position_udp_bridge-1.0.0-py3.10.egg-info\n'}
+[15.813591] (position_udp_bridge) StdoutLine: {'line': b'running install_scripts\n'}
+[15.820083] (line_follower_control) StdoutLine: {'line': b'Copying ../../build/line_follower_control/line_follower_control.egg-info to /home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages/line_follower_control-1.0.0-py3.10.egg-info\n'}
+[15.828720] (line_follower_control) StdoutLine: {'line': b'running install_scripts\n'}
+[15.842932] (track_perception) StdoutLine: {'line': b'Installing object_detection_node script to /home/orangepi/scuderiaferrari/install/track_perception/bin\n'}
+[15.847398] (keyboard_controller) StdoutLine: {'line': b'Installing keyboard_control_node script to /home/orangepi/scuderiaferrari/install/keyboard_controller/lib/keyboard_controller\n'}
+[15.847987] (track_perception) StdoutLine: {'line': b'Installing perception_decision_node script to /home/orangepi/scuderiaferrari/install/track_perception/bin\n'}
+[15.848747] (keyboard_controller) StdoutLine: {'line': b'Installing terminal_keyboard_node script to /home/orangepi/scuderiaferrari/install/keyboard_controller/lib/keyboard_controller\n'}
+[15.851579] (track_perception) StdoutLine: {'line': b"writing list of installed files to '/home/orangepi/scuderiaferrari/build/track_perception/install.log'\n"}
+[15.858556] (keyboard_controller) StdoutLine: {'line': b"writing list of installed files to '/home/orangepi/scuderiaferrari/build/keyboard_controller/install.log'\n"}
+[15.859746] (chassis_controller) StdoutLine: {'line': b'Installing chassis_controller_node script to /home/orangepi/scuderiaferrari/install/chassis_controller/lib/chassis_controller\n'}
+[15.860268] (position_udp_bridge) StdoutLine: {'line': b'Installing udp_sender_node script to /home/orangepi/scuderiaferrari/install/position_udp_bridge/lib/position_udp_bridge\n'}
+[15.864241] (chassis_controller) StdoutLine: {'line': b"writing list of installed files to '/home/orangepi/scuderiaferrari/build/chassis_controller/install.log'\n"}
+[15.866939] (position_udp_bridge) StdoutLine: {'line': b"writing list of installed files to '/home/orangepi/scuderiaferrari/build/position_udp_bridge/install.log'\n"}
+[15.875175] (-) TimerEvent: {}
+[15.908260] (uwb_locator) JobEnded: {'identifier': 'uwb_locator', 'rc': 0}
+[15.912821] (line_follower_control) StdoutLine: {'line': b'Installing controller_node script to /home/orangepi/scuderiaferrari/install/line_follower_control/lib/line_follower_control\n'}
+[15.916724] (line_follower_control) StdoutLine: {'line': b"writing list of installed files to '/home/orangepi/scuderiaferrari/build/line_follower_control/install.log'\n"}
+[15.965962] (track_perception) CommandEnded: {'returncode': 0}
+[15.975314] (-) TimerEvent: {}
+[16.027764] (track_perception) JobEnded: {'identifier': 'track_perception', 'rc': 0}
+[16.033922] (keyboard_controller) CommandEnded: {'returncode': 0}
+[16.065197] (keyboard_controller) JobEnded: {'identifier': 'keyboard_controller', 'rc': 0}
+[16.068659] (chassis_controller) CommandEnded: {'returncode': 0}
+[16.075430] (-) TimerEvent: {}
+[16.098019] (chassis_controller) JobEnded: {'identifier': 'chassis_controller', 'rc': 0}
+[16.103294] (line_follower_control) CommandEnded: {'returncode': 0}
+[16.131680] (line_follower_control) JobEnded: {'identifier': 'line_follower_control', 'rc': 0}
+[16.135526] (position_udp_bridge) CommandEnded: {'returncode': 0}
+[16.163408] (position_udp_bridge) JobEnded: {'identifier': 'position_udp_bridge', 'rc': 0}
+[16.168055] (-) EventReactorShutdown: {}

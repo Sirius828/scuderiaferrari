@@ -1,0 +1,13 @@
+Metadata-Version: 2.1
+Name: position-udp-bridge
+Version: 1.0.0
+Summary: 位置数据UDP发送桥接包 - 将UWB定位数据通过UDP发送
+Home-page: UNKNOWN
+Maintainer: OrangePi
+Maintainer-email: orangepi@example.com
+License: MIT
+Platform: UNKNOWN
+Provides-Extra: test
+
+UNKNOWN
+

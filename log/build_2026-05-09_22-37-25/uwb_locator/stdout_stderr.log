@@ -1,0 +1,45 @@
+running egg_info
+creating ../../build/uwb_locator/uwb_locator.egg-info
+writing ../../build/uwb_locator/uwb_locator.egg-info/PKG-INFO
+writing dependency_links to ../../build/uwb_locator/uwb_locator.egg-info/dependency_links.txt
+writing entry points to ../../build/uwb_locator/uwb_locator.egg-info/entry_points.txt
+writing requirements to ../../build/uwb_locator/uwb_locator.egg-info/requires.txt
+writing top-level names to ../../build/uwb_locator/uwb_locator.egg-info/top_level.txt
+writing manifest file '../../build/uwb_locator/uwb_locator.egg-info/SOURCES.txt'
+reading manifest file '../../build/uwb_locator/uwb_locator.egg-info/SOURCES.txt'
+writing manifest file '../../build/uwb_locator/uwb_locator.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/orangepi/scuderiaferrari/build/uwb_locator/build
+creating /home/orangepi/scuderiaferrari/build/uwb_locator/build/lib
+creating /home/orangepi/scuderiaferrari/build/uwb_locator/build/lib/uwb_locator
+copying uwb_locator/serial_reader.py -> /home/orangepi/scuderiaferrari/build/uwb_locator/build/lib/uwb_locator
+copying uwb_locator/frame_parser.py -> /home/orangepi/scuderiaferrari/build/uwb_locator/build/lib/uwb_locator
+copying uwb_locator/__init__.py -> /home/orangepi/scuderiaferrari/build/uwb_locator/build/lib/uwb_locator
+copying uwb_locator/uwb_tag_node.py -> /home/orangepi/scuderiaferrari/build/uwb_locator/build/lib/uwb_locator
+running install
+running install_lib
+creating /home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages/uwb_locator
+copying /home/orangepi/scuderiaferrari/build/uwb_locator/build/lib/uwb_locator/serial_reader.py -> /home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages/uwb_locator
+copying /home/orangepi/scuderiaferrari/build/uwb_locator/build/lib/uwb_locator/frame_parser.py -> /home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages/uwb_locator
+copying /home/orangepi/scuderiaferrari/build/uwb_locator/build/lib/uwb_locator/__init__.py -> /home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages/uwb_locator
+copying /home/orangepi/scuderiaferrari/build/uwb_locator/build/lib/uwb_locator/uwb_tag_node.py -> /home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages/uwb_locator
+byte-compiling /home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages/uwb_locator/serial_reader.py to serial_reader.cpython-310.pyc
+byte-compiling /home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages/uwb_locator/frame_parser.py to frame_parser.cpython-310.pyc
+byte-compiling /home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages/uwb_locator/__init__.py to __init__.cpython-310.pyc
+byte-compiling /home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages/uwb_locator/uwb_tag_node.py to uwb_tag_node.cpython-310.pyc
+running install_data
+creating /home/orangepi/scuderiaferrari/install/uwb_locator/share/ament_index
+creating /home/orangepi/scuderiaferrari/install/uwb_locator/share/ament_index/resource_index
+creating /home/orangepi/scuderiaferrari/install/uwb_locator/share/ament_index/resource_index/packages
+copying resource/uwb_locator -> /home/orangepi/scuderiaferrari/install/uwb_locator/share/ament_index/resource_index/packages
+copying package.xml -> /home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator
+creating /home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/launch
+copying launch/uwb_tag.launch.py -> /home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/launch
+creating /home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/config
+copying config/uwb_config.yaml -> /home/orangepi/scuderiaferrari/install/uwb_locator/share/uwb_locator/config
+running install_egg_info
+Copying ../../build/uwb_locator/uwb_locator.egg-info to /home/orangepi/scuderiaferrari/install/uwb_locator/lib/python3.10/site-packages/uwb_locator-1.0.0-py3.10.egg-info
+running install_scripts
+Installing uwb_tag_node script to /home/orangepi/scuderiaferrari/install/uwb_locator/bin
+writing list of installed files to '/home/orangepi/scuderiaferrari/build/uwb_locator/install.log'

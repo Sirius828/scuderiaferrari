@@ -1,0 +1,11 @@
+# 保守模式参数 - 适合新手和室内环境
+# 特点：速度慢、加速度缓、转向温和
+
+keyboard_controller:
+  ros__parameters:
+    max_speed: 5.0           # 较低的最大速度
+    reverse_speed: 1.5       # 较慢的后退速度
+    acceleration: 3.0        # 较缓的加速度
+    deceleration: 3.0        # 较缓的减速度
+    turn_rate: 0.5           # 较慢的转向速率（2秒满舵）
+    update_rate: 20.0
