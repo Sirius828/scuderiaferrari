@@ -122,15 +122,20 @@ perception_decision_node:
     exit_single_path_min_ratio: 0.8  # 远端Band中至少多少比例为单路径才允许退出LOCK
     
     # 中心线拟合参数
-    fit_min_points: 2  # 拟合所需的最少点数，岔路需要看
-    fit_order: 1  # 拟合阶数，1=线性拟合，2=二次拟合
+    fit_min_points: 5  # 拟合所需的最少点数，二阶拟合建议至少5个点
+    fit_order: 2  # NORMAL拟合阶数，1=线性拟合，2=二次拟合
+    branch_fit_order: 2  # LOCK岔路拟合阶数
+    enable_branch_bottom_anchor: true  # 仅LOCK时启用底部软锚点，让切入更平滑
+    branch_bottom_anchor_x_ratio: 0.5  # 锚点x位置（0.5=画面中心）
+    branch_bottom_anchor_y_ratio: 0.98  # 锚点y位置（靠近画面底部）
+    branch_bottom_anchor_weight: 0.6  # 软锚点权重，小于1表示弱约束
     use_heading_term: true  # 是否使用航向角误差项
-    heading_weight: 0.35  # 航向角误差的权重
-    near_offset_weight: 0.65  # 近处偏移量的权重
+    heading_weight: 0.15  # 航向角误差的权重，二阶拟合下保持保守
+    near_offset_weight: 0.85  # 近处偏移量的权重
     
     # 安全参数
     max_offset_jump: 0.8  # Offset最大跳变幅度
-    offset_smoothing_alpha: 0.5  # 一阶低通滤波系数
+    offset_smoothing_alpha: 0.35  # 一阶低通滤波系数
     
     # 调试参数
     publish_debug_info: true  # 是否发布调试信息
