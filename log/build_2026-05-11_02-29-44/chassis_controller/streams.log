@@ -1,0 +1,21 @@
+[7.633s] Invoking command in '/home/orangepi/scuderiaferrari/src/chassis_controller': PYTHONPATH=/home/orangepi/scuderiaferrari/build/chassis_controller/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/chassis_controller build --build-base /home/orangepi/scuderiaferrari/build/chassis_controller/build install --record /home/orangepi/scuderiaferrari/build/chassis_controller/install.log --single-version-externally-managed install_data
+[8.501s] running egg_info
+[8.527s] writing ../../build/chassis_controller/chassis_controller.egg-info/PKG-INFO
+[8.555s] writing dependency_links to ../../build/chassis_controller/chassis_controller.egg-info/dependency_links.txt
+[8.567s] writing entry points to ../../build/chassis_controller/chassis_controller.egg-info/entry_points.txt
+[8.580s] writing requirements to ../../build/chassis_controller/chassis_controller.egg-info/requires.txt
+[8.656s] writing top-level names to ../../build/chassis_controller/chassis_controller.egg-info/top_level.txt
+[8.749s] reading manifest file '../../build/chassis_controller/chassis_controller.egg-info/SOURCES.txt'
+[8.764s] writing manifest file '../../build/chassis_controller/chassis_controller.egg-info/SOURCES.txt'
+[8.806s] running build
+[8.807s] running build_py
+[8.823s] running install
+[8.824s] running install_lib
+[8.828s] running install_data
+[8.829s] running install_egg_info
+[8.870s] removing '/home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages/chassis_controller-0.0.0-py3.10.egg-info' (and everything under it)
+[9.331s] Copying ../../build/chassis_controller/chassis_controller.egg-info to /home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages/chassis_controller-0.0.0-py3.10.egg-info
+[9.341s] running install_scripts
+[9.431s] Installing chassis_controller_node script to /home/orangepi/scuderiaferrari/install/chassis_controller/lib/chassis_controller
+[9.435s] writing list of installed files to '/home/orangepi/scuderiaferrari/build/chassis_controller/install.log'
+[10.112s] Invoked command in '/home/orangepi/scuderiaferrari/src/chassis_controller' returned '0': PYTHONPATH=/home/orangepi/scuderiaferrari/build/chassis_controller/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/chassis_controller/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/chassis_controller build --build-base /home/orangepi/scuderiaferrari/build/chassis_controller/build install --record /home/orangepi/scuderiaferrari/build/chassis_controller/install.log --single-version-externally-managed install_data

@@ -1,21 +1,30 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
-import os
+from pathlib import Path
+
+
+def _default_config_file():
+    """Prefer the workspace src config so parameter edits do not require rebuild."""
+    pkg_share = Path(get_package_share_directory('line_follower_control')).resolve()
+
+    for parent in pkg_share.parents:
+        src_config = parent / 'src' / 'line_follower_control' / 'config' / 'controller_params.yaml'
+        if src_config.exists():
+            return str(src_config)
+
+    return str(pkg_share / 'config' / 'controller_params.yaml')
 
 
 def generate_launch_description():
     """Launch file for line follower controller"""
     
-    # 获取包的路径
-    pkg_share = get_package_share_directory('line_follower_control')
-    
     # 声明启动参数 - 默认使用 src 目录的配置文件（方便不编译修改参数）
     config_file_arg = DeclareLaunchArgument(
         'config_file',
-        default_value='/home/orangepi/scuderiaferrari/src/line_follower_control/config/controller_params.yaml',
+        default_value=_default_config_file(),
         description='Path to YAML configuration file (default: src directory for easy modification without recompilation)'
     )
     
