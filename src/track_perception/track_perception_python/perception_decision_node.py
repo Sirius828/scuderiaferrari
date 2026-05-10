@@ -268,6 +268,7 @@ class PerceptionDecisionNode(Node):
         # ⭐ 高级逻辑状态变量（新逻辑）
         self.last_offset = 0.0
         self.branch_locked = False
+        self.locked_branch_side = self.outer_side
         self.lock_start_time = None
         self.exit_confirm_count = 0
         self.current_segments = []  # 用于调试绘制
@@ -414,7 +415,7 @@ class PerceptionDecisionNode(Node):
                         # 新逻辑：使用 branch_locked 状态
                         road_status = "LOCK" if self.branch_locked else "NORMAL"
                         # 显示分支选择信息
-                        branch_info = f"outer={self.outer_side}" if self.branch_locked else "-"
+                        branch_info = f"branch={self.locked_branch_side}" if self.branch_locked else "-"
                     else:
                         # 旧逻辑：使用 intersection_state
                         if self.intersection_state == 'NORMAL':
@@ -463,6 +464,7 @@ class PerceptionDecisionNode(Node):
         current_time = time.time()
         center_offset = 0.0
         is_valid = False
+        self.masked_seg_map = None
         
         # ==================== 步骤1: Band 扫描与岔路检测 ====================
         if self.enable_segment_branch_logic:
@@ -481,10 +483,20 @@ class PerceptionDecisionNode(Node):
             # 状态机转换
             if not self.branch_locked:
                 if branch_detected:
+                    target_branch = self.outer_side
+                    if self.enable_guideboard_branch_selection and self.check_guideboard_in_far_roi(h, w):
+                        target_branch = self.guideboard_branch
+                        self.get_logger().info(f'🚩 GuideBoard detected, selecting branch: {target_branch}')
+                    
+                    if target_branch not in ('left', 'right'):
+                        self.get_logger().warn(f'Invalid branch side "{target_branch}", falling back to outer_side={self.outer_side}')
+                        target_branch = self.outer_side
+                    
                     self.branch_locked = True
+                    self.locked_branch_side = target_branch
                     self.lock_start_time = current_time
                     self.exit_confirm_count = 0
-                    self.get_logger().info(f'🚩 Branch detected (score={branch_score}), locking to {self.outer_side}')
+                    self.get_logger().info(f'🚩 Branch detected (score={branch_score}), locking to {self.locked_branch_side}')
             else:
                 # LOCK_BRANCH 状态下检查退出条件
                 single_path_count = 0
@@ -503,11 +515,13 @@ class PerceptionDecisionNode(Node):
                 if self.exit_confirm_count >= self.exit_single_path_confirm_frames or \
                    (current_time - self.lock_start_time > self.branch_lock_time):
                     self.branch_locked = False
+                    self.locked_branch_side = self.outer_side
                     self.exit_confirm_count = 0
                     self.get_logger().info('✅ Branch lock released')
             
             # ==================== 步骤2: 收集点并拟合 ====================
-            points = self.collect_centerline_points(bands, self.branch_locked, self.outer_side, 
+            target_side = self.locked_branch_side if self.branch_locked else self.outer_side
+            points = self.collect_centerline_points(bands, self.branch_locked, target_side, 
                                                     last_center_x=(self.last_offset * w/2 + w/2))
             raw_offset, coeffs = self.fit_centerline_and_compute_offset(points, h, w)
             
@@ -829,16 +843,17 @@ class PerceptionDecisionNode(Node):
         if not band['segments']: return None
         
         if len(band['segments']) == 1:
-            # ⭐ 关键修复：即使只有一个 Segment，也要根据 outer_side 选择半边
+            # 岔路入口常会被分割成一个连续宽 Segment。LOCK 后不改 mask，
+            # 只把拟合目标点推向目标侧，让车辆更早贴向外圈/目标分支。
             seg = band['segments'][0]
             seg_width = seg['x1'] - seg['x0']
             
             if outer_side == 'left':
-                # 选择左侧 35% 位置作为中心点
-                target_x = seg['x0'] + seg_width * 0.35
+                # 选择左侧 20% 位置作为中心点
+                target_x = seg['x0'] + seg_width * 0.20
             else:
-                # 选择右侧 35% 位置作为中心点
-                target_x = seg['x1'] - seg_width * 0.35
+                # 选择右侧 80% 位置作为中心点
+                target_x = seg['x0'] + seg_width * 0.80
             
             # 返回一个虚拟的 segment 对象
             return {
