@@ -95,6 +95,7 @@ class PerceptionDecisionNode(Node):
         self.declare_parameter('branch_bottom_anchor_x_ratio', 0.5)
         self.declare_parameter('branch_bottom_anchor_y_ratio', 0.98)
         self.declare_parameter('branch_bottom_anchor_weight', 0.6)
+        self.declare_parameter('lookahead_y_ratio', 0.7)
         self.declare_parameter('use_heading_term', True)
         self.declare_parameter('heading_weight', 0.35)
         self.declare_parameter('near_offset_weight', 0.65)
@@ -167,6 +168,7 @@ class PerceptionDecisionNode(Node):
         self.branch_bottom_anchor_x_ratio = self.get_parameter('branch_bottom_anchor_x_ratio').get_parameter_value().double_value
         self.branch_bottom_anchor_y_ratio = self.get_parameter('branch_bottom_anchor_y_ratio').get_parameter_value().double_value
         self.branch_bottom_anchor_weight = self.get_parameter('branch_bottom_anchor_weight').get_parameter_value().double_value
+        self.lookahead_y_ratio = self.get_parameter('lookahead_y_ratio').get_parameter_value().double_value
         self.use_heading_term = self.get_parameter('use_heading_term').get_parameter_value().bool_value
         self.heading_weight = self.get_parameter('heading_weight').get_parameter_value().double_value
         self.near_offset_weight = self.get_parameter('near_offset_weight').get_parameter_value().double_value
@@ -270,6 +272,7 @@ class PerceptionDecisionNode(Node):
         self.get_logger().info(f'   🎯 Segment Branch Logic: {self.enable_segment_branch_logic}')
         self.get_logger().info(f'   🔒 Branch Lock: min={self.min_branch_lock_time:.2f}s, max={self.branch_lock_time:.2f}s, exit_ratio={self.exit_single_path_min_ratio:.2f}')
         self.get_logger().info(f'   📈 Fit: normal_order={self.fit_order}, branch_order={self.branch_fit_order}, branch_anchor={self.enable_branch_bottom_anchor}')
+        self.get_logger().info(f'   🎯 Lookahead Y Ratio: {self.lookahead_y_ratio:.2f}')
         
         # 岔路口状态机（旧逻辑，已弃用）
         self.intersection_state = 'NORMAL'
@@ -942,7 +945,7 @@ class PerceptionDecisionNode(Node):
         
         try:
             coeffs = np.polyfit(ys, xs, order, w=weights)
-            near_y = int(h * 0.7)
+            near_y = int(h * self.lookahead_y_ratio)
             near_x = np.polyval(coeffs, near_y)
             
             near_offset = (near_x - w / 2.0) / (w / 2.0)

@@ -129,9 +129,10 @@ perception_decision_node:
     branch_bottom_anchor_x_ratio: 0.5  # 锚点x位置（0.5=画面中心）
     branch_bottom_anchor_y_ratio: 0.98  # 锚点y位置（靠近画面底部）
     branch_bottom_anchor_weight: 0.6  # 软锚点权重，小于1表示弱约束
+    lookahead_y_ratio: 0.75  # 计算offset和heading的前瞻y位置
     use_heading_term: true  # 是否使用航向角误差项
-    heading_weight: 0.15  # 航向角误差的权重，二阶拟合下保持保守
-    near_offset_weight: 0.85  # 近处偏移量的权重
+    heading_weight: 0.10  # 航向角误差的权重，二阶拟合下保持保守
+    near_offset_weight: 0.90  # 近处偏移量的权重
     
     # 安全参数
     max_offset_jump: 0.8  # Offset最大跳变幅度
