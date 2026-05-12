@@ -1,0 +1,29 @@
+[3.936s] Invoking command in '/home/orangepi/scuderiaferrari/src/track_perception': PYTHONPATH=/home/orangepi/scuderiaferrari/build/track_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/track_perception build --build-base /home/orangepi/scuderiaferrari/build/track_perception/build install --record /home/orangepi/scuderiaferrari/build/track_perception/install.log --single-version-externally-managed install_data
+[5.129s] running egg_info
+[5.129s] writing ../../build/track_perception/track_perception.egg-info/PKG-INFO
+[5.244s] writing dependency_links to ../../build/track_perception/track_perception.egg-info/dependency_links.txt
+[5.262s] writing entry points to ../../build/track_perception/track_perception.egg-info/entry_points.txt
+[5.275s] writing requirements to ../../build/track_perception/track_perception.egg-info/requires.txt
+[5.301s] writing top-level names to ../../build/track_perception/track_perception.egg-info/top_level.txt
+[5.304s] reading manifest file '../../build/track_perception/track_perception.egg-info/SOURCES.txt'
+[5.311s] writing manifest file '../../build/track_perception/track_perception.egg-info/SOURCES.txt'
+[5.313s] running build
+[5.313s] running build_py
+[5.314s] copying track_perception_python/object_detection_node.py -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python
+[5.323s] copying track_perception_python/object_detection_infer.py -> /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python
+[5.337s] running install
+[5.337s] running install_lib
+[5.339s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/object_detection_node.py -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python
+[5.357s] copying /home/orangepi/scuderiaferrari/build/track_perception/build/lib/track_perception_python/object_detection_infer.py -> /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python
+[5.371s] byte-compiling /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/object_detection_node.py to object_detection_node.cpython-310.pyc
+[5.382s] byte-compiling /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception_python/object_detection_infer.py to object_detection_infer.cpython-310.pyc
+[5.389s] running install_data
+[5.389s] copying track_perception_python/config/intersection_params.yaml -> /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/config
+[5.394s] running install_egg_info
+[5.397s] removing '/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception-2.0.0-py3.10.egg-info' (and everything under it)
+[5.418s] Copying ../../build/track_perception/track_perception.egg-info to /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception-2.0.0-py3.10.egg-info
+[5.427s] running install_scripts
+[5.472s] Installing object_detection_node script to /home/orangepi/scuderiaferrari/install/track_perception/bin
+[5.473s] Installing perception_decision_node script to /home/orangepi/scuderiaferrari/install/track_perception/bin
+[5.477s] writing list of installed files to '/home/orangepi/scuderiaferrari/build/track_perception/install.log'
+[5.762s] Invoked command in '/home/orangepi/scuderiaferrari/src/track_perception' returned '0': PYTHONPATH=/home/orangepi/scuderiaferrari/build/track_perception/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/track_perception build --build-base /home/orangepi/scuderiaferrari/build/track_perception/build install --record /home/orangepi/scuderiaferrari/build/track_perception/install.log --single-version-externally-managed install_data

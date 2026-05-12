@@ -1,0 +1,145 @@
+# 感知决策节点配置文件
+# 包含岔路口检测与外圈锁定参数
+
+# ========================================
+# 目标检测节点配置
+# ========================================
+object_detection_node:
+  ros__parameters:
+    shm_name: "shm_ar_video"
+    model_path: "model/rknn_lt_v2.rknn"  # ⭐ 目标检测模型路径
+    label_list_path: "model/label_list.txt"
+    tpes: 1
+    core_ids: [0]
+    enable_flip: true
+    flip_code: 0
+    input_format: "RGB"
+    publish_detections: true
+    publish_rate: 0  # <=0 表示每个完成的检测结果都发布，不限速
+    enable_perf_stats: false
+    perf_interval: 2.0  # 每隔多少秒打印一次 detection 单帧耗时
+    use_fast_postprocess: false  # false=使用旧后处理，稳定优先；true=启用实验性快速后处理
+
+# ========================================
+# 感知决策节点配置
+# ========================================
+perception_decision_node:
+  ros__parameters:
+    # ========================================
+    # 基础参数
+    # ========================================
+    shm_name: "shm_ar_video"
+    
+    # ⭐ 模型路径参数
+    seg_model_dir: "model"  # 语义分割模型目录
+    seg_model_filename: "pp_liteseg_v3.rknn"  # ⭐ 语义分割模型文件名
+    
+    seg_tpes: 2
+    seg_core_ids: [1, 2]
+    blend_alpha: -1.0  # -1表示只显示分割结果，不混合原图
+    show_window: true
+    enable_perf_stats: false
+    
+    # 图像预处理参数
+    enable_flip: true
+    flip_code: 0  # 0=垂直翻转, 1=水平翻转, -1=两者
+    input_format: "RGB"
+    model_input_format: "RGB"
+    
+    # 外圈方向配置
+    outer_side: "left"  # "left" 或 "right"，取决于赛道布局
+    
+    # ========================================
+    # ⭐ GuideBoard 岔路选择参数
+    # ========================================
+    enable_guideboard_branch_selection: true  # 是否启用GuideBoard岔路选择
+    guideboard_branch: "right"  # 检测到GuideBoard时选择的岔路方向
+    guideboard_detect_y0_ratio: 0.2  # GuideBoard检测起始y比例（0.0=顶部，1.0=底部）
+    guideboard_detect_y1_ratio: 0.7  # GuideBoard检测结束y比例（默认检测上半部分70%区域）
+                                     # 如需全画面检测，设置为 0.0 和 1.0
+    
+    # ========================================
+    # ⭐ 高级岔路检测与中心线拟合参数（新逻辑）
+    # ========================================
+    
+    # 功能开关
+    enable_segment_branch_logic: true  # 启用多层Band扫描逻辑
+    
+    # Band 扫描参数
+    band_count: 13  # 扫描Band的数量
+    band_y_min_ratio: 0.65  # Band扫描起始y比例（0.0=顶部，1.0=底部）
+    band_y_max_ratio: 1.00  # Band扫描结束y比例
+    band_height_ratio: 0.02  # 每个Band的高度比例
+    
+    # Segment 提取参数
+    min_segment_width_px: 25  # Segment最小宽度（像素）
+    min_segment_gap_px: 40  # 两个Segment之间的最小间隙（像素）
+    min_pixels_per_band: 80  # 每个Band中Segment的最小像素数量
+    
+    # 岔路确认参数
+    branch_detect_min_bands: 2  # 至少需要多少个Band检测到2+个Segment才判定为岔路
+    branch_detect_far_band_ratio: 0.7  # 只用较远的多少比例Band判断岔路
+    
+    # 分支选择参数（outer_side 已在上面定义，这里不需要重复）
+    branch_lock_time: 2.0  # 分支锁定的最大持续时间（秒）
+    min_branch_lock_time: 0.8  # 分支锁定的最短持续时间（秒），避免LOCK/NORMAL频繁切换
+    exit_single_path_confirm_frames: 5  # 连续多少帧检测到单路径才退出LOCK状态
+    exit_single_path_min_ratio: 0.8  # 远端Band中至少多少比例为单路径才允许退出LOCK
+    
+    # 中心线拟合参数
+    fit_min_points: 5  # 拟合所需的最少点数，二阶拟合建议至少5个点
+    fit_order: 2  # NORMAL拟合阶数，1=线性拟合，2=二次拟合
+    branch_fit_order: 2  # LOCK岔路拟合阶数
+    enable_branch_bottom_anchor: true  # 仅LOCK时启用底部软锚点，让切入更平滑
+    branch_bottom_anchor_x_ratio: 0.5  # 锚点x位置（0.5=画面中心）
+    branch_bottom_anchor_y_ratio: 0.98  # 锚点y位置（靠近画面底部）
+    branch_bottom_anchor_weight: 0.6  # 软锚点权重，小于1表示弱约束
+    lookahead_y_ratio: 0.75  # 计算offset和heading的前瞻y位置
+    use_heading_term: true  # 是否使用航向角误差项
+    heading_weight: 0.10  # 航向角误差的权重，二阶拟合下保持保守
+    near_offset_weight: 0.90  # 近处偏移量的权重
+    
+    # 安全参数
+    max_offset_jump: 0.8  # Offset最大跳变幅度
+    offset_smoothing_alpha: 0.35  # 一阶低通滤波系数
+    
+    # 调试参数
+    show_branch_debug: false  # 是否在可视化窗口中绘制Band和Segment
+    enable_status_log: false  # 是否输出“直行/NORMAL/Offset”心跳日志
+    enable_branch_event_log: false  # 关闭岔路LOCK/释放事件日志
+
+
+# ========================================
+# 参数调优指南
+# ========================================
+#
+# 1. 如果车应该走外圈但走了内圈：
+#    → 修改 outer_side: "left" ↔ "right"
+#
+# 2. 如果过早进入 LOCK 状态：
+#    → 增大 branch_detect_min_bands
+#    → 或增大 min_segment_gap_px
+#    → 或减小 branch_detect_far_band_ratio，只看更远端的 Band
+#
+# 3. 如果检测不到岔路：
+#    → 减小 branch_detect_min_bands
+#    → 或减小 min_segment_gap_px
+#    → 或增加 band_count
+#
+# 4. 如果锁定时间太长，过了岔路口还未释放：
+#    → 减小 branch_lock_time
+#    → 或减小 exit_single_path_confirm_frames
+#    → 或减小 exit_single_path_min_ratio
+#
+# 5. 如果频繁在NORMAL和LOCK之间切换：
+#    → 增大 min_branch_lock_time
+#    → 或增大 exit_single_path_confirm_frames
+#
+# 6. 如果中心线抖动：
+#    → 减小 offset_smoothing_alpha
+#    → 或减小 max_offset_jump
+#
+# 7. ⭐ GuideBoard 岔路选择功能：
+#    → enable_guideboard_branch_selection: true  # 启用GuideBoard检测
+#    → guideboard_branch: "right"  # 检测到GuideBoard时走右侧岔路
+#    → 默认情况下（无GuideBoard），走 outer_side 指定的方向

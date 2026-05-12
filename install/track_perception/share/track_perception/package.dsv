@@ -1,12 +1,6 @@
-source;share/track_perception/hook/path.ps1
-source;share/track_perception/hook/path.dsv
-source;share/track_perception/hook/path.sh
 source;share/track_perception/hook/pythonpath.ps1
 source;share/track_perception/hook/pythonpath.dsv
 source;share/track_perception/hook/pythonpath.sh
-source;share/track_perception/hook/pythonscriptspath.ps1
-source;share/track_perception/hook/pythonscriptspath.dsv
-source;share/track_perception/hook/pythonscriptspath.sh
 source;share/track_perception/hook/ament_prefix_path.ps1
 source;share/track_perception/hook/ament_prefix_path.dsv
 source;share/track_perception/hook/ament_prefix_path.sh

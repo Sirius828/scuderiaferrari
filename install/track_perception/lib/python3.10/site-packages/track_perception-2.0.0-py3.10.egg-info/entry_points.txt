@@ -1,4 +1,4 @@
 [console_scripts]
-object_detection_node = track_perception_python.object_detection_node:main
-perception_decision_node = track_perception_python.perception_decision_node:main
+object_detection_node = track_perception.object_detection_node:main
+perception_decision_node = track_perception.perception_decision_node:main
 
