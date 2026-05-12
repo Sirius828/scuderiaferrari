@@ -32,6 +32,11 @@ class LineFollowerController(Node):
         self.declare_parameter('max_steering', 1.0)      # 最大转向比例
         self.declare_parameter('invalid_timeout', 0.5)   # is_valid=False超时时间(秒)
         
+        # 日志参数
+        self.declare_parameter('controller_log_mode', 'normal')  # normal, pid_tuning, off
+        self.declare_parameter('pid_tuning_log_hz', 10.0)        # PID调参日志频率
+        self.declare_parameter('pid_tuning_bar_width', 41)       # 误差条宽度，建议使用奇数
+        
         # 获取PID参数
         self.Kp = self.get_parameter('Kp').get_parameter_value().double_value
         self.Ki = self.get_parameter('Ki').get_parameter_value().double_value
@@ -43,6 +48,14 @@ class LineFollowerController(Node):
         self.wheel_radius = self.get_parameter('wheel_radius').get_parameter_value().double_value  # m
         self.max_steering = self.get_parameter('max_steering').get_parameter_value().double_value
         self.invalid_timeout = self.get_parameter('invalid_timeout').get_parameter_value().double_value
+        
+        # 获取日志参数
+        self.controller_log_mode = self.get_parameter('controller_log_mode').get_parameter_value().string_value
+        self.pid_tuning_log_hz = self.get_parameter('pid_tuning_log_hz').get_parameter_value().double_value
+        self.pid_tuning_bar_width = self.get_parameter('pid_tuning_bar_width').get_parameter_value().integer_value
+        self.pid_tuning_bar_width = max(11, min(81, self.pid_tuning_bar_width))
+        if self.pid_tuning_bar_width % 2 == 0:
+            self.pid_tuning_bar_width += 1
         
         # ⭐ 关键修复：将线速度 (m/s) 转换为转速 (rps, revolutions per second)
         # v = ω_rps × 2π × r  =>  ω_rps = v / (2π × r)
@@ -60,6 +73,8 @@ class LineFollowerController(Node):
         self.prev_time = time.time()       # 上一帧时间
         self.is_valid = True               # 是否有赛道
         self.invalid_start_time = None     # is_valid=False的开始时间
+        self.last_pid_terms = (0.0, 0.0, 0.0)
+        self.last_tuning_log_time = 0.0
         
         # ==================== 订阅者 ====================
         # ⭐ 使用与segmentation_node相同的QoS配置
@@ -106,6 +121,11 @@ class LineFollowerController(Node):
         self.get_logger().info(f'   Wheel Speed: {self.wheel_speed_rps:.2f} rps (revolutions per second)')
         self.get_logger().info(f'   Max Steering: {self.max_steering}')
         self.get_logger().info(f'   Invalid Timeout: {self.invalid_timeout} s')
+        self.get_logger().info(
+            f'   Log Mode: {self.controller_log_mode}, '
+            f'PID Tuning Log Hz: {self.pid_tuning_log_hz}, '
+            f'Bar Width: {self.pid_tuning_bar_width}'
+        )
     
     def offset_callback(self, msg: Float32):
         """接收center_offset"""
@@ -151,19 +171,7 @@ class LineFollowerController(Node):
             # 发布控制指令
             self.publish_cmd_vel(steering)
             
-            # 调试日志（每100帧打印一次）
-            if hasattr(self, '_log_counter'):
-                self._log_counter += 1
-            else:
-                self._log_counter = 0
-            
-            if self._log_counter % 100 == 0:
-                self.get_logger().info(
-                    f'📊 Offset: {self.current_offset:.3f}, '
-                    f'Steering: {steering:.3f}, '
-                    f'Integral: {self.integral:.3f}, '
-                    f'dt: {dt*1000:.1f}ms'
-                )
+            self.log_control_status(steering, dt, current_time)
         
         # 更新状态
         self.prev_offset = self.current_offset
@@ -192,11 +200,64 @@ class LineFollowerController(Node):
         # 3. 微分项（误差变化率）
         d_error = (error - self.prev_offset) / dt if dt > 0 else 0.0
         D = self.Kd * d_error
+        self.last_pid_terms = (P, I, D)
         
         # 4. 总和
         output = P + I + D
         
         return output
+    
+    def log_control_status(self, steering: float, dt: float, current_time: float):
+        """根据日志模式输出普通控制日志或PID调参日志"""
+        if self.controller_log_mode == 'off':
+            return
+        
+        if self.controller_log_mode == 'pid_tuning':
+            log_hz = max(0.1, self.pid_tuning_log_hz)
+            if current_time - self.last_tuning_log_time < 1.0 / log_hz:
+                return
+            self.last_tuning_log_time = current_time
+            p_term, i_term, d_term = self.last_pid_terms
+            self.get_logger().info(
+                f'[PID_TUNE] err={self.current_offset:+.3f} '
+                f'{self.format_offset_bar(self.current_offset)} '
+                f'steer={steering:+.3f} '
+                f'P={p_term:+.3f} I={i_term:+.3f} D={d_term:+.3f} '
+                f'dt={dt*1000:.1f}ms'
+            )
+            return
+        
+        if self.controller_log_mode != 'normal':
+            self.get_logger().warn(
+                f'Unknown controller_log_mode "{self.controller_log_mode}", using normal log behavior'
+            )
+            self.controller_log_mode = 'normal'
+        
+        # 普通日志：保持原来的每100帧打印一次
+        if hasattr(self, '_log_counter'):
+            self._log_counter += 1
+        else:
+            self._log_counter = 0
+        
+        if self._log_counter % 100 == 0:
+            self.get_logger().info(
+                f'📊 Offset: {self.current_offset:.3f}, '
+                f'Steering: {steering:.3f}, '
+                f'Integral: {self.integral:.3f}, '
+                f'dt: {dt*1000:.1f}ms'
+            )
+    
+    def format_offset_bar(self, offset: float) -> str:
+        """将[-1, 1]误差画成固定宽度ASCII条，中心线表示0误差"""
+        width = self.pid_tuning_bar_width
+        center = width // 2
+        clamped = max(-1.0, min(1.0, offset))
+        marker = int(round((clamped + 1.0) * (width - 1) / 2.0))
+        
+        chars = ['-'] * width
+        chars[center] = '|'
+        chars[marker] = 'X' if marker == center else '*'
+        return '[' + ''.join(chars) + ']'
     
     def publish_cmd_vel(self, steering: float):
         """发布速度控制指令"""

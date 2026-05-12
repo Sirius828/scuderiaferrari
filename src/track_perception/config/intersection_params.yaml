@@ -104,8 +104,8 @@ perception_decision_node:
     offset_smoothing_alpha: 0.35  # 一阶低通滤波系数
     
     # 调试参数
-    show_branch_debug: false  # 是否在可视化窗口中绘制Band和Segment
-    enable_status_log: false  # 是否输出“直行/NORMAL/Offset”心跳日志
+    show_branch_debug: true  # 是否在可视化窗口中绘制Band和Segment
+    enable_status_log: true  # 是否输出“直行/NORMAL/Offset”心跳日志
     enable_branch_event_log: false  # 关闭岔路LOCK/释放事件日志
 
 

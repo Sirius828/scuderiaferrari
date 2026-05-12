@@ -8,7 +8,7 @@ Control logic:
 - S: Constant reverse speed
 - A: Turn right (immediate full turn when pressed)
 - D: Turn left (immediate full turn when pressed)
-- G: Toggle motor on/off
+- G: Toggle keyboard control handoff on/off
 """
 
 import rclpy
@@ -42,7 +42,7 @@ class KeyboardController(Node):
         # 当前状态
         self.current_speed = 0.0        # 当前速度
         self.current_steering = 0.0     # 当前转向比例 (-1.0右满 到 1.0左满)
-        self.motor_enabled = False      # 电机使能状态
+        self.control_enabled = False    # 键盘控制接管状态
         
         # 按键状态
         self.key_w_pressed = False
@@ -74,7 +74,7 @@ class KeyboardController(Node):
         self.get_logger().info('  S - Constant reverse')
         self.get_logger().info('  A - Turn right')
         self.get_logger().info('  D - Turn left')
-        self.get_logger().info('  G - Toggle motor')
+        self.get_logger().info('  G - Toggle keyboard control')
         self.get_logger().info('  ESC - Exit')
     
     def handle_events(self):
@@ -108,23 +108,31 @@ class KeyboardController(Node):
         return True
     
     def toggle_motor(self):
-        """Toggle motor on/off state"""
-        self.motor_enabled = not self.motor_enabled
-        status = "Enabled" if self.motor_enabled else "Disabled"
-        self.get_logger().info(f'Motor status: {status}')
-        
-        # Publish enable message
-        msg = Int8()
-        msg.data = 1 if self.motor_enabled else 0
-        self.enable_pub.publish(msg)
-        
-        # If motor disabled, stop motion
-        if not self.motor_enabled:
+        """Toggle keyboard control handoff state."""
+        self.control_enabled = not self.control_enabled
+        status = "Active" if self.control_enabled else "Standby"
+        self.get_logger().info(f'Keyboard control: {status}')
+
+        if self.control_enabled:
+            # Keep chassis enabled when taking manual control. Releasing keyboard
+            # control must not disable chassis, so autonomous controllers can keep running.
+            msg = Int8()
+            msg.data = 1
+            self.enable_pub.publish(msg)
+        else:
+            # Release /cmd_vel ownership without publishing a zero command.
             self.current_speed = 0.0
             self.current_steering = 0.0
+            self.key_w_pressed = False
+            self.key_s_pressed = False
+            self.key_a_pressed = False
+            self.key_d_pressed = False
     
     def update_physics(self, dt):
         """Update physics state"""
+        if not self.control_enabled:
+            return
+
         # Handle forward logic
         if self.key_w_pressed:
             # Accelerate forward
@@ -155,8 +163,8 @@ class KeyboardController(Node):
     
     def publish_commands(self):
         """Publish control commands"""
-        # Only send velocity commands when motor is enabled
-        if self.motor_enabled:
+        # Only publish while keyboard control is actively taking over /cmd_vel.
+        if self.control_enabled:
             twist_msg = Twist()
             twist_msg.linear.x = self.current_speed
             twist_msg.angular.z = self.current_steering  # Use steering ratio (-1.0 to 1.0)
@@ -172,8 +180,8 @@ class KeyboardController(Node):
         screen.blit(title, (70, 20))
         
         # Motor status
-        status_color = (0, 255, 0) if self.motor_enabled else (255, 0, 0)
-        status_text = "Motor: Enabled" if self.motor_enabled else "Motor: Disabled"
+        status_color = (0, 255, 0) if self.control_enabled else (255, 180, 0)
+        status_text = "Keyboard: Active" if self.control_enabled else "Keyboard: Standby"
         status = self.font_medium.render(status_text, True, status_color)
         screen.blit(status, (20, 70))
         
@@ -243,7 +251,7 @@ class KeyboardController(Node):
         
         # Help info
         help_texts = [
-            "W-Fwd  S-Rev  A-Right  D-Left  G-Toggle  ESC-Exit",
+            "W-Fwd  S-Rev  A-Right  D-Left  G-Handoff  ESC-Exit",
         ]
         
         help_y = 270
@@ -277,16 +285,12 @@ class KeyboardController(Node):
         """Shutdown node"""
         self.get_logger().info('Shutting down node...')
         
-        # Send stop command
-        twist_msg = Twist()
-        twist_msg.linear.x = 0.0
-        twist_msg.angular.z = 0.0
-        self.cmd_vel_pub.publish(twist_msg)
-        
-        # Disable motor
-        enable_msg = Int8()
-        enable_msg.data = 0
-        self.enable_pub.publish(enable_msg)
+        if self.control_enabled:
+            # If this node currently owns /cmd_vel, leave the chassis stopped.
+            twist_msg = Twist()
+            twist_msg.linear.x = 0.0
+            twist_msg.angular.z = 0.0
+            self.cmd_vel_pub.publish(twist_msg)
         
         self.get_logger().info('Node shutdown')
         

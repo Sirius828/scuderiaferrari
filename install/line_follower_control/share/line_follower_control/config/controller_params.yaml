@@ -3,12 +3,12 @@
 /**:
   ros__parameters:
     # ==================== 标准PID参数 ====================
-    Kp: 1.0            # 比例增益 - 响应速度
-    Ki: 0.00            # 积分增益 - 消除稳态误差
-    Kd: 0.0             # 微分增益 - 抑制振荡
+    Kp: 1.2            # 比例增益 - 响应速度
+    Ki: 0.03            # 积分增益 - 消除稳态误差
+    Kd: 0.4             # 微分增益 - 抑制振荡
     
     # ==================== 车辆参数 ====================
-    linear_speed: 0.7     # Linear speed in m/s
+    linear_speed: 0.8     # Linear speed in m/s
     wheel_radius: 0.032    # Wheel radius in meters
     
     # ==================== 积分限幅 ====================
@@ -17,3 +17,11 @@
     
     # ==================== 超时设置 ====================
     invalid_timeout: 0.5   # Timeout for is_valid=False (seconds)
+    
+    # ==================== 日志设置 ====================
+    # normal: 原有低频控制日志
+    # pid_tuning: 高频PID调参日志，带误差条
+    # off: 关闭控制循环日志
+    controller_log_mode: "normal"
+    pid_tuning_log_hz: 10.0
+    pid_tuning_bar_width: 41

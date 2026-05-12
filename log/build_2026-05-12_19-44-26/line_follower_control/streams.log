@@ -1,0 +1,22 @@
+[6.754s] Invoking command in '/home/orangepi/scuderiaferrari/src/line_follower_control': PYTHONPATH=/home/orangepi/scuderiaferrari/build/line_follower_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/line_follower_control build --build-base /home/orangepi/scuderiaferrari/build/line_follower_control/build install --record /home/orangepi/scuderiaferrari/build/line_follower_control/install.log --single-version-externally-managed install_data
+[7.880s] running egg_info
+[7.885s] writing ../../build/line_follower_control/line_follower_control.egg-info/PKG-INFO
+[7.892s] writing dependency_links to ../../build/line_follower_control/line_follower_control.egg-info/dependency_links.txt
+[7.898s] writing entry points to ../../build/line_follower_control/line_follower_control.egg-info/entry_points.txt
+[7.903s] writing requirements to ../../build/line_follower_control/line_follower_control.egg-info/requires.txt
+[7.911s] writing top-level names to ../../build/line_follower_control/line_follower_control.egg-info/top_level.txt
+[7.922s] reading manifest file '../../build/line_follower_control/line_follower_control.egg-info/SOURCES.txt'
+[7.925s] writing manifest file '../../build/line_follower_control/line_follower_control.egg-info/SOURCES.txt'
+[7.927s] running build
+[7.927s] running build_py
+[7.930s] running install
+[7.930s] running install_lib
+[7.932s] running install_data
+[7.933s] copying config/controller_params.yaml -> /home/orangepi/scuderiaferrari/install/line_follower_control/share/line_follower_control/config
+[7.938s] running install_egg_info
+[7.969s] removing '/home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages/line_follower_control-1.0.0-py3.10.egg-info' (and everything under it)
+[8.012s] Copying ../../build/line_follower_control/line_follower_control.egg-info to /home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages/line_follower_control-1.0.0-py3.10.egg-info
+[8.041s] running install_scripts
+[8.097s] Installing controller_node script to /home/orangepi/scuderiaferrari/install/line_follower_control/lib/line_follower_control
+[8.098s] writing list of installed files to '/home/orangepi/scuderiaferrari/build/line_follower_control/install.log'
+[8.418s] Invoked command in '/home/orangepi/scuderiaferrari/src/line_follower_control' returned '0': PYTHONPATH=/home/orangepi/scuderiaferrari/build/line_follower_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/orangepi/scuderiaferrari/install/line_follower_control/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/line_follower_control build --build-base /home/orangepi/scuderiaferrari/build/line_follower_control/build install --record /home/orangepi/scuderiaferrari/build/line_follower_control/install.log --single-version-externally-managed install_data
