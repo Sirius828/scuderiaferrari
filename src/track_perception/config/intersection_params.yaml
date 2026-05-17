@@ -100,7 +100,7 @@ perception_decision_node:
     near_offset_weight: 0.90  # 近处偏移量的权重
     
     # 安全参数
-    max_offset_jump: 0.8  # Offset最大跳变幅度
+    max_offset_jump: 2.0  # Offset最大跳变幅度
     offset_smoothing_alpha: 0.35  # 一阶低通滤波系数
     
     # 调试参数
