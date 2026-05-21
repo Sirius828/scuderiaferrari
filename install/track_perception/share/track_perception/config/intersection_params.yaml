@@ -81,7 +81,7 @@ perception_decision_node:
     branch_detect_far_band_ratio: 0.7  # 只用较远的多少比例Band判断岔路
     
     # 分支选择参数（outer_side 已在上面定义，这里不需要重复）
-    enable_continuity_branch_selection: true  # 无GuideBoard时优先选择与上一帧中心线连续的分支，抑制汇入/T字路口误锁默认侧
+    enable_continuity_branch_selection: false  # 无GuideBoard时是否按路径连续性选分支；false=严格使用outer_side
     branch_continuity_max_dx_ratio: 0.35  # 连续分支候选与上一帧中心线允许的最大x距离比例
     branch_continuity_near_band_ratio: 0.5  # 用靠近车身的多少比例Band判断路径连续性
     enable_locked_path_continuity: true  # LOCK后期优先跟随当前路径连续segment，避免回主路前被GuideBoard指定侧的新segment拉走
@@ -99,6 +99,13 @@ perception_decision_node:
     enable_fit_point_jump_filter: true  # 拟合前过滤连续Band中心点x跳变过大的点，抑制边缘误分割参与拟合
     max_fit_point_dx_ratio: 0.22  # 相邻拟合点允许的最大x跳变比例（相对图像宽度）
     max_fit_point_dx_px: 140.0  # 相邻拟合点允许的最大x跳变像素上限；<=0表示只用ratio
+    enable_obstacle_avoidance: true  # 启用Human/Car障碍排斥，将其bbox膨胀区从赛道segment中扣除
+    obstacle_labels: "Human,Car"  # 参与避障的检测类别，逗号分隔
+    obstacle_min_confidence: 0.45  # 检测置信度低于该值不参与避障
+    obstacle_x_margin_px: 25.0  # 障碍bbox左右膨胀像素
+    obstacle_y_margin_px: 20.0  # 障碍bbox上下膨胀像素
+    obstacle_max_age: 0.3  # detection结果超过该时间(s)不参与避障
+    obstacle_min_bottom_y_ratio: 0.30  # bbox底部低于该画面y比例才参与避障，过滤远处/边缘误检
     enable_branch_bottom_anchor: true  # 仅LOCK时启用底部软锚点，让切入更平滑
     branch_bottom_anchor_x_ratio: 0.5  # 锚点x位置（0.5=画面中心）
     branch_bottom_anchor_y_ratio: 0.98  # 锚点y位置（靠近画面底部）

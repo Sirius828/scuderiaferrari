@@ -66,7 +66,7 @@ class PerceptionDecisionNode(Node):
         self.declare_parameter('branch_detect_far_band_ratio', 0.6)
         # 分支选择参数
         self.declare_parameter('outer_side', 'left')
-        self.declare_parameter('enable_continuity_branch_selection', True)
+        self.declare_parameter('enable_continuity_branch_selection', False)
         self.declare_parameter('branch_continuity_max_dx_ratio', 0.35)
         self.declare_parameter('branch_continuity_near_band_ratio', 0.5)
         self.declare_parameter('enable_locked_path_continuity', True)
@@ -83,6 +83,13 @@ class PerceptionDecisionNode(Node):
         self.declare_parameter('enable_fit_point_jump_filter', True)
         self.declare_parameter('max_fit_point_dx_ratio', 0.22)
         self.declare_parameter('max_fit_point_dx_px', 140.0)
+        self.declare_parameter('enable_obstacle_avoidance', True)
+        self.declare_parameter('obstacle_labels', 'Human,Car')
+        self.declare_parameter('obstacle_min_confidence', 0.45)
+        self.declare_parameter('obstacle_x_margin_px', 45.0)
+        self.declare_parameter('obstacle_y_margin_px', 20.0)
+        self.declare_parameter('obstacle_max_age', 0.3)
+        self.declare_parameter('obstacle_min_bottom_y_ratio', 0.30)
         self.declare_parameter('enable_branch_bottom_anchor', True)
         self.declare_parameter('branch_bottom_anchor_x_ratio', 0.5)
         self.declare_parameter('branch_bottom_anchor_y_ratio', 0.98)
@@ -149,6 +156,16 @@ class PerceptionDecisionNode(Node):
         self.enable_fit_point_jump_filter = self.get_parameter('enable_fit_point_jump_filter').get_parameter_value().bool_value
         self.max_fit_point_dx_ratio = self.get_parameter('max_fit_point_dx_ratio').get_parameter_value().double_value
         self.max_fit_point_dx_px = self.get_parameter('max_fit_point_dx_px').get_parameter_value().double_value
+        self.enable_obstacle_avoidance = self.get_parameter('enable_obstacle_avoidance').get_parameter_value().bool_value
+        obstacle_labels_param = self.get_parameter('obstacle_labels').get_parameter_value().string_value
+        self.obstacle_labels = {
+            label.strip() for label in obstacle_labels_param.split(',') if label.strip()
+        }
+        self.obstacle_min_confidence = self.get_parameter('obstacle_min_confidence').get_parameter_value().double_value
+        self.obstacle_x_margin_px = self.get_parameter('obstacle_x_margin_px').get_parameter_value().double_value
+        self.obstacle_y_margin_px = self.get_parameter('obstacle_y_margin_px').get_parameter_value().double_value
+        self.obstacle_max_age = self.get_parameter('obstacle_max_age').get_parameter_value().double_value
+        self.obstacle_min_bottom_y_ratio = self.get_parameter('obstacle_min_bottom_y_ratio').get_parameter_value().double_value
         self.enable_branch_bottom_anchor = self.get_parameter('enable_branch_bottom_anchor').get_parameter_value().bool_value
         self.branch_bottom_anchor_x_ratio = self.get_parameter('branch_bottom_anchor_x_ratio').get_parameter_value().double_value
         self.branch_bottom_anchor_y_ratio = self.get_parameter('branch_bottom_anchor_y_ratio').get_parameter_value().double_value
@@ -281,6 +298,7 @@ class PerceptionDecisionNode(Node):
         self.lock_start_time = None
         self.exit_confirm_count = 0
         self.current_segments = []  # 用于调试绘制
+        self.current_obstacle_zones = []  # 用于调试绘制
         self.fit_coeffs = None  # ⭐ 保存拟合系数用于可视化
         self.fit_points = []  # ⭐ 保存拟合用的点
         
@@ -779,6 +797,8 @@ class PerceptionDecisionNode(Node):
     def build_bands(self, road_mask):
         """构建扫描 Band"""
         h, w = road_mask.shape
+        obstacle_zones = self.get_active_obstacle_zones(w, h)
+        self.current_obstacle_zones = obstacle_zones
         y_min = int(h * self.band_y_min_ratio)
         y_max = int(h * self.band_y_max_ratio)
         band_height = max(1, int(h * self.band_height_ratio))
@@ -793,6 +813,7 @@ class PerceptionDecisionNode(Node):
             
             band_mask = road_mask[y0:y1, :]
             segments = self.extract_segments_in_band(band_mask)
+            segments = self.apply_obstacle_exclusion_to_segments(segments, y0, y1, obstacle_zones)
             
             bands.append({
                 'y0': y0,
@@ -801,6 +822,89 @@ class PerceptionDecisionNode(Node):
                 'segments': segments
             })
         return bands
+
+    def get_active_obstacle_zones(self, image_width, image_height):
+        """将 Human/Car 检测框转换为当前帧的不可通行区间。"""
+        if not self.enable_obstacle_avoidance:
+            return []
+        if not self.latest_detections:
+            return []
+        if self.obstacle_max_age > 0 and time.time() - self.detections_timestamp > self.obstacle_max_age:
+            return []
+
+        zones = []
+        min_bottom_y = image_height * max(0.0, min(1.0, self.obstacle_min_bottom_y_ratio))
+        x_margin = max(0.0, self.obstacle_x_margin_px)
+        y_margin = max(0.0, self.obstacle_y_margin_px)
+
+        for det in self.latest_detections:
+            if det.get('class_name') not in self.obstacle_labels:
+                continue
+            if float(det.get('confidence', 0.0)) < self.obstacle_min_confidence:
+                continue
+
+            x1 = float(det.get('x1', 0.0))
+            y1 = float(det.get('y1', 0.0))
+            x2 = float(det.get('x2', 0.0))
+            y2 = float(det.get('y2', 0.0))
+            if max(y1, y2) < min_bottom_y:
+                continue
+
+            zone = {
+                'x0': max(0.0, min(x1, x2) - x_margin),
+                'x1': min(float(image_width - 1), max(x1, x2) + x_margin),
+                'y0': max(0.0, min(y1, y2) - y_margin),
+                'y1': min(float(image_height - 1), max(y1, y2) + y_margin),
+                'label': det.get('class_name', 'Obstacle'),
+                'confidence': float(det.get('confidence', 0.0)),
+            }
+            if zone['x1'] > zone['x0'] and zone['y1'] > zone['y0']:
+                zones.append(zone)
+
+        return zones
+
+    def apply_obstacle_exclusion_to_segments(self, segments, band_y0, band_y1, obstacle_zones):
+        """从赛道 segment 中扣除与障碍物重叠的横向区间。"""
+        if not segments or not obstacle_zones:
+            return segments
+
+        split_segments = []
+        for seg in segments:
+            intervals = [(float(seg['x0']), float(seg['x1']))]
+            for zone in obstacle_zones:
+                if zone['y1'] < band_y0 or zone['y0'] > band_y1:
+                    continue
+
+                next_intervals = []
+                for x0, x1 in intervals:
+                    cut_x0 = max(x0, float(zone['x0']))
+                    cut_x1 = min(x1, float(zone['x1']))
+                    if cut_x1 < x0 or cut_x0 > x1:
+                        next_intervals.append((x0, x1))
+                        continue
+
+                    if cut_x0 - x0 >= self.min_segment_width_px:
+                        next_intervals.append((x0, cut_x0))
+                    if x1 - cut_x1 >= self.min_segment_width_px:
+                        next_intervals.append((cut_x1, x1))
+                intervals = next_intervals
+                if not intervals:
+                    break
+
+            for x0, x1 in intervals:
+                width = int(round(x1 - x0))
+                if width < self.min_segment_width_px:
+                    continue
+                split_segments.append({
+                    'x0': int(round(x0)),
+                    'x1': int(round(x1)),
+                    'width': width,
+                    'center_x': (x0 + x1) / 2.0,
+                    'pixel_count': max(self.min_pixels_per_band, int(seg.get('pixel_count', self.min_pixels_per_band) * width / max(1, seg['width']))),
+                    'obstacle_cut': True,
+                })
+
+        return split_segments
 
     def extract_segments_in_band(self, band_mask):
         """提取单个 Band 内的赛道 Segment"""
@@ -1114,6 +1218,25 @@ class PerceptionDecisionNode(Node):
             
             # ⭐ 绘制 Band 调试信息（如果启用）
             if self.show_branch_debug and hasattr(self, 'current_segments'):
+                if getattr(self, 'current_obstacle_zones', None):
+                    for zone in self.current_obstacle_zones:
+                        cv2.rectangle(
+                            display_frame,
+                            (int(zone['x0']), int(zone['y0'])),
+                            (int(zone['x1']), int(zone['y1'])),
+                            (0, 0, 255),
+                            2
+                        )
+                        cv2.putText(
+                            display_frame,
+                            f"avoid:{zone.get('label', '')}",
+                            (int(zone['x0']), max(0, int(zone['y0']) - 5)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.45,
+                            (0, 0, 255),
+                            1
+                        )
+
                 for i, band_info in enumerate(self.current_segments):
                     y0, y1 = band_info['y0'], band_info['y1']
                     
