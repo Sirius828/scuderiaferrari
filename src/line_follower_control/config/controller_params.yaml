@@ -17,6 +17,8 @@
     
     # ==================== 超时设置 ====================
     invalid_timeout: 0.5   # Timeout for is_valid=False (seconds)
+    enable_perception_stop: true  # 是否响应/perception/stop_request停车请求
+    perception_stop_timeout: 0.5  # 停车请求超过该时间未更新则自动解除，避免perception掉线永久停车
     
     # ==================== 日志设置 ====================
     # normal: 原有低频控制日志

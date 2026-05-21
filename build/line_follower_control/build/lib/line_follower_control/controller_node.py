@@ -33,6 +33,8 @@ class LineFollowerController(Node):
         self.declare_parameter('wheel_radius', 0.035)    # 轮子半径 (m)，默认3.5cm
         self.declare_parameter('max_steering', 1.0)      # 最大转向比例
         self.declare_parameter('invalid_timeout', 0.5)   # is_valid=False超时时间(秒)
+        self.declare_parameter('enable_perception_stop', True)
+        self.declare_parameter('perception_stop_timeout', 0.5)
         
         # 日志参数
         self.declare_parameter('controller_log_mode', 'normal')  # normal, pid_tuning, off
@@ -52,6 +54,9 @@ class LineFollowerController(Node):
         self.last_pid_terms = (0.0, 0.0, 0.0)
         self.last_tuning_log_time = 0.0
         self.track_lost_logged = False
+        self.perception_stop_active = False
+        self.last_perception_stop_time = None
+        self.perception_stop_logged = False
         
         # ==================== 订阅者 ====================
         # ⭐ 使用与segmentation_node相同的QoS配置
@@ -76,6 +81,12 @@ class LineFollowerController(Node):
             self.valid_callback,
             sensor_qos
         )
+        self.perception_stop_subscription = self.create_subscription(
+            Bool,
+            '/perception/stop_request',
+            self.perception_stop_callback,
+            10
+        )
         
         # ==================== 发布者 ====================
         # 发布/cmd_vel到chassis_controller
@@ -99,6 +110,10 @@ class LineFollowerController(Node):
         self.get_logger().info(f'   Max Steering: {self.max_steering}')
         self.get_logger().info(f'   Invalid Timeout: {self.invalid_timeout} s')
         self.get_logger().info(
+            f'   Perception Stop: {self.enable_perception_stop} '
+            f'(timeout={self.perception_stop_timeout:.2f}s)'
+        )
+        self.get_logger().info(
             f'   Log Mode: {self.controller_log_mode}, '
             f'PID Tuning Log Hz: {self.pid_tuning_log_hz}, '
             f'Bar Width: {self.pid_tuning_bar_width}'
@@ -115,6 +130,8 @@ class LineFollowerController(Node):
         self.wheel_radius = self.get_parameter('wheel_radius').value
         self.max_steering = self.get_parameter('max_steering').value
         self.invalid_timeout = self.get_parameter('invalid_timeout').value
+        self.enable_perception_stop = self.get_parameter('enable_perception_stop').value
+        self.perception_stop_timeout = self.get_parameter('perception_stop_timeout').value
 
         self.controller_log_mode = self.get_parameter('controller_log_mode').value
         self.pid_tuning_log_hz = self.get_parameter('pid_tuning_log_hz').value
@@ -134,6 +151,8 @@ class LineFollowerController(Node):
             'wheel_radius': self.wheel_radius,
             'max_steering': self.max_steering,
             'invalid_timeout': self.invalid_timeout,
+            'enable_perception_stop': self.enable_perception_stop,
+            'perception_stop_timeout': self.perception_stop_timeout,
             'controller_log_mode': self.controller_log_mode,
             'pid_tuning_log_hz': self.pid_tuning_log_hz,
             'pid_tuning_bar_width': self.pid_tuning_bar_width,
@@ -153,6 +172,8 @@ class LineFollowerController(Node):
             pending['wheel_radius'] = float(pending['wheel_radius'])
             pending['max_steering'] = float(pending['max_steering'])
             pending['invalid_timeout'] = float(pending['invalid_timeout'])
+            pending['enable_perception_stop'] = bool(pending['enable_perception_stop'])
+            pending['perception_stop_timeout'] = float(pending['perception_stop_timeout'])
             pending['pid_tuning_log_hz'] = float(pending['pid_tuning_log_hz'])
             pending['pid_tuning_bar_width'] = int(pending['pid_tuning_bar_width'])
             pending['controller_log_mode'] = str(pending['controller_log_mode'])
@@ -170,6 +191,8 @@ class LineFollowerController(Node):
             return SetParametersResult(successful=False, reason='max_steering must be >= 0')
         if pending['invalid_timeout'] < 0.0:
             return SetParametersResult(successful=False, reason='invalid_timeout must be >= 0')
+        if pending['perception_stop_timeout'] < 0.0:
+            return SetParametersResult(successful=False, reason='perception_stop_timeout must be >= 0')
         if pending['pid_tuning_log_hz'] <= 0.0:
             return SetParametersResult(successful=False, reason='pid_tuning_log_hz must be > 0')
         if pending['controller_log_mode'] not in ('normal', 'pid_tuning', 'off'):
@@ -187,6 +210,8 @@ class LineFollowerController(Node):
         self.wheel_radius = pending['wheel_radius']
         self.max_steering = pending['max_steering']
         self.invalid_timeout = pending['invalid_timeout']
+        self.enable_perception_stop = pending['enable_perception_stop']
+        self.perception_stop_timeout = pending['perception_stop_timeout']
         self.controller_log_mode = pending['controller_log_mode']
         self.pid_tuning_log_hz = pending['pid_tuning_log_hz']
         self.pid_tuning_bar_width = self.normalize_bar_width(pending['pid_tuning_bar_width'])
@@ -232,11 +257,41 @@ class LineFollowerController(Node):
             # 重置计时器
             self.invalid_start_time = None
             self.track_lost_logged = False
+
+    def perception_stop_callback(self, msg: Bool):
+        """接收感知层停车请求。"""
+        self.perception_stop_active = bool(msg.data)
+        self.last_perception_stop_time = time.time()
+        if not self.perception_stop_active:
+            self.perception_stop_logged = False
+
+    def should_stop_for_perception(self, current_time: float) -> bool:
+        if not self.enable_perception_stop or not self.perception_stop_active:
+            return False
+        if self.last_perception_stop_time is None:
+            return False
+        if self.perception_stop_timeout > 0.0:
+            elapsed = current_time - self.last_perception_stop_time
+            if elapsed > self.perception_stop_timeout:
+                self.perception_stop_active = False
+                self.perception_stop_logged = False
+                return False
+        return True
     
     def control_loop(self):
         """控制循环（50Hz）"""
         current_time = time.time()
         dt = current_time - self.prev_time
+
+        if self.should_stop_for_perception(current_time):
+            self.integral = 0.0
+            self.publish_stop(log=False)
+            if not self.perception_stop_logged:
+                self.get_logger().warn('🛑 Perception stop request active; publishing STOP')
+                self.perception_stop_logged = True
+            self.prev_offset = self.current_offset
+            self.prev_time = current_time
+            return
         
         if not self.is_valid:
             if self.invalid_start_time is not None:

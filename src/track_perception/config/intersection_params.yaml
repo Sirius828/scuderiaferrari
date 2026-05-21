@@ -106,6 +106,13 @@ perception_decision_node:
     obstacle_y_margin_px: 20.0  # 障碍bbox上下膨胀像素
     obstacle_max_age: 0.3  # detection结果超过该时间(s)不参与避障
     obstacle_min_bottom_y_ratio: 0.30  # bbox底部低于该画面y比例才参与避障，过滤远处/边缘误检
+    enable_traffic_light_stop: true  # 启用红灯+斑马线停车请求
+    traffic_light_min_confidence: 0.45  # 红/绿灯检测置信度阈值
+    zebra_min_confidence: 0.45  # Zebra斑马线检测置信度阈值
+    zebra_stop_y_ratio: 0.70  # Zebra bbox底部达到该画面高度比例时认为到达停车线
+    traffic_light_max_age: 0.5  # 检测结果超过该时间(s)不用于红绿灯状态更新
+    green_light_confirm_frames: 1  # 连续多少帧绿灯才解除停车
+    red_light_confirm_frames: 1  # 连续多少帧红灯才进入红灯已见状态
     enable_branch_bottom_anchor: true  # 仅LOCK时启用底部软锚点，让切入更平滑
     branch_bottom_anchor_x_ratio: 0.5  # 锚点x位置（0.5=画面中心）
     branch_bottom_anchor_y_ratio: 0.98  # 锚点y位置（靠近画面底部）

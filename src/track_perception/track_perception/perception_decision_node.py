@@ -90,6 +90,13 @@ class PerceptionDecisionNode(Node):
         self.declare_parameter('obstacle_y_margin_px', 20.0)
         self.declare_parameter('obstacle_max_age', 0.3)
         self.declare_parameter('obstacle_min_bottom_y_ratio', 0.30)
+        self.declare_parameter('enable_traffic_light_stop', True)
+        self.declare_parameter('traffic_light_min_confidence', 0.45)
+        self.declare_parameter('zebra_min_confidence', 0.45)
+        self.declare_parameter('zebra_stop_y_ratio', 0.70)
+        self.declare_parameter('traffic_light_max_age', 0.5)
+        self.declare_parameter('green_light_confirm_frames', 1)
+        self.declare_parameter('red_light_confirm_frames', 1)
         self.declare_parameter('enable_branch_bottom_anchor', True)
         self.declare_parameter('branch_bottom_anchor_x_ratio', 0.5)
         self.declare_parameter('branch_bottom_anchor_y_ratio', 0.98)
@@ -166,6 +173,13 @@ class PerceptionDecisionNode(Node):
         self.obstacle_y_margin_px = self.get_parameter('obstacle_y_margin_px').get_parameter_value().double_value
         self.obstacle_max_age = self.get_parameter('obstacle_max_age').get_parameter_value().double_value
         self.obstacle_min_bottom_y_ratio = self.get_parameter('obstacle_min_bottom_y_ratio').get_parameter_value().double_value
+        self.enable_traffic_light_stop = self.get_parameter('enable_traffic_light_stop').get_parameter_value().bool_value
+        self.traffic_light_min_confidence = self.get_parameter('traffic_light_min_confidence').get_parameter_value().double_value
+        self.zebra_min_confidence = self.get_parameter('zebra_min_confidence').get_parameter_value().double_value
+        self.zebra_stop_y_ratio = self.get_parameter('zebra_stop_y_ratio').get_parameter_value().double_value
+        self.traffic_light_max_age = self.get_parameter('traffic_light_max_age').get_parameter_value().double_value
+        self.green_light_confirm_frames = self.get_parameter('green_light_confirm_frames').get_parameter_value().integer_value
+        self.red_light_confirm_frames = self.get_parameter('red_light_confirm_frames').get_parameter_value().integer_value
         self.enable_branch_bottom_anchor = self.get_parameter('enable_branch_bottom_anchor').get_parameter_value().bool_value
         self.branch_bottom_anchor_x_ratio = self.get_parameter('branch_bottom_anchor_x_ratio').get_parameter_value().double_value
         self.branch_bottom_anchor_y_ratio = self.get_parameter('branch_bottom_anchor_y_ratio').get_parameter_value().double_value
@@ -250,6 +264,11 @@ class PerceptionDecisionNode(Node):
             '/segmentation/is_valid',
             qos_profile=valid_qos_profile
         )
+        self.stop_request_publisher = self.create_publisher(
+            Bool,
+            '/perception/stop_request',
+            10
+        )
         
         # 共享内存对象
         self.shm = None
@@ -270,7 +289,9 @@ class PerceptionDecisionNode(Node):
             'red_light',     # 7
             'yellow_light',  # 8
             'green_light',   # 9
-            'Stop'           # 10
+            'Stop',          # 10
+            'Rock',          # 11
+            'Zebra'          # 12
         ]
         
         self.get_logger().info(f'📡 Perception Decision Node Ready')
@@ -301,6 +322,10 @@ class PerceptionDecisionNode(Node):
         self.current_obstacle_zones = []  # 用于调试绘制
         self.fit_coeffs = None  # ⭐ 保存拟合系数用于可视化
         self.fit_points = []  # ⭐ 保存拟合用的点
+        self.traffic_light_state = 'CLEAR'
+        self.stop_request_active = False
+        self.red_light_confirm_count = 0
+        self.green_light_confirm_count = 0
         
         # ⭐ 心跳日志参数
         self.heartbeat_interval = 0.5  # 心跳间隔（秒）
@@ -354,6 +379,75 @@ class PerceptionDecisionNode(Node):
             
         except Exception as e:
             self.get_logger().error(f'Error parsing detections: {e}')
+
+    def get_recent_detections_for_traffic_light(self):
+        """返回未过期的检测结果；过期时不更新交通灯状态。"""
+        if not self.latest_detections:
+            return []
+        if self.traffic_light_max_age > 0 and time.time() - self.detections_timestamp > self.traffic_light_max_age:
+            return []
+        return self.latest_detections
+
+    def update_traffic_light_stop_state(self, image_height):
+        """红灯+斑马线停车状态机。"""
+        if not self.enable_traffic_light_stop:
+            self.stop_request_active = False
+            self.traffic_light_state = 'CLEAR'
+            self.red_light_confirm_count = 0
+            self.green_light_confirm_count = 0
+            return
+
+        detections = self.get_recent_detections_for_traffic_light()
+        has_red = False
+        has_green = False
+        zebra_reached = False
+        zebra_stop_y = float(image_height) * max(0.0, min(1.0, self.zebra_stop_y_ratio))
+
+        for det in detections:
+            class_name = det.get('class_name', '')
+            confidence = float(det.get('confidence', 0.0))
+
+            if class_name == 'green_light' and confidence >= self.traffic_light_min_confidence:
+                has_green = True
+            elif class_name == 'red_light' and confidence >= self.traffic_light_min_confidence:
+                has_red = True
+            elif class_name == 'Zebra' and confidence >= self.zebra_min_confidence:
+                zebra_bottom_y = max(float(det.get('y1', 0.0)), float(det.get('y2', 0.0)))
+                if zebra_bottom_y >= zebra_stop_y:
+                    zebra_reached = True
+
+        if has_green:
+            self.green_light_confirm_count += 1
+        else:
+            self.green_light_confirm_count = 0
+
+        if self.green_light_confirm_count >= max(1, self.green_light_confirm_frames):
+            if self.stop_request_active and self.enable_branch_event_log:
+                self.get_logger().info('🚦 Green light confirmed, releasing stop request')
+            self.traffic_light_state = 'CLEAR'
+            self.stop_request_active = False
+            self.red_light_confirm_count = 0
+            return
+
+        if has_red:
+            self.red_light_confirm_count += 1
+        else:
+            self.red_light_confirm_count = 0
+
+        if self.traffic_light_state == 'WAIT_GREEN':
+            self.stop_request_active = True
+            return
+
+        if self.red_light_confirm_count >= max(1, self.red_light_confirm_frames):
+            self.traffic_light_state = 'RED_SEEN'
+
+        if self.traffic_light_state == 'RED_SEEN' and zebra_reached:
+            self.traffic_light_state = 'WAIT_GREEN'
+            self.stop_request_active = True
+            if self.enable_branch_event_log:
+                self.get_logger().info('🚦 Red light + Zebra reached, requesting stop')
+        else:
+            self.stop_request_active = False
     
     def remove_shm_from_resource_tracker(self):
         """防止客户端退出时误删服务端的 SHM"""
@@ -450,6 +544,7 @@ class PerceptionDecisionNode(Node):
                 
                 # ⭐ 保存当前偏移量（用于可视化）
                 self.current_offset = center_offset
+                self.update_traffic_light_stop_state(h)
                 
                 # 6. 发布结果
                 offset_msg = Float32()
@@ -459,6 +554,10 @@ class PerceptionDecisionNode(Node):
                 is_valid_msg = Bool()
                 is_valid_msg.data = is_valid
                 self.is_valid_publisher.publish(is_valid_msg)
+
+                stop_request_msg = Bool()
+                stop_request_msg.data = self.stop_request_active
+                self.stop_request_publisher.publish(stop_request_msg)
                 self.published_msgs_window += 1
                 if need_perf_stats:
                     t_publish_done = time.perf_counter()
