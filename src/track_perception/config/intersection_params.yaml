@@ -81,6 +81,12 @@ perception_decision_node:
     branch_detect_far_band_ratio: 0.7  # 只用较远的多少比例Band判断岔路
     
     # 分支选择参数（outer_side 已在上面定义，这里不需要重复）
+    enable_continuity_branch_selection: true  # 无GuideBoard时优先选择与上一帧中心线连续的分支，抑制汇入/T字路口误锁默认侧
+    branch_continuity_max_dx_ratio: 0.35  # 连续分支候选与上一帧中心线允许的最大x距离比例
+    branch_continuity_near_band_ratio: 0.5  # 用靠近车身的多少比例Band判断路径连续性
+    enable_locked_path_continuity: true  # LOCK后期优先跟随当前路径连续segment，避免回主路前被GuideBoard指定侧的新segment拉走
+    locked_path_continuity_after_time: 0.5  # 进入LOCK多少秒后启用路径连续性取点；入口阶段仍优先执行GuideBoard选择
+    locked_path_continuity_max_dx_ratio: 0.28  # LOCK连续取点允许的最大x距离比例
     branch_lock_time: 2.0  # 分支锁定的最大持续时间（秒）
     min_branch_lock_time: 0.8  # 分支锁定的最短持续时间（秒），避免LOCK/NORMAL频繁切换
     exit_single_path_confirm_frames: 5  # 连续多少帧检测到单路径才退出LOCK状态
@@ -90,6 +96,9 @@ perception_decision_node:
     fit_min_points: 5  # 拟合所需的最少点数，二阶拟合建议至少5个点
     fit_order: 2  # NORMAL拟合阶数，1=线性拟合，2=二次拟合
     branch_fit_order: 2  # LOCK岔路拟合阶数
+    enable_fit_point_jump_filter: true  # 拟合前过滤连续Band中心点x跳变过大的点，抑制边缘误分割参与拟合
+    max_fit_point_dx_ratio: 0.22  # 相邻拟合点允许的最大x跳变比例（相对图像宽度）
+    max_fit_point_dx_px: 140.0  # 相邻拟合点允许的最大x跳变像素上限；<=0表示只用ratio
     enable_branch_bottom_anchor: true  # 仅LOCK时启用底部软锚点，让切入更平滑
     branch_bottom_anchor_x_ratio: 0.5  # 锚点x位置（0.5=画面中心）
     branch_bottom_anchor_y_ratio: 0.98  # 锚点y位置（靠近画面底部）

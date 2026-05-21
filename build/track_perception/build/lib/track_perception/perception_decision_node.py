@@ -66,6 +66,12 @@ class PerceptionDecisionNode(Node):
         self.declare_parameter('branch_detect_far_band_ratio', 0.6)
         # 分支选择参数
         self.declare_parameter('outer_side', 'left')
+        self.declare_parameter('enable_continuity_branch_selection', True)
+        self.declare_parameter('branch_continuity_max_dx_ratio', 0.35)
+        self.declare_parameter('branch_continuity_near_band_ratio', 0.5)
+        self.declare_parameter('enable_locked_path_continuity', True)
+        self.declare_parameter('locked_path_continuity_after_time', 0.5)
+        self.declare_parameter('locked_path_continuity_max_dx_ratio', 0.28)
         self.declare_parameter('branch_lock_time', 2.0)
         self.declare_parameter('min_branch_lock_time', 0.8)
         self.declare_parameter('exit_single_path_confirm_frames', 5)
@@ -74,6 +80,9 @@ class PerceptionDecisionNode(Node):
         self.declare_parameter('fit_min_points', 4)
         self.declare_parameter('fit_order', 1)
         self.declare_parameter('branch_fit_order', 2)
+        self.declare_parameter('enable_fit_point_jump_filter', True)
+        self.declare_parameter('max_fit_point_dx_ratio', 0.22)
+        self.declare_parameter('max_fit_point_dx_px', 140.0)
         self.declare_parameter('enable_branch_bottom_anchor', True)
         self.declare_parameter('branch_bottom_anchor_x_ratio', 0.5)
         self.declare_parameter('branch_bottom_anchor_y_ratio', 0.98)
@@ -124,6 +133,12 @@ class PerceptionDecisionNode(Node):
         self.branch_detect_min_bands = self.get_parameter('branch_detect_min_bands').get_parameter_value().integer_value
         self.branch_detect_far_band_ratio = self.get_parameter('branch_detect_far_band_ratio').get_parameter_value().double_value
         self.outer_side = self.get_parameter('outer_side').get_parameter_value().string_value
+        self.enable_continuity_branch_selection = self.get_parameter('enable_continuity_branch_selection').get_parameter_value().bool_value
+        self.branch_continuity_max_dx_ratio = self.get_parameter('branch_continuity_max_dx_ratio').get_parameter_value().double_value
+        self.branch_continuity_near_band_ratio = self.get_parameter('branch_continuity_near_band_ratio').get_parameter_value().double_value
+        self.enable_locked_path_continuity = self.get_parameter('enable_locked_path_continuity').get_parameter_value().bool_value
+        self.locked_path_continuity_after_time = self.get_parameter('locked_path_continuity_after_time').get_parameter_value().double_value
+        self.locked_path_continuity_max_dx_ratio = self.get_parameter('locked_path_continuity_max_dx_ratio').get_parameter_value().double_value
         self.branch_lock_time = self.get_parameter('branch_lock_time').get_parameter_value().double_value
         self.min_branch_lock_time = self.get_parameter('min_branch_lock_time').get_parameter_value().double_value
         self.exit_single_path_confirm_frames = self.get_parameter('exit_single_path_confirm_frames').get_parameter_value().integer_value
@@ -131,6 +146,9 @@ class PerceptionDecisionNode(Node):
         self.fit_min_points = self.get_parameter('fit_min_points').get_parameter_value().integer_value
         self.fit_order = self.get_parameter('fit_order').get_parameter_value().integer_value
         self.branch_fit_order = self.get_parameter('branch_fit_order').get_parameter_value().integer_value
+        self.enable_fit_point_jump_filter = self.get_parameter('enable_fit_point_jump_filter').get_parameter_value().bool_value
+        self.max_fit_point_dx_ratio = self.get_parameter('max_fit_point_dx_ratio').get_parameter_value().double_value
+        self.max_fit_point_dx_px = self.get_parameter('max_fit_point_dx_px').get_parameter_value().double_value
         self.enable_branch_bottom_anchor = self.get_parameter('enable_branch_bottom_anchor').get_parameter_value().bool_value
         self.branch_bottom_anchor_x_ratio = self.get_parameter('branch_bottom_anchor_x_ratio').get_parameter_value().double_value
         self.branch_bottom_anchor_y_ratio = self.get_parameter('branch_bottom_anchor_y_ratio').get_parameter_value().double_value
@@ -558,11 +576,20 @@ class PerceptionDecisionNode(Node):
             # 状态机转换
             if not self.branch_locked:
                 if branch_detected:
+                    last_center_x = self.last_offset * w / 2.0 + w / 2.0
                     target_branch = self.outer_side
                     if self.enable_guideboard_branch_selection and self.check_guideboard_in_far_roi(h, w):
                         target_branch = self.guideboard_branch
                         if self.enable_branch_event_log:
                             self.get_logger().info(f'🚩 GuideBoard detected, selecting branch: {target_branch}')
+                    elif self.enable_continuity_branch_selection:
+                        continuity_branch = self.choose_branch_side_by_continuity(bands, w, last_center_x)
+                        if continuity_branch is not None:
+                            target_branch = continuity_branch
+                            if self.enable_branch_event_log:
+                                self.get_logger().info(
+                                    f'🚩 Branch detected, selecting continuous branch: {target_branch}'
+                                )
                     
                     if target_branch not in ('left', 'right'):
                         self.get_logger().warn(f'Invalid branch side "{target_branch}", falling back to outer_side={self.outer_side}')
@@ -607,10 +634,12 @@ class PerceptionDecisionNode(Node):
             
             # ==================== 步骤2: 收集点并拟合 ====================
             target_side = self.locked_branch_side if self.branch_locked else self.outer_side
+            last_center_x = self.last_offset * w / 2.0 + w / 2.0
             points = self.collect_centerline_points(bands, self.branch_locked, target_side, 
-                                                    last_center_x=(self.last_offset * w/2 + w/2))
+                                                    last_center_x=last_center_x,
+                                                    image_width=w)
             fit_order = self.branch_fit_order if self.branch_locked else self.fit_order
-            fit_points = list(points)
+            fit_points = self.filter_centerline_points(points, w, last_center_x=last_center_x)
             if self.branch_locked and self.enable_branch_bottom_anchor and fit_order >= 2:
                 fit_points.append((
                     w * self.branch_bottom_anchor_x_ratio,
@@ -825,6 +854,44 @@ class PerceptionDecisionNode(Node):
         
         return branch_bands >= self.branch_detect_min_bands, branch_bands
 
+    def choose_branch_side_by_continuity(self, bands, image_width, last_center_x):
+        """没有明确路牌时，优先锁定与上一帧中心线连续的分支。"""
+        if last_center_x is None or not bands:
+            return None
+
+        near_ratio = max(0.1, min(1.0, self.branch_continuity_near_band_ratio))
+        near_count = max(1, int(np.ceil(len(bands) * near_ratio)))
+        near_bands = bands[-near_count:]
+        max_dx = max(1.0, self.branch_continuity_max_dx_ratio * float(image_width))
+
+        best_seg = None
+        best_segments = None
+        best_dist = None
+        for band in reversed(near_bands):
+            segments = band.get('segments', [])
+            if len(segments) < 2:
+                continue
+
+            candidate = min(segments, key=lambda s: abs(float(s['center_x']) - last_center_x))
+            dist = abs(float(candidate['center_x']) - last_center_x)
+            if dist > max_dx:
+                continue
+
+            if best_dist is None or dist < best_dist:
+                best_seg = candidate
+                best_segments = segments
+                best_dist = dist
+
+        if best_seg is None or not best_segments:
+            return None
+
+        sorted_segments = sorted(best_segments, key=lambda s: float(s['center_x']))
+        best_index = min(
+            range(len(sorted_segments)),
+            key=lambda i: abs(float(sorted_segments[i]['center_x']) - float(best_seg['center_x']))
+        )
+        return 'left' if best_index < len(sorted_segments) / 2.0 else 'right'
+
     def choose_target_segment(self, band, outer_side):
         """选择目标分支 Segment"""
         if not band['segments']: return None
@@ -857,9 +924,44 @@ class PerceptionDecisionNode(Node):
         else:
             return max(band['segments'], key=lambda s: s['center_x'])
 
-    def collect_centerline_points(self, bands, branch_locked, outer_side, last_center_x=None):
+    def choose_locked_segment_by_continuity(self, band, image_width, last_center_x):
+        """LOCK 后期优先选择与当前行驶路径连续的 segment，而不是固定左/右侧。"""
+        if last_center_x is None or not band['segments']:
+            return None
+
+        max_dx = max(1.0, self.locked_path_continuity_max_dx_ratio * float(image_width))
+        if len(band['segments']) == 1:
+            seg = band['segments'][0]
+            if last_center_x < seg['x0'] - max_dx or last_center_x > seg['x1'] + max_dx:
+                return None
+
+            target_x = max(float(seg['x0']), min(float(seg['x1']), float(last_center_x)))
+            return {
+                'x0': int(max(seg['x0'], target_x - seg['width'] * 0.2)),
+                'x1': int(min(seg['x1'], target_x + seg['width'] * 0.2)),
+                'width': max(1.0, seg['width'] * 0.4),
+                'center_x': target_x,
+                'pixel_count': seg.get('pixel_count', 100)
+            }
+
+        target_seg = min(band['segments'], key=lambda s: abs(float(s['center_x']) - float(last_center_x)))
+        if abs(float(target_seg['center_x']) - float(last_center_x)) > max_dx:
+            return None
+        return target_seg
+
+    def should_use_locked_path_continuity(self):
+        if not self.enable_locked_path_continuity or not self.branch_locked or self.lock_start_time is None:
+            return False
+        return (time.time() - self.lock_start_time) >= self.locked_path_continuity_after_time
+
+    def collect_centerline_points(self, bands, branch_locked, outer_side, last_center_x=None, image_width=None):
         """收集用于拟合的中心点"""
         points = []
+        use_locked_continuity = (
+            branch_locked and
+            image_width is not None and
+            self.should_use_locked_path_continuity()
+        )
         for b in bands:
             target_seg = None
             
@@ -868,7 +970,10 @@ class PerceptionDecisionNode(Node):
                 continue
             
             if branch_locked:
-                target_seg = self.choose_target_segment(b, outer_side)
+                if use_locked_continuity:
+                    target_seg = self.choose_locked_segment_by_continuity(b, image_width, last_center_x)
+                if target_seg is None:
+                    target_seg = self.choose_target_segment(b, outer_side)
             else:
                 if len(b['segments']) == 1:
                     target_seg = b['segments'][0]
@@ -882,6 +987,71 @@ class PerceptionDecisionNode(Node):
             if target_seg:
                 points.append((target_seg['center_x'], b['y_center']))
         return points
+
+    def filter_centerline_points(self, points, image_width, last_center_x=None):
+        """过滤连续 band 中 x 跳变过大的中心点，避免误分割区域参与拟合。"""
+        points = list(points)
+        if not self.enable_fit_point_jump_filter or len(points) < 3:
+            return points
+
+        ratio_limit = max(0.0, self.max_fit_point_dx_ratio) * float(image_width)
+        px_limit = self.max_fit_point_dx_px if self.max_fit_point_dx_px > 0 else ratio_limit
+        max_dx = max(1.0, min(ratio_limit, px_limit))
+
+        keep = [True] * len(points)
+
+        # 先剔除夹在两个连续点之间的孤立横向跳点。
+        for i in range(1, len(points) - 1):
+            prev_x = float(points[i - 1][0])
+            cur_x = float(points[i][0])
+            next_x = float(points[i + 1][0])
+            if (abs(cur_x - prev_x) > max_dx and
+                abs(cur_x - next_x) > max_dx and
+                abs(next_x - prev_x) <= max_dx):
+                keep[i] = False
+
+        # 端点也可能来自画面边缘误分割；只在后续点彼此连续时剔除端点。
+        if len(points) >= 3:
+            x0 = float(points[0][0])
+            x1 = float(points[1][0])
+            x2 = float(points[2][0])
+            if abs(x0 - x1) > max_dx and abs(x1 - x2) <= max_dx:
+                keep[0] = False
+
+            xn0 = float(points[-1][0])
+            xn1 = float(points[-2][0])
+            xn2 = float(points[-3][0])
+            if abs(xn0 - xn1) > max_dx and abs(xn1 - xn2) <= max_dx:
+                keep[-1] = False
+
+        filtered = [p for p, should_keep in zip(points, keep) if should_keep]
+        if len(filtered) < 2:
+            return filtered
+
+        # 如果过滤后仍被大跳变分成多段，只保留最连续的一段。
+        chains = []
+        current_chain = [filtered[0]]
+        for point in filtered[1:]:
+            if abs(float(point[0]) - float(current_chain[-1][0])) <= max_dx:
+                current_chain.append(point)
+            else:
+                chains.append(current_chain)
+                current_chain = [point]
+        chains.append(current_chain)
+
+        if len(chains) == 1:
+            return filtered
+
+        def chain_score(chain):
+            length_score = len(chain)
+            bottom_score = max(float(p[1]) for p in chain)
+            if last_center_x is None:
+                continuity_score = 0.0
+            else:
+                continuity_score = -min(abs(float(p[0]) - float(last_center_x)) for p in chain)
+            return (length_score, bottom_score, continuity_score)
+
+        return list(max(chains, key=chain_score))
 
     def fit_centerline_and_compute_offset(self, points, h, w, fit_order=None):
         """拟合中心线并计算 Offset"""
