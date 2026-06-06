@@ -8,6 +8,7 @@ import os
 import sys
 import glob
 import time
+import traceback
 from functools import partial
 import cv2
 import numpy as np
@@ -22,11 +23,33 @@ OBJ_THRESH = 0.5
 NMS_THRESH = 0.45
 IMG_SIZE = (640, 640)
 POST_TOPK_PER_CLASS = 50
+POST_KEEP_TOPK = 30
+ENABLE_CLASS_AGNOSTIC_NMS = True
+CLASS_AGNOSTIC_NMS_THRESH = 0.60
 ENABLE_FAST_POSTPROCESS = True
 DUPLICATE_IOU_THRESH = 0.30
 DUPLICATE_CONTAINMENT_THRESH = 0.75
 
 _DFL_PROJ_CACHE = {}
+
+
+def letterbox_image(img, new_shape=IMG_SIZE, color=(114, 114, 114)):
+    """Resize with unchanged aspect ratio, then pad on right/bottom.
+
+    PaddleYOLO training letterbox keeps the resized image at the top-left corner
+    and pads the remaining area on the right/bottom side.
+    """
+    src_h, src_w = img.shape[:2]
+    dst_w, dst_h = new_shape
+    scale = min(dst_w / src_w, dst_h / src_h)
+    resized_w = int(round(src_w * scale))
+    resized_h = int(round(src_h * scale))
+    resized = cv2.resize(img, (resized_w, resized_h), interpolation=cv2.INTER_LINEAR)
+    padded = np.full((dst_h, dst_w, 3), color, dtype=img.dtype)
+    pad_x = 0
+    pad_y = 0
+    padded[pad_y:pad_y + resized_h, pad_x:pad_x + resized_w] = resized
+    return padded, scale, pad_x, pad_y
 
 
 def xywh2xyxy(x):
@@ -37,6 +60,11 @@ def xywh2xyxy(x):
     y[:, 2] = x[:, 0] + x[:, 2] / 2  # bottom right x
     y[:, 3] = x[:, 1] + x[:, 3] / 2  # bottom right y
     return y
+
+
+def as_xyxy(x):
+    """PaddleYOLO exported YOLOv8 output is already decoded as [x1, y1, x2, y2]."""
+    return x.astype(np.float32, copy=True)
 
 
 def dfl(position):
@@ -95,7 +123,7 @@ def filter_boxes(boxes, box_confidences, box_class_probs):
     return boxes, classes, scores
 
 
-def nms_boxes(boxes, scores):
+def nms_boxes(boxes, scores, nms_thresh=NMS_THRESH):
     """NMS算法（纯NumPy实现）"""
     x = boxes[:, 0]
     y = boxes[:, 1]
@@ -120,7 +148,7 @@ def nms_boxes(boxes, scores):
         inter = w1 * h1
 
         ovr = inter / (areas[i] + areas[order[1:]] - inter)
-        inds = np.where(ovr <= NMS_THRESH)[0]
+        inds = np.where(ovr <= nms_thresh)[0]
         order = order[inds + 1]
     keep = np.array(keep)
     return keep
@@ -412,6 +440,246 @@ def fast_post_process(input_data, img_shape=(640, 640)):
     return boxes, classes, scores, profile
 
 
+def _as_yolov8_flat_output(output):
+    """Normalize a single YOLOv8 flat output to (num_anchors, 4 + num_classes)."""
+    output = np.asarray(output)
+    if output.ndim == 3:
+        if output.shape[0] != 1:
+            raise ValueError(f'flat YOLO output batch must be 1, got shape={output.shape}')
+        output = output[0]
+    elif output.ndim != 2:
+        raise ValueError(f'flat YOLO output must be 2D/3D, got shape={output.shape}')
+
+    # RKNN exports may be (8400, 17) or (17, 8400).
+    if output.shape[0] <= 256 and output.shape[1] > output.shape[0]:
+        output = output.T
+
+    if output.shape[1] < 6:
+        raise ValueError(f'flat YOLO output attrs must be >= 6, got shape={output.shape}')
+    return output.astype(np.float32, copy=False)
+
+
+def flat_yolov8_post_process(input_data, img_shape=(640, 640), letterbox_meta=None):
+    """
+    后处理单输出 YOLOv8 RKNN: (1, 8400, 4 + num_classes).
+
+    PaddleYOLO 导出的 flat 输出 bbox 已经是 xyxy 坐标，坐标位于 640x640
+    letterbox 输入空间，再映射回当前画面坐标。
+    """
+    t_start = time.perf_counter()
+    if input_data is None or len(input_data) != 1:
+        raise ValueError(f'flat YOLOv8 postprocess expects 1 output, got {0 if input_data is None else len(input_data)}')
+
+    output = _as_yolov8_flat_output(input_data[0])
+    candidates_before_filter = int(output.shape[0])
+
+    boxes_xyxy = output[:, :4]
+    class_probs = output[:, 4:]
+    raw_score_min = float(np.min(class_probs)) if class_probs.size else 0.0
+    raw_score_max = float(np.max(class_probs)) if class_probs.size else 0.0
+
+    # 有些导出会保留 logits；当前 RKNN 通常已是 0..1 概率。这里做保护性 sigmoid。
+    if class_probs.size > 0 and (np.max(class_probs) > 1.0 or np.min(class_probs) < 0.0):
+        class_probs = 1.0 / (1.0 + np.exp(-class_probs))
+
+    anchor_max_scores = np.max(class_probs, axis=1)
+    score_max = float(np.max(anchor_max_scores)) if anchor_max_scores.size else 0.0
+
+    # PaddleYOLO multiclass_nms 风格：每个类别独立筛选候选，而不是每个
+    # anchor 只取 argmax 类别。模型导出时去掉 NMS 后需要在这里补回来。
+    filtered_per_class = []
+    candidates_after_filter = 0
+    for class_id in range(class_probs.shape[1]):
+        class_scores = class_probs[:, class_id]
+        keep = np.flatnonzero(class_scores >= OBJ_THRESH)
+        if keep.size == 0:
+            continue
+        candidates_after_filter += int(keep.size)
+        filtered_per_class.append((class_id, keep, class_scores[keep].astype(np.float32, copy=False)))
+    t_filter_done = time.perf_counter()
+
+    if not filtered_per_class:
+        profile = {
+            'post_format': 'flat_yolov8',
+            'post_multiclass_nms': True,
+            'post_score_filter_ms': (t_filter_done - t_start) * 1000.0,
+            'post_topk_ms': 0.0,
+            'post_dfl_decode_ms': 0.0,
+            'post_nms_ms': 0.0,
+            'post_dedupe_ms': 0.0,
+            'post_agnostic_removed': 0,
+            'post_keep_topk_removed': 0,
+            'post_duplicates_removed': 0,
+            'post_candidates_before_filter': candidates_before_filter,
+            'post_candidates_after_filter': 0,
+            'post_candidates_after_topk': 0,
+            'post_nms_input_max_per_class': 0,
+            'post_flat_raw_score_min': raw_score_min,
+            'post_flat_raw_score_max': raw_score_max,
+            'post_flat_score_max': score_max,
+            'post_fast_path': False,
+        }
+        return None, None, None, profile
+
+    selected_anchor_indices = []
+    selected_classes = []
+    selected_scores = []
+    nms_input_max_per_class = 0
+    for class_id, anchor_indices, class_scores in filtered_per_class:
+        if anchor_indices.size > POST_TOPK_PER_CLASS:
+            top_local = np.argpartition(class_scores, -POST_TOPK_PER_CLASS)[-POST_TOPK_PER_CLASS:]
+            anchor_indices = anchor_indices[top_local]
+            class_scores = class_scores[top_local]
+        nms_input_max_per_class = max(nms_input_max_per_class, int(anchor_indices.size))
+        selected_anchor_indices.append(anchor_indices)
+        selected_classes.append(np.full(anchor_indices.shape, class_id, dtype=np.int32))
+        selected_scores.append(class_scores)
+
+    selected_anchor_indices = np.concatenate(selected_anchor_indices)
+    classes = np.concatenate(selected_classes)
+    scores = np.concatenate(selected_scores).astype(np.float32, copy=False)
+    candidates_after_topk = int(scores.size)
+    t_topk_done = time.perf_counter()
+
+    boxes = as_xyxy(boxes_xyxy[selected_anchor_indices])
+    if letterbox_meta is not None:
+        scale, pad_x, pad_y = letterbox_meta
+        boxes[:, [0, 2]] = (boxes[:, [0, 2]] - pad_x) / max(scale, 1e-6)
+        boxes[:, [1, 3]] = (boxes[:, [1, 3]] - pad_y) / max(scale, 1e-6)
+    else:
+        scale_x = float(img_shape[1]) / float(IMG_SIZE[0])
+        scale_y = float(img_shape[0]) / float(IMG_SIZE[1])
+        boxes[:, [0, 2]] *= scale_x
+        boxes[:, [1, 3]] *= scale_y
+    t_decode_done = time.perf_counter()
+
+    nboxes, nclasses, nscores = [], [], []
+    for class_id in np.unique(classes):
+        inds = np.flatnonzero(classes == class_id)
+        b = boxes[inds]
+        c_cls = classes[inds]
+        s = scores[inds]
+        keep_nms = nms_boxes(b, s)
+        if len(keep_nms) != 0:
+            nboxes.append(b[keep_nms])
+            nclasses.append(c_cls[keep_nms])
+            nscores.append(s[keep_nms])
+
+    t_nms_done = time.perf_counter()
+
+    if not nboxes:
+        profile = {
+            'post_format': 'flat_yolov8',
+            'post_multiclass_nms': True,
+            'post_score_filter_ms': (t_filter_done - t_start) * 1000.0,
+            'post_topk_ms': (t_topk_done - t_filter_done) * 1000.0,
+            'post_dfl_decode_ms': (t_decode_done - t_topk_done) * 1000.0,
+            'post_nms_ms': (t_nms_done - t_decode_done) * 1000.0,
+            'post_dedupe_ms': 0.0,
+            'post_agnostic_removed': 0,
+            'post_keep_topk_removed': 0,
+            'post_duplicates_removed': 0,
+            'post_candidates_before_filter': candidates_before_filter,
+            'post_candidates_after_filter': candidates_after_filter,
+            'post_candidates_after_topk': candidates_after_topk,
+            'post_nms_input_max_per_class': nms_input_max_per_class,
+            'post_flat_raw_score_min': raw_score_min,
+            'post_flat_raw_score_max': raw_score_max,
+            'post_flat_score_max': score_max,
+            'post_fast_path': False,
+        }
+        return None, None, None, profile
+
+    boxes = np.concatenate(nboxes)
+    classes = np.concatenate(nclasses)
+    scores = np.concatenate(nscores)
+    agnostic_removed = 0
+    if ENABLE_CLASS_AGNOSTIC_NMS and len(boxes) > 1:
+        keep_agnostic = nms_boxes(boxes, scores, nms_thresh=CLASS_AGNOSTIC_NMS_THRESH)
+        agnostic_removed = int(len(boxes) - len(keep_agnostic))
+        boxes = boxes[keep_agnostic]
+        classes = classes[keep_agnostic]
+        scores = scores[keep_agnostic]
+
+    boxes, classes, scores, duplicates_removed = suppress_duplicate_boxes(boxes, classes, scores)
+    keep_topk_removed = 0
+    if POST_KEEP_TOPK > 0 and len(scores) > POST_KEEP_TOPK:
+        order = np.argsort(scores)[::-1][:POST_KEEP_TOPK]
+        keep_topk_removed = int(len(scores) - len(order))
+        boxes = boxes[order]
+        classes = classes[order]
+        scores = scores[order]
+    t_dedupe_done = time.perf_counter()
+
+    profile = {
+        'post_format': 'flat_yolov8',
+        'post_multiclass_nms': True,
+        'post_score_filter_ms': (t_filter_done - t_start) * 1000.0,
+        'post_topk_ms': (t_topk_done - t_filter_done) * 1000.0,
+        'post_dfl_decode_ms': (t_decode_done - t_topk_done) * 1000.0,
+        'post_nms_ms': (t_nms_done - t_decode_done) * 1000.0,
+        'post_dedupe_ms': (t_dedupe_done - t_nms_done) * 1000.0,
+        'post_agnostic_removed': agnostic_removed,
+        'post_keep_topk_removed': keep_topk_removed,
+        'post_duplicates_removed': duplicates_removed,
+        'post_candidates_before_filter': candidates_before_filter,
+        'post_candidates_after_filter': candidates_after_filter,
+        'post_candidates_after_topk': candidates_after_topk,
+        'post_nms_input_max_per_class': nms_input_max_per_class,
+        'post_flat_raw_score_min': raw_score_min,
+        'post_flat_raw_score_max': raw_score_max,
+        'post_flat_score_max': score_max,
+        'post_fast_path': False,
+    }
+
+    if boxes is None or len(boxes) == 0:
+        return None, None, None, profile
+    return boxes, classes, scores, profile
+
+
+def split_yolov8_post_process(input_data, img_shape=(640, 640), letterbox_meta=None):
+    """
+    后处理拆分输出 YOLOv8 RKNN: boxes=(1,8400,4), scores=(1,8400,num_classes).
+    拆分输出用于避免 bbox 大数值范围把 score 量化成 0。
+    """
+    if input_data is None or len(input_data) != 2:
+        raise ValueError(f'split YOLOv8 postprocess expects 2 outputs, got {0 if input_data is None else len(input_data)}')
+
+    first = np.asarray(input_data[0])
+    second = np.asarray(input_data[1])
+    if first.ndim == 3 and first.shape[0] == 1:
+        first = first[0]
+    if second.ndim == 3 and second.shape[0] == 1:
+        second = second[0]
+
+    if first.ndim != 2 or second.ndim != 2:
+        raise ValueError(f'split YOLOv8 outputs must be 2D/3D, got {first.shape}, {second.shape}')
+
+    if first.shape[1] == 4 and second.shape[0] == first.shape[0]:
+        boxes_xyxy = first
+        class_probs = second
+    elif second.shape[1] == 4 and first.shape[0] == second.shape[0]:
+        boxes_xyxy = second
+        class_probs = first
+    else:
+        raise ValueError(f'cannot identify split YOLOv8 boxes/scores shapes: {first.shape}, {second.shape}')
+
+    combined = np.concatenate(
+        [
+            boxes_xyxy.astype(np.float32, copy=False),
+            class_probs.astype(np.float32, copy=False),
+        ],
+        axis=1
+    )
+    boxes, classes, scores, profile = flat_yolov8_post_process(
+        [combined],
+        img_shape,
+        letterbox_meta=letterbox_meta
+    )
+    profile['post_format'] = 'split_yolov8'
+    return boxes, classes, scores, profile
+
+
 def post_process(input_data, img_shape=(640, 640)):
     """后处理（纯NumPy实现，适配RK3588输出格式）"""
     boxes, scores, classes_conf = [], [], []
@@ -468,6 +736,33 @@ def post_process(input_data, img_shape=(640, 640)):
     return boxes, classes, scores
 
 
+def _output_shapes(outputs):
+    if outputs is None:
+        return 'None'
+    return ', '.join(str(getattr(output, 'shape', None)) for output in outputs)
+
+
+def run_detection_postprocess(outputs, img_shape, use_fast_postprocess=True, letterbox_meta=None):
+    """根据 RKNN 输出格式自动选择后处理。"""
+    if outputs is None or len(outputs) == 0:
+        raise ValueError('RKNN inference returned no outputs')
+
+    if len(outputs) == 1:
+        return flat_yolov8_post_process(outputs, img_shape, letterbox_meta=letterbox_meta)
+
+    if len(outputs) == 2:
+        return split_yolov8_post_process(outputs, img_shape, letterbox_meta=letterbox_meta)
+
+    if use_fast_postprocess and ENABLE_FAST_POSTPROCESS:
+        return fast_post_process(outputs, img_shape)
+
+    boxes, classes, scores = post_process(outputs, img_shape)
+    return boxes, classes, scores, {
+        'post_fast_path': False,
+        'post_format': 'dfl_multi_output',
+    }
+
+
 def detection_inference_func(rknn_instance, img_bgr, use_fast_postprocess=True):
     """
     目标检测推理回调函数（在线程池中执行）
@@ -487,11 +782,8 @@ def detection_inference_func(rknn_instance, img_bgr, use_fast_postprocess=True):
         # 保存原始尺寸
         h_orig, w_orig = img_bgr.shape[:2]
         
-        # BGR -> RGB
-        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-        
-        # resize 到模型输入尺寸
-        img_resized = cv2.resize(img_rgb, IMG_SIZE)
+        # YOLOv8 模型按 640x640 letterbox 训练，推理也保持相同比例填充。
+        img_resized, lb_scale, lb_pad_x, lb_pad_y = letterbox_image(img_bgr, IMG_SIZE)
         img_input = np.expand_dims(img_resized, 0)
 
         t_rknn_start = time.perf_counter()
@@ -504,15 +796,25 @@ def detection_inference_func(rknn_instance, img_bgr, use_fast_postprocess=True):
         # 后处理
         post_profile = {}
         try:
-            if use_fast_postprocess and ENABLE_FAST_POSTPROCESS:
-                boxes, classes, scores, post_profile = fast_post_process(outputs, (h_orig, w_orig))
-            else:
-                boxes, classes, scores = post_process(outputs, (h_orig, w_orig))
-                post_profile = {'post_fast_path': False}
+            boxes, classes, scores, post_profile = run_detection_postprocess(
+                outputs,
+                (h_orig, w_orig),
+                use_fast_postprocess=use_fast_postprocess,
+                letterbox_meta=(lb_scale, lb_pad_x, lb_pad_y)
+            )
         except Exception as e:
-            print(f'⚠️ Fast postprocess failed, falling back to legacy post_process: {e}')
+            print(
+                f'⚠️ Detection postprocess failed: {e}; '
+                f'outputs=[{_output_shapes(outputs)}]'
+            )
+            if len(outputs) == 1:
+                raise
             boxes, classes, scores = post_process(outputs, (h_orig, w_orig))
-            post_profile = {'post_fast_path': False, 'post_fallback': True}
+            post_profile = {
+                'post_fast_path': False,
+                'post_fallback': True,
+                'post_format': 'dfl_multi_output',
+            }
 
         t_build_start = time.perf_counter()
         
@@ -569,6 +871,7 @@ def detection_inference_func(rknn_instance, img_bgr, use_fast_postprocess=True):
         
     except Exception as e:
         print(f'❌ Inference error: {e}')
+        traceback.print_exc()
         return [], False, {}
 
 
@@ -685,6 +988,7 @@ class ObjectDetectionInfer:
             
         except Exception as e:
             print(f'❌ Inference error: {e}')
+            traceback.print_exc()
             return [], False
 
     def get_last_profile(self):

@@ -9,7 +9,8 @@ import rclpy
 from rcl_interfaces.msg import SetParametersResult
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
-from std_msgs.msg import Float32, Bool
+from std_msgs.msg import Float32, Bool, String
+from std_srvs.srv import SetBool
 from geometry_msgs.msg import Twist
 import math
 import time
@@ -35,11 +36,15 @@ class LineFollowerController(Node):
         self.declare_parameter('invalid_timeout', 0.5)   # is_valid=False超时时间(秒)
         self.declare_parameter('enable_perception_stop', True)
         self.declare_parameter('perception_stop_timeout', 0.5)
+        self.declare_parameter('autonomous_enabled_on_start', False)
+        self.declare_parameter('publish_stop_when_disabled', True)
+        self.declare_parameter('enable_manual_override', True)
         
         # 日志参数
         self.declare_parameter('controller_log_mode', 'normal')  # normal, pid_tuning, off
         self.declare_parameter('pid_tuning_log_hz', 10.0)        # PID调参日志频率
         self.declare_parameter('pid_tuning_bar_width', 41)       # 误差条宽度，建议使用奇数
+        self.declare_parameter('controller_debug_hz', 1.0)
         
         self.load_parameters()
         self.add_on_set_parameters_callback(self.parameters_callback)
@@ -52,11 +57,25 @@ class LineFollowerController(Node):
         self.is_valid = True               # 是否有赛道
         self.invalid_start_time = None     # is_valid=False的开始时间
         self.last_pid_terms = (0.0, 0.0, 0.0)
+        self.last_steering = 0.0
         self.last_tuning_log_time = 0.0
         self.track_lost_logged = False
         self.perception_stop_active = False
         self.last_perception_stop_time = None
         self.perception_stop_logged = False
+        self.autonomous_enabled = bool(self.autonomous_enabled_on_start)
+        self.emergency_stop_active = False
+        self.manual_override_active = False
+        self.disabled_stop_logged = False
+        self.manual_override_logged = False
+        self.last_control_mode = 'init'
+        self.debug_window_start = time.time()
+        self.debug_loop_count = 0
+        self.debug_cmd_count = 0
+        self.debug_stop_count = 0
+        self.debug_skip_count = 0
+        self.debug_dt_sum = 0.0
+        self.debug_dt_max = 0.0
         
         # ==================== 订阅者 ====================
         # ⭐ 使用与segmentation_node相同的QoS配置
@@ -87,6 +106,23 @@ class LineFollowerController(Node):
             self.perception_stop_callback,
             10
         )
+        self.emergency_stop_subscription = self.create_subscription(
+            Bool,
+            '/race/emergency_stop',
+            self.emergency_stop_callback,
+            10
+        )
+        self.manual_override_subscription = self.create_subscription(
+            Bool,
+            '/race/manual_override',
+            self.manual_override_callback,
+            10
+        )
+        self.enabled_service = self.create_service(
+            SetBool,
+            '/line_follower/set_enabled',
+            self.set_enabled_callback
+        )
         
         # ==================== 发布者 ====================
         # 发布/cmd_vel到chassis_controller
@@ -95,10 +131,19 @@ class LineFollowerController(Node):
             '/cmd_vel',
             10
         )
+        self.debug_publisher = self.create_publisher(
+            String,
+            '/line_follower/debug',
+            10
+        )
         
         # ==================== 定时器 ====================
         # 以50Hz频率发布控制指令
         self.control_timer = self.create_timer(0.02, self.control_loop)
+        self.debug_timer = self.create_timer(
+            max(0.1, 1.0 / max(0.1, self.controller_debug_hz)),
+            self.publish_debug_status
+        )
         
         # 打印配置信息
         self.get_logger().info('🚗 Line Follower Controller Initialized (Standard PID)')
@@ -112,6 +157,11 @@ class LineFollowerController(Node):
         self.get_logger().info(
             f'   Perception Stop: {self.enable_perception_stop} '
             f'(timeout={self.perception_stop_timeout:.2f}s)'
+        )
+        self.get_logger().info(
+            f'   Autonomous Enabled: {self.autonomous_enabled}, '
+            f'publish_stop_when_disabled={self.publish_stop_when_disabled}, '
+            f'enable_manual_override={self.enable_manual_override}'
         )
         self.get_logger().info(
             f'   Log Mode: {self.controller_log_mode}, '
@@ -132,12 +182,16 @@ class LineFollowerController(Node):
         self.invalid_timeout = self.get_parameter('invalid_timeout').value
         self.enable_perception_stop = self.get_parameter('enable_perception_stop').value
         self.perception_stop_timeout = self.get_parameter('perception_stop_timeout').value
+        self.autonomous_enabled_on_start = self.get_parameter('autonomous_enabled_on_start').value
+        self.publish_stop_when_disabled = self.get_parameter('publish_stop_when_disabled').value
+        self.enable_manual_override = self.get_parameter('enable_manual_override').value
 
         self.controller_log_mode = self.get_parameter('controller_log_mode').value
         self.pid_tuning_log_hz = self.get_parameter('pid_tuning_log_hz').value
         self.pid_tuning_bar_width = self.normalize_bar_width(
             self.get_parameter('pid_tuning_bar_width').value
         )
+        self.controller_debug_hz = self.get_parameter('controller_debug_hz').value
         self.update_wheel_speed()
 
     def parameters_callback(self, parameters):
@@ -153,9 +207,12 @@ class LineFollowerController(Node):
             'invalid_timeout': self.invalid_timeout,
             'enable_perception_stop': self.enable_perception_stop,
             'perception_stop_timeout': self.perception_stop_timeout,
+            'publish_stop_when_disabled': self.publish_stop_when_disabled,
+            'enable_manual_override': self.enable_manual_override,
             'controller_log_mode': self.controller_log_mode,
             'pid_tuning_log_hz': self.pid_tuning_log_hz,
             'pid_tuning_bar_width': self.pid_tuning_bar_width,
+            'controller_debug_hz': self.controller_debug_hz,
         }
 
         for parameter in parameters:
@@ -174,8 +231,11 @@ class LineFollowerController(Node):
             pending['invalid_timeout'] = float(pending['invalid_timeout'])
             pending['enable_perception_stop'] = bool(pending['enable_perception_stop'])
             pending['perception_stop_timeout'] = float(pending['perception_stop_timeout'])
+            pending['publish_stop_when_disabled'] = bool(pending['publish_stop_when_disabled'])
+            pending['enable_manual_override'] = bool(pending['enable_manual_override'])
             pending['pid_tuning_log_hz'] = float(pending['pid_tuning_log_hz'])
             pending['pid_tuning_bar_width'] = int(pending['pid_tuning_bar_width'])
+            pending['controller_debug_hz'] = float(pending['controller_debug_hz'])
             pending['controller_log_mode'] = str(pending['controller_log_mode'])
         except (TypeError, ValueError) as exc:
             return SetParametersResult(
@@ -195,6 +255,8 @@ class LineFollowerController(Node):
             return SetParametersResult(successful=False, reason='perception_stop_timeout must be >= 0')
         if pending['pid_tuning_log_hz'] <= 0.0:
             return SetParametersResult(successful=False, reason='pid_tuning_log_hz must be > 0')
+        if pending['controller_debug_hz'] <= 0.0:
+            return SetParametersResult(successful=False, reason='controller_debug_hz must be > 0')
         if pending['controller_log_mode'] not in ('normal', 'pid_tuning', 'off'):
             return SetParametersResult(
                 successful=False,
@@ -212,9 +274,12 @@ class LineFollowerController(Node):
         self.invalid_timeout = pending['invalid_timeout']
         self.enable_perception_stop = pending['enable_perception_stop']
         self.perception_stop_timeout = pending['perception_stop_timeout']
+        self.publish_stop_when_disabled = pending['publish_stop_when_disabled']
+        self.enable_manual_override = pending['enable_manual_override']
         self.controller_log_mode = pending['controller_log_mode']
         self.pid_tuning_log_hz = pending['pid_tuning_log_hz']
         self.pid_tuning_bar_width = self.normalize_bar_width(pending['pid_tuning_bar_width'])
+        self.controller_debug_hz = pending['controller_debug_hz']
         self.update_wheel_speed()
 
         self.get_logger().info(
@@ -265,6 +330,50 @@ class LineFollowerController(Node):
         if not self.perception_stop_active:
             self.perception_stop_logged = False
 
+    def emergency_stop_callback(self, msg: Bool):
+        """接收UI/比赛控制层急停请求。"""
+        self.emergency_stop_active = bool(msg.data)
+        if self.emergency_stop_active:
+            self.autonomous_enabled = False
+            self.integral = 0.0
+            self.get_logger().error('🛑 Emergency stop active; autonomous control disabled')
+        else:
+            self.get_logger().info('Emergency stop cleared; press Start to enable autonomous control')
+
+    def manual_override_callback(self, msg: Bool):
+        """键盘/人工接管时释放/cmd_vel，避免自动巡线和键盘同时写速度。"""
+        if not self.enable_manual_override:
+            return
+        self.manual_override_active = bool(msg.data)
+        if self.manual_override_active:
+            self.autonomous_enabled = False
+            self.integral = 0.0
+            self.disabled_stop_logged = False
+        else:
+            self.manual_override_logged = False
+
+    def set_enabled_callback(self, request, response):
+        """发车/禁用巡线服务。"""
+        self.autonomous_enabled = bool(request.data)
+        if self.autonomous_enabled:
+            self.emergency_stop_active = False
+            self.manual_override_active = False
+        self.integral = 0.0
+        self.prev_offset = self.current_offset
+        self.prev_time = time.time()
+        self.disabled_stop_logged = False
+        self.manual_override_logged = False
+        self.perception_stop_logged = False
+
+        response.success = True
+        if self.autonomous_enabled:
+            response.message = 'Autonomous line following enabled'
+            self.get_logger().info('▶️ Autonomous line following enabled')
+        else:
+            response.message = 'Autonomous line following disabled'
+            self.get_logger().warn('⏸️ Autonomous line following disabled')
+        return response
+
     def should_stop_for_perception(self, current_time: float) -> bool:
         if not self.enable_perception_stop or not self.perception_stop_active:
             return False
@@ -282,9 +391,46 @@ class LineFollowerController(Node):
         """控制循环（50Hz）"""
         current_time = time.time()
         dt = current_time - self.prev_time
+        self.debug_loop_count += 1
+        self.debug_dt_sum += dt
+        self.debug_dt_max = max(self.debug_dt_max, dt)
+
+        if self.emergency_stop_active:
+            self.integral = 0.0
+            self.last_control_mode = 'emergency_stop'
+            self.publish_stop(log=False)
+            self.prev_offset = self.current_offset
+            self.prev_time = current_time
+            return
+
+        if self.manual_override_active:
+            self.integral = 0.0
+            self.last_control_mode = 'manual_override'
+            self.debug_skip_count += 1
+            if not self.manual_override_logged:
+                self.get_logger().info('Manual override active; releasing /cmd_vel to keyboard controller')
+                self.manual_override_logged = True
+            self.prev_offset = self.current_offset
+            self.prev_time = current_time
+            return
+
+        if not self.autonomous_enabled:
+            self.integral = 0.0
+            self.last_control_mode = 'disabled'
+            if self.publish_stop_when_disabled:
+                self.publish_stop(log=False)
+            else:
+                self.debug_skip_count += 1
+            if not self.disabled_stop_logged:
+                self.get_logger().info('Autonomous disabled; waiting for /line_follower/set_enabled')
+                self.disabled_stop_logged = True
+            self.prev_offset = self.current_offset
+            self.prev_time = current_time
+            return
 
         if self.should_stop_for_perception(current_time):
             self.integral = 0.0
+            self.last_control_mode = 'perception_stop'
             self.publish_stop(log=False)
             if not self.perception_stop_logged:
                 self.get_logger().warn('🛑 Perception stop request active; publishing STOP')
@@ -294,11 +440,23 @@ class LineFollowerController(Node):
             return
         
         if not self.is_valid:
-            if self.invalid_start_time is not None:
-                invalid_duration = current_time - self.invalid_start_time
-                if invalid_duration > self.invalid_timeout and not self.track_lost_logged:
-                    self.get_logger().error('🛑 Track lost for too long; not publishing cmd_vel.')
-                    self.track_lost_logged = True
+            invalid_duration = (
+                current_time - self.invalid_start_time
+                if self.invalid_start_time is not None
+                else 0.0
+            )
+            if invalid_duration <= self.invalid_timeout:
+                self.last_control_mode = 'track_hold'
+                self.publish_cmd_vel(self.last_steering)
+                self.prev_offset = self.current_offset
+                self.prev_time = current_time
+                return
+
+            self.last_control_mode = 'invalid_track'
+            self.debug_skip_count += 1
+            if invalid_duration > self.invalid_timeout and not self.track_lost_logged:
+                self.get_logger().error('🛑 Track lost for too long; not publishing cmd_vel.')
+                self.track_lost_logged = True
             self.prev_offset = self.current_offset
             self.prev_time = current_time
             return
@@ -313,6 +471,8 @@ class LineFollowerController(Node):
         steering = max(-self.max_steering, min(self.max_steering, steering))
 
         # 发布控制指令
+        self.last_control_mode = 'run'
+        self.last_steering = steering
         self.publish_cmd_vel(steering)
 
         self.log_control_status(steering, dt, current_time)
@@ -411,6 +571,7 @@ class LineFollowerController(Node):
         twist_msg.linear.x = self.wheel_speed_rps  # 轮子转速 (rps)
         twist_msg.angular.z = steering               # 转向比例 (-1.0 ~ 1.0)
         self.cmd_vel_publisher.publish(twist_msg)
+        self.debug_cmd_count += 1
     
     def publish_stop(self, log: bool = True):
         """发布停车指令"""
@@ -418,8 +579,45 @@ class LineFollowerController(Node):
         twist_msg.linear.x = 0.0
         twist_msg.angular.z = 0.0
         self.cmd_vel_publisher.publish(twist_msg)
+        self.debug_stop_count += 1
         if log:
             self.get_logger().info('🛑 Published STOP command (linear=0.0, angular=0.0)')
+
+    def publish_debug_status(self):
+        now = time.time()
+        elapsed = max(1e-6, now - self.debug_window_start)
+        loop_hz = self.debug_loop_count / elapsed
+        cmd_hz = self.debug_cmd_count / elapsed
+        stop_hz = self.debug_stop_count / elapsed
+        skip_hz = self.debug_skip_count / elapsed
+        avg_dt_ms = (self.debug_dt_sum / self.debug_loop_count * 1000.0) if self.debug_loop_count else 0.0
+
+        msg = String()
+        msg.data = (
+            f'mode={self.last_control_mode} '
+            f'enabled={self.autonomous_enabled} '
+            f'valid={self.is_valid} '
+            f'pstop={self.perception_stop_active} '
+            f'estop={self.emergency_stop_active} '
+            f'manual={self.manual_override_active} '
+            f'offset={self.current_offset:+.3f} '
+            f'wheel_rps={self.wheel_speed_rps:.3f} '
+            f'loop_hz={loop_hz:.1f} '
+            f'cmd_hz={cmd_hz:.1f} '
+            f'stop_hz={stop_hz:.1f} '
+            f'skip_hz={skip_hz:.1f} '
+            f'avg_dt_ms={avg_dt_ms:.1f} '
+            f'max_dt_ms={self.debug_dt_max * 1000.0:.1f}'
+        )
+        self.debug_publisher.publish(msg)
+
+        self.debug_window_start = now
+        self.debug_loop_count = 0
+        self.debug_cmd_count = 0
+        self.debug_stop_count = 0
+        self.debug_skip_count = 0
+        self.debug_dt_sum = 0.0
+        self.debug_dt_max = 0.0
 
 
 def main(args=None):

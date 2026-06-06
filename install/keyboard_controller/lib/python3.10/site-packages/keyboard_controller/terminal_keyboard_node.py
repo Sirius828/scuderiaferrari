@@ -15,7 +15,7 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Int8
+from std_msgs.msg import Bool, Int8
 import sys
 import tty
 import termios
@@ -47,6 +47,7 @@ class TerminalKeyboardController(Node):
         self.current_speed = 0.0        # 当前速度
         self.current_steering = 0.0     # 当前转向比例 (-1.0右满 到 1.0左满)
         self.motor_enabled = False      # 电机使能状态
+        self.emergency_stop_active = False
         
         # 按键状态
         self.key_w_pressed = False
@@ -57,6 +58,13 @@ class TerminalKeyboardController(Node):
         # 发布者
         self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
         self.enable_pub = self.create_publisher(Int8, '/chassis/enable', 10)
+        self.manual_override_pub = self.create_publisher(Bool, '/race/manual_override', 10)
+        self.emergency_stop_sub = self.create_subscription(
+            Bool,
+            '/race/emergency_stop',
+            self.emergency_stop_callback,
+            10
+        )
         
         # 保存终端设置
         self.fd = sys.stdin.fileno()
@@ -142,9 +150,14 @@ class TerminalKeyboardController(Node):
     
     def toggle_motor(self):
         """切换电机启停状态"""
+        if self.emergency_stop_active:
+            self.get_logger().warn('急停中，键盘控制保持禁用')
+            return
+
         self.motor_enabled = not self.motor_enabled
         status = "启用" if self.motor_enabled else "禁用"
         self.get_logger().info(f'电机状态: {status}')
+        self.publish_manual_override(self.motor_enabled)
         
         # 发布使能消息
         msg = Int8()
@@ -154,7 +167,29 @@ class TerminalKeyboardController(Node):
         # 如果禁用电机，停止运动
         if not self.motor_enabled:
             self.current_speed = 0.0
-            self.current_angle = 0.0
+            self.current_steering = 0.0
+
+    def emergency_stop_callback(self, msg: Bool):
+        """UI急停时立刻释放终端键盘控制，防止和停车命令抢/cmd_vel。"""
+        self.emergency_stop_active = bool(msg.data)
+        if not self.emergency_stop_active:
+            return
+
+        if self.motor_enabled:
+            self.get_logger().warn('收到急停，终端键盘控制已禁用')
+        self.motor_enabled = False
+        self.current_speed = 0.0
+        self.current_steering = 0.0
+        self.key_w_pressed = False
+        self.key_s_pressed = False
+        self.key_a_pressed = False
+        self.key_d_pressed = False
+        self.publish_manual_override(False)
+
+    def publish_manual_override(self, active: bool):
+        msg = Bool()
+        msg.data = bool(active)
+        self.manual_override_pub.publish(msg)
     
     def update_physics(self, dt):
         """更新物理状态"""
@@ -323,6 +358,7 @@ class TerminalKeyboardController(Node):
         enable_msg = Int8()
         enable_msg.data = 0
         self.enable_pub.publish(enable_msg)
+        self.publish_manual_override(False)
         
         # 恢复终端设置
         termios.tcsetattr(self.fd, termios.TCSADRAIN, self.old_settings)

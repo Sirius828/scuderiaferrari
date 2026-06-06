@@ -1,0 +1,3 @@
+[console_scripts]
+race_control_ui = race_control_ui.race_control_ui:main
+

@@ -23,7 +23,7 @@ def generate_launch_description():
     
     # 声明启动参数 - 默认使用 src 目录的配置文件（方便不编译修改参数）
     config_file_arg = DeclareLaunchArgument(
-        'config_file',
+        'controller_config_file',
         default_value=_default_config_file(),
         description='Path to YAML configuration file (default: src directory for easy modification without recompilation)'
     )
@@ -34,11 +34,11 @@ def generate_launch_description():
         executable='controller_node',
         name='line_follower_controller',
         output='screen',
-        parameters=[LaunchConfiguration('config_file')],
+        parameters=[LaunchConfiguration('controller_config_file')],
     )
     
     return LaunchDescription([
         config_file_arg,
-        LogInfo(msg=['Line follower config file: ', LaunchConfiguration('config_file')]),
+        LogInfo(msg=['Line follower config file: ', LaunchConfiguration('controller_config_file')]),
         controller_node,
     ])

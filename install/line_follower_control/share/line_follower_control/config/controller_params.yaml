@@ -19,6 +19,9 @@
     invalid_timeout: 0.5   # Timeout for is_valid=False (seconds)
     enable_perception_stop: true  # 是否响应/perception/stop_request停车请求
     perception_stop_timeout: 0.5  # 停车请求超过该时间未更新则自动解除，避免perception掉线永久停车
+    autonomous_enabled_on_start: false  # 启动后默认待命，等待UI发车服务
+    publish_stop_when_disabled: false  # 待命/禁用巡线时不持续刷0；急停/感知停车仍会发布0
+    enable_manual_override: true  # 键盘接管时释放/cmd_vel，避免和自动巡线冲突
     
     # ==================== 日志设置 ====================
     # normal: 原有低频控制日志
@@ -27,3 +30,4 @@
     controller_log_mode: "off"
     pid_tuning_log_hz: 30.0
     pid_tuning_bar_width: 41
+    controller_debug_hz: 1.0

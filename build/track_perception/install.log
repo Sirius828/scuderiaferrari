@@ -16,12 +16,18 @@
 /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/package.xml
 /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/launch/perception.launch.py
 /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/config/intersection_params.yaml
+/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/model/yolov8_n_custom_int8_from_ipynb.rknn
+/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/model/yolov8_seg_n_int8.rknn
 /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/model/pp_liteseg_v2.rknn
 /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/model/pp_liteseg_v3.rknn
 /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/model/rknn_lt_v2.rknn
 /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/model/rknn_lt.rknn
 /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/model/pp_liteseg.rknn
+/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/model/yolov8_n_det_split_int8(1).rknn
+/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/model/yolov8_n_det_split_int8.rknn
+/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/model/yolov8_n_custom_int8.rknn
 /home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/model/label_list.txt
+/home/orangepi/scuderiaferrari/install/track_perception/share/track_perception/model/新建 文本文档.txt
 /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception-2.0.0-py3.10.egg-info/zip-safe
 /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception-2.0.0-py3.10.egg-info/PKG-INFO
 /home/orangepi/scuderiaferrari/install/track_perception/lib/python3.10/site-packages/track_perception-2.0.0-py3.10.egg-info/requires.txt

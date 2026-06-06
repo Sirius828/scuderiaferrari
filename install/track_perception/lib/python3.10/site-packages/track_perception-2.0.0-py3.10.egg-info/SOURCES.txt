@@ -16,6 +16,12 @@ model/pp_liteseg_v2.rknn
 model/pp_liteseg_v3.rknn
 model/rknn_lt.rknn
 model/rknn_lt_v2.rknn
+model/yolov8_n_custom_int8.rknn
+model/yolov8_n_custom_int8_from_ipynb.rknn
+model/yolov8_n_det_split_int8(1).rknn
+model/yolov8_n_det_split_int8.rknn
+model/yolov8_seg_n_int8.rknn
+model/新建 文本文档.txt
 resource/track_perception
 track_perception/__init__.py
 track_perception/object_detection_infer.py

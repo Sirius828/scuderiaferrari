@@ -7,7 +7,7 @@
 object_detection_node:
   ros__parameters:
     shm_name: "shm_ar_video"
-    model_path: "model/rknn_lt_v2.rknn"  # ⭐ 目标检测模型路径
+    model_path: "model/yolov8_n_det_split_int8(1).rknn"  # 目标检测模型路径，bbox/score拆分输出，转换阶段适配0~1输入
     label_list_path: "model/label_list.txt"
     tpes: 1
     core_ids: [0]
@@ -16,7 +16,7 @@ object_detection_node:
     input_format: "RGB"
     publish_detections: true
     publish_rate: 0  # <=0 表示每个完成的检测结果都发布，不限速
-    enable_perf_stats: false
+    enable_perf_stats: true
     perf_interval: 2.0  # 每隔多少秒打印一次 detection 单帧耗时
     use_fast_postprocess: false  # false=使用旧后处理，稳定优先；true=启用实验性快速后处理
 
@@ -32,7 +32,7 @@ perception_decision_node:
     
     # ⭐ 模型路径参数
     seg_model_dir: "model"  # 语义分割模型目录
-    seg_model_filename: "pp_liteseg_v3.rknn"  # ⭐ 语义分割模型文件名
+    seg_model_filename: "pp_liteseg.rknn"  # 语义分割模型文件名；yolov8_seg_n_int8 是实例分割输出，不能直接作为语义mask
     
     seg_tpes: 2
     seg_core_ids: [1, 2]
@@ -113,6 +113,11 @@ perception_decision_node:
     traffic_light_max_age: 0.5  # 检测结果超过该时间(s)不用于红绿灯状态更新
     green_light_confirm_frames: 1  # 连续多少帧绿灯才解除停车
     red_light_confirm_frames: 1  # 连续多少帧红灯才进入红灯已见状态
+    enable_finish_stop: true  # 启用终点Stop label停车
+    finish_stop_min_confidence: 0.45  # Stop label置信度阈值
+    finish_stop_arm_y_ratio: 0.70  # Stop bbox底部达到该画面高度比例后进入压线等待
+    finish_stop_lost_frames: 3  # 接近Stop后连续多少帧看不到Stop才判定已压过终点
+    finish_stop_max_age: 0.5  # 检测结果超过该时间(s)按未看到Stop处理
     enable_branch_bottom_anchor: true  # 仅LOCK时启用底部软锚点，让切入更平滑
     branch_bottom_anchor_x_ratio: 0.5  # 锚点x位置（0.5=画面中心）
     branch_bottom_anchor_y_ratio: 0.98  # 锚点y位置（靠近画面底部）

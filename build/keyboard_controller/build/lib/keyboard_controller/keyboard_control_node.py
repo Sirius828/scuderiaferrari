@@ -14,7 +14,7 @@ Control logic:
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Int8
+from std_msgs.msg import Bool, Int8
 import pygame
 import sys
 
@@ -43,6 +43,7 @@ class KeyboardController(Node):
         self.current_speed = 0.0        # 当前速度
         self.current_steering = 0.0     # 当前转向比例 (-1.0右满 到 1.0左满)
         self.control_enabled = False    # 键盘控制接管状态
+        self.emergency_stop_active = False
         
         # 按键状态
         self.key_w_pressed = False
@@ -53,6 +54,13 @@ class KeyboardController(Node):
         # 发布者
         self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
         self.enable_pub = self.create_publisher(Int8, '/chassis/enable', 10)
+        self.manual_override_pub = self.create_publisher(Bool, '/race/manual_override', 10)
+        self.emergency_stop_sub = self.create_subscription(
+            Bool,
+            '/race/emergency_stop',
+            self.emergency_stop_callback,
+            10
+        )
         
         # Initialize pygame
         pygame.init()
@@ -109,9 +117,14 @@ class KeyboardController(Node):
     
     def toggle_motor(self):
         """Toggle keyboard control handoff state."""
+        if self.emergency_stop_active:
+            self.get_logger().warn('Emergency stop active; keyboard control remains disabled')
+            return
+
         self.control_enabled = not self.control_enabled
         status = "Active" if self.control_enabled else "Standby"
         self.get_logger().info(f'Keyboard control: {status}')
+        self.publish_manual_override(self.control_enabled)
 
         if self.control_enabled:
             # Keep chassis enabled when taking manual control. Releasing keyboard
@@ -127,6 +140,28 @@ class KeyboardController(Node):
             self.key_s_pressed = False
             self.key_a_pressed = False
             self.key_d_pressed = False
+
+    def emergency_stop_callback(self, msg: Bool):
+        """UI急停时立刻释放键盘控制，防止和停车命令抢/cmd_vel。"""
+        self.emergency_stop_active = bool(msg.data)
+        if not self.emergency_stop_active:
+            return
+
+        if self.control_enabled:
+            self.get_logger().warn('Emergency stop received; keyboard control disabled')
+        self.control_enabled = False
+        self.current_speed = 0.0
+        self.current_steering = 0.0
+        self.key_w_pressed = False
+        self.key_s_pressed = False
+        self.key_a_pressed = False
+        self.key_d_pressed = False
+        self.publish_manual_override(False)
+
+    def publish_manual_override(self, active: bool):
+        msg = Bool()
+        msg.data = bool(active)
+        self.manual_override_pub.publish(msg)
     
     def update_physics(self, dt):
         """Update physics state"""
@@ -291,6 +326,7 @@ class KeyboardController(Node):
             twist_msg.linear.x = 0.0
             twist_msg.angular.z = 0.0
             self.cmd_vel_pub.publish(twist_msg)
+        self.publish_manual_override(False)
         
         self.get_logger().info('Node shutdown')
         
