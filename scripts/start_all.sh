@@ -14,7 +14,7 @@ chmod +x /tmp/terminal1.sh
 
 # 第二个终端：启动setupui程序
 echo '#!/bin/bash' > /tmp/terminal2.sh
-echo 'cd ~/Desktop/setupui_new/setupUI/dist/' >> /tmp/terminal2.sh
+echo 'cd /home/orangepi/Desktop/setupui_new/setupUI/dist/' >> /tmp/terminal2.sh
 echo './setup_webui' >> /tmp/terminal2.sh
 chmod +x /tmp/terminal2.sh
 
@@ -23,8 +23,8 @@ if command -v gnome-terminal &> /dev/null; then
     gnome-terminal --tab --title="ROS2 Launch" -- bash -c "/tmp/terminal1.sh; exec bash"
     gnome-terminal --tab --title="SetupUI" -- bash -c "/tmp/terminal2.sh; exec bash"
 elif command -v xfce4-terminal &> /dev/null; then
-    xfce4-terminal --title="ROS2 Launch" -e "bash -c '/tmp/terminal1.sh; exec bash'" &
-    xfce4-terminal --title="SetupUI" -e "bash -c '/tmp/terminal2.sh; exec bash'" &
+    xfce4-terminal --title="ROS2 Launch" --command="bash -c '/tmp/terminal1.sh; exec bash'" &
+    xfce4-terminal --title="SetupUI" --command="bash -c '/tmp/terminal2.sh; exec bash'" &
 elif command -v xterm &> /dev/null; then
     xterm -title "ROS2 Launch" -e "/tmp/terminal1.sh; exec bash" &
     xterm -title "SetupUI" -e "/tmp/terminal2.sh; exec bash" &

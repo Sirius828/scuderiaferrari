@@ -32,7 +32,7 @@ perception_decision_node:
     
     # ⭐ 模型路径参数
     seg_model_dir: "model"  # 语义分割模型目录
-    seg_model_filename: "pp_liteseg.rknn"  # 语义分割模型文件名；yolov8_seg_n_int8 是实例分割输出，不能直接作为语义mask
+    seg_model_filename: "pp_liteseg_v3.rknn"  # 语义分割模型文件名；yolov8_seg_n_int8 是实例分割输出，不能直接作为语义mask
     
     seg_tpes: 2
     seg_core_ids: [1, 2]
@@ -99,7 +99,7 @@ perception_decision_node:
     enable_fit_point_jump_filter: true  # 拟合前过滤连续Band中心点x跳变过大的点，抑制边缘误分割参与拟合
     max_fit_point_dx_ratio: 0.22  # 相邻拟合点允许的最大x跳变比例（相对图像宽度）
     max_fit_point_dx_px: 140.0  # 相邻拟合点允许的最大x跳变像素上限；<=0表示只用ratio
-    enable_obstacle_avoidance: true  # 启用Human/Car障碍排斥，将其bbox膨胀区从赛道segment中扣除
+    enable_obstacle_avoidance: false  # 启用Human/Car障碍排斥，将其bbox膨胀区从赛道segment中扣除
     obstacle_labels: "Human,Car"  # 参与避障的检测类别，逗号分隔
     obstacle_min_confidence: 0.45  # 检测置信度低于该值不参与避障
     obstacle_x_margin_px: 25.0  # 障碍bbox左右膨胀像素
