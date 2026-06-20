@@ -91,6 +91,12 @@ perception_decision_node:
     min_branch_lock_time: 0.8  # 分支锁定的最短持续时间（秒），避免LOCK/NORMAL频繁切换
     exit_single_path_confirm_frames: 5  # 连续多少帧检测到单路径才退出LOCK状态
     exit_single_path_min_ratio: 0.8  # 远端Band中至少多少比例为单路径才允许退出LOCK
+    enable_merge_wide_segment_logic: true  # 启用合流宽路处理：宽单segment内继续沿当前侧取虚拟车道中心
+    merge_wide_segment_ratio: 1.35  # 单segment宽度超过同一band常规车道宽度该倍率时，认为是合流宽路候选
+    merge_wide_min_bands: 2  # 至少多少个band同时变宽才确认合流宽路
+    merge_wide_confirm_frames: 2  # 连续多少帧满足条件才进入合流宽路锁定
+    merge_wide_release_frames: 4  # 连续多少帧不满足条件才释放合流宽路锁定
+    merge_wide_lane_width_alpha: 0.2  # 常规车道宽度的更新系数，越小越稳定
     
     # 中心线拟合参数
     fit_min_points: 5  # 拟合所需的最少点数，二阶拟合建议至少5个点
@@ -135,12 +141,19 @@ perception_decision_node:
     show_branch_debug: true  # 是否在可视化窗口中绘制Band和Segment
     enable_status_log: true  # 是否输出“直行/NORMAL/Offset”心跳日志
     enable_branch_event_log: false  # 关闭岔路LOCK/释放事件日志
+    publish_lane_state: true  # 发布/perception/lane_state，供控制器和后续避障/金币逻辑复用
 
 
 # ========================================
 # 参数调优指南
 # ========================================
-#
+#ROS_LOCALHOST_ONLY=0
+#ROS_PYTHON_VERSION=3
+#ROS_VERSION=2
+#SESSION_MANAGER=local/orangepi5:@/tmp/.ICE-unix/1863,unix/orangepi5:/tmp/.ICE-unix/1863
+#SHELL=/bin/bash
+#SHLVL=2
+#SSH_AGENT_PID=2137
 # 1. 如果车应该走外圈但走了内圈：
 #    → 修改 outer_side: "left" ↔ "right"
 #
