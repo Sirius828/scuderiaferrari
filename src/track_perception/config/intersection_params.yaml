@@ -7,7 +7,7 @@
 object_detection_node:
   ros__parameters:
     shm_name: "shm_ar_video"
-    model_path: "model/yolov8_n_det_split_int8(1).rknn"  # 目标检测模型路径，bbox/score拆分输出，转换阶段适配0~1输入
+    model_path: "model/yolov8_n_det_split_int8_v2.rknn"  # 目标检测模型路径，bbox/score拆分输出，转换阶段适配0~1输入
     label_list_path: "model/label_list.txt"
     tpes: 1
     core_ids: [0]
@@ -16,9 +16,11 @@ object_detection_node:
     input_format: "RGB"
     publish_detections: true
     publish_rate: 0  # <=0 表示每个完成的检测结果都发布，不限速
-    enable_perf_stats: true
+    enable_perf_stats: false
     perf_interval: 2.0  # 每隔多少秒打印一次 detection 单帧耗时
     use_fast_postprocess: false  # false=使用旧后处理，稳定优先；true=启用实验性快速后处理
+    model_input_width: 384
+    model_input_height: 288
 
 # ========================================
 # 感知决策节点配置

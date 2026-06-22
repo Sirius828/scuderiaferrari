@@ -22,6 +22,10 @@
     autonomous_enabled_on_start: false  # 启动后默认待命，等待UI发车服务
     publish_stop_when_disabled: false  # 待命/禁用巡线时不持续刷0；急停/感知停车仍会发布0
     enable_manual_override: true  # 键盘接管时释放/cmd_vel，避免和自动巡线冲突
+    use_lane_state: true  # 订阅/perception/lane_state；旧center_offset仍保留为回退
+    lane_state_timeout: 0.3  # lane_state超过该时间未更新时，仅使用旧center_offset
+    heading_gain: 0.0  # 额外航向角转向项；默认0保持原控制行为
+    curvature_gain: 0.0  # 额外曲率前馈项；默认0保持原控制行为
     
     # ==================== 日志设置 ====================
     # normal: 原有低频控制日志

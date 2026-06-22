@@ -12,13 +12,31 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from rcl_interfaces.msg import ParameterDescriptor
+from dataclasses import asdict, dataclass
+import json
 import time
 import struct
 import numpy as np
 import cv2
 from multiprocessing import shared_memory, resource_tracker
 from .ppseg_infer import PPSegInfer
-from std_msgs.msg import Float32, Bool, Float32MultiArray
+from std_msgs.msg import Float32, Bool, Float32MultiArray, String
+
+
+@dataclass
+class LaneState:
+    """Internal lane state; old center_offset/is_valid topics remain the public contract."""
+    control_offset: float = 0.0
+    lateral_offset: float = 0.0
+    heading_error: float = 0.0
+    curvature: float = 0.0
+    confidence: float = 0.0
+    is_valid: bool = False
+    road_state: str = 'LOW_CONFIDENCE'
+    branch_side: str = ''
+    task_state: str = 'CLEAR'
+    task_bias: float = 0.0
+    timestamp: float = 0.0
 
 
 class PerceptionDecisionNode(Node):
@@ -32,6 +50,11 @@ class PerceptionDecisionNode(Node):
         # 语义分割模型参数
         self.declare_parameter('seg_model_dir', 'model')
         self.declare_parameter('seg_model_filename', 'pp_liteseg.rknn')  # ⭐ 默认使用旧版本
+        self.declare_parameter('seg_model_input_width', 640)
+        self.declare_parameter('seg_model_input_height', 480)
+        self.declare_parameter('seg_conf_threshold', 0.25)
+        self.declare_parameter('seg_mask_threshold', 0.5)
+        self.declare_parameter('seg_max_detections', 30)
         self.declare_parameter('seg_tpes', 3)
         self.declare_parameter('seg_core_ids', [], ParameterDescriptor(dynamic_typing=True))
         self.declare_parameter('blend_alpha', -1.0)
@@ -76,6 +99,13 @@ class PerceptionDecisionNode(Node):
         self.declare_parameter('min_branch_lock_time', 0.8)
         self.declare_parameter('exit_single_path_confirm_frames', 5)
         self.declare_parameter('exit_single_path_min_ratio', 0.8)
+        # 合流宽路处理：两条同向道路合成一个宽 segment 时，不取宽块中心。
+        self.declare_parameter('enable_merge_wide_segment_logic', True)
+        self.declare_parameter('merge_wide_segment_ratio', 1.35)
+        self.declare_parameter('merge_wide_min_bands', 2)
+        self.declare_parameter('merge_wide_confirm_frames', 2)
+        self.declare_parameter('merge_wide_release_frames', 4)
+        self.declare_parameter('merge_wide_lane_width_alpha', 0.2)
         # 中心线拟合参数
         self.declare_parameter('fit_min_points', 4)
         self.declare_parameter('fit_order', 1)
@@ -117,11 +147,17 @@ class PerceptionDecisionNode(Node):
         self.declare_parameter('show_branch_debug', False)
         self.declare_parameter('enable_status_log', False)
         self.declare_parameter('enable_branch_event_log', False)
+        self.declare_parameter('publish_lane_state', True)
         
         # 获取参数
         self.shm_name = self.get_parameter('shm_name').get_parameter_value().string_value
         seg_model_dir = self.get_parameter('seg_model_dir').get_parameter_value().string_value
         seg_model_filename = self.get_parameter('seg_model_filename').get_parameter_value().string_value
+        seg_model_input_width = self.get_parameter('seg_model_input_width').get_parameter_value().integer_value
+        seg_model_input_height = self.get_parameter('seg_model_input_height').get_parameter_value().integer_value
+        seg_conf_threshold = self.get_parameter('seg_conf_threshold').get_parameter_value().double_value
+        seg_mask_threshold = self.get_parameter('seg_mask_threshold').get_parameter_value().double_value
+        seg_max_detections = self.get_parameter('seg_max_detections').get_parameter_value().integer_value
         seg_tpes = self.get_parameter('seg_tpes').get_parameter_value().integer_value
         seg_core_ids = list(self.get_parameter('seg_core_ids').get_parameter_value().integer_array_value)
         blend_alpha_param = self.get_parameter('blend_alpha').get_parameter_value().double_value
@@ -162,6 +198,12 @@ class PerceptionDecisionNode(Node):
         self.min_branch_lock_time = self.get_parameter('min_branch_lock_time').get_parameter_value().double_value
         self.exit_single_path_confirm_frames = self.get_parameter('exit_single_path_confirm_frames').get_parameter_value().integer_value
         self.exit_single_path_min_ratio = self.get_parameter('exit_single_path_min_ratio').get_parameter_value().double_value
+        self.enable_merge_wide_segment_logic = self.get_parameter('enable_merge_wide_segment_logic').get_parameter_value().bool_value
+        self.merge_wide_segment_ratio = self.get_parameter('merge_wide_segment_ratio').get_parameter_value().double_value
+        self.merge_wide_min_bands = self.get_parameter('merge_wide_min_bands').get_parameter_value().integer_value
+        self.merge_wide_confirm_frames = self.get_parameter('merge_wide_confirm_frames').get_parameter_value().integer_value
+        self.merge_wide_release_frames = self.get_parameter('merge_wide_release_frames').get_parameter_value().integer_value
+        self.merge_wide_lane_width_alpha = self.get_parameter('merge_wide_lane_width_alpha').get_parameter_value().double_value
         self.fit_min_points = self.get_parameter('fit_min_points').get_parameter_value().integer_value
         self.fit_order = self.get_parameter('fit_order').get_parameter_value().integer_value
         self.branch_fit_order = self.get_parameter('branch_fit_order').get_parameter_value().integer_value
@@ -203,6 +245,7 @@ class PerceptionDecisionNode(Node):
         self.show_branch_debug = self.get_parameter('show_branch_debug').get_parameter_value().bool_value
         self.enable_status_log = self.get_parameter('enable_status_log').get_parameter_value().bool_value
         self.enable_branch_event_log = self.get_parameter('enable_branch_event_log').get_parameter_value().bool_value
+        self.publish_lane_state_enabled = self.get_parameter('publish_lane_state').get_parameter_value().bool_value
         
         # 处理 blend_alpha
         self.blend_alpha = None if blend_alpha_param < 0 else blend_alpha_param
@@ -233,10 +276,19 @@ class PerceptionDecisionNode(Node):
                 show_visualization=self.show_visualization,
                 input_format=self.input_format,
                 model_input_format=self.model_input_format,
-                core_ids=seg_core_ids
+                core_ids=seg_core_ids,
+                input_size=(seg_model_input_width, seg_model_input_height),
+                conf_threshold=seg_conf_threshold,
+                mask_threshold=seg_mask_threshold,
+                max_detections=seg_max_detections,
             )
             self.get_logger().info('✅ Semantic Segmentation model initialized')
             self.get_logger().info(f'   📦 Model: {seg_model_dir}/{seg_model_filename}')
+            self.get_logger().info(f'   Input Size: {seg_model_input_width}x{seg_model_input_height}')
+            self.get_logger().info(
+                f'   Seg Thresholds: conf={seg_conf_threshold:.2f}, '
+                f'mask={seg_mask_threshold:.2f}, max_det={seg_max_detections}'
+            )
             self.get_logger().info(f'   TPEs: {seg_tpes}')
             self.get_logger().info(f'   NPU Core IDs: {seg_core_ids if seg_core_ids else "auto 0/1/2"}')
         except Exception as e:
@@ -279,6 +331,11 @@ class PerceptionDecisionNode(Node):
             '/perception/stop_request',
             10
         )
+        self.lane_state_publisher = self.create_publisher(
+            String,
+            '/perception/lane_state',
+            10
+        )
         
         # 共享内存对象
         self.shm = None
@@ -313,6 +370,10 @@ class PerceptionDecisionNode(Node):
         self.get_logger().info(f'   🔍 GuideBoard Detect Range: y={self.guideboard_detect_y0_ratio:.1f}-{self.guideboard_detect_y1_ratio:.1f}')
         self.get_logger().info(f'   🎯 Segment Branch Logic: {self.enable_segment_branch_logic}')
         self.get_logger().info(f'   🔒 Branch Lock: min={self.min_branch_lock_time:.2f}s, max={self.branch_lock_time:.2f}s, exit_ratio={self.exit_single_path_min_ratio:.2f}')
+        self.get_logger().info(
+            f'   🔀 Merge Wide Logic: {self.enable_merge_wide_segment_logic} '
+            f'(ratio={self.merge_wide_segment_ratio:.2f}, min_bands={self.merge_wide_min_bands})'
+        )
         self.get_logger().info(f'   📈 Fit: normal_order={self.fit_order}, branch_order={self.branch_fit_order}, branch_anchor={self.enable_branch_bottom_anchor}')
         self.get_logger().info(f'   🎯 Lookahead Y Ratio: {self.lookahead_y_ratio:.2f}')
         self.get_logger().info(f'   Perf Stats: {self.enable_perf_stats} (interval={self.perf_interval:.1f}s)')
@@ -328,10 +389,16 @@ class PerceptionDecisionNode(Node):
         self.locked_branch_side = self.outer_side
         self.lock_start_time = None
         self.exit_confirm_count = 0
+        self.merge_wide_locked = False
+        self.merge_wide_side = None
+        self.merge_wide_confirm_count = 0
+        self.merge_wide_release_count = 0
+        self.band_lane_widths = [None] * max(1, self.band_count)
         self.current_segments = []  # 用于调试绘制
         self.current_obstacle_zones = []  # 用于调试绘制
         self.fit_coeffs = None  # ⭐ 保存拟合系数用于可视化
         self.fit_points = []  # ⭐ 保存拟合用的点
+        self.last_lane_state = LaneState()
         self.traffic_light_state = 'CLEAR'
         self.stop_request_active = False
         self.traffic_stop_active = False
@@ -530,6 +597,22 @@ class PerceptionDecisionNode(Node):
                         self.get_logger().info('🏁 Finish Stop passed, requesting final stop')
 
         self.stop_request_active = self.traffic_stop_active or self.finish_stop_active
+
+    def get_task_state(self):
+        """Keep task state compact; future obstacle/coin logic should extend this."""
+        if self.finish_stop_active:
+            return 'FINISH_STOP'
+        if self.traffic_stop_active:
+            return 'TRAFFIC_STOP'
+        return 'CLEAR'
+
+    def publish_lane_state(self, lane_state: LaneState):
+        """Publish rich lane diagnostics without changing existing control/UI topics."""
+        if not self.publish_lane_state_enabled:
+            return
+        msg = String()
+        msg.data = json.dumps(asdict(lane_state), ensure_ascii=False)
+        self.lane_state_publisher.publish(msg)
     
     def remove_shm_from_resource_tracker(self):
         """防止客户端退出时误删服务端的 SHM"""
@@ -620,27 +703,31 @@ class PerceptionDecisionNode(Node):
             
             if flag and seg_map is not None:
                 # 5. 决策逻辑
-                center_offset, is_valid = self.make_decision(seg_map, h, w)
+                lane_state = self.make_decision(seg_map, h, w)
                 if need_perf_stats:
                     t_decision_done = time.perf_counter()
                 
                 # ⭐ 保存当前偏移量（用于可视化）
-                self.current_offset = center_offset
+                self.current_offset = lane_state.control_offset
                 self.update_traffic_light_stop_state(h)
                 self.update_finish_stop_state(h)
+                lane_state.task_state = self.get_task_state()
+                lane_state.timestamp = time.time()
+                self.last_lane_state = lane_state
                 
                 # 6. 发布结果
                 offset_msg = Float32()
-                offset_msg.data = center_offset
+                offset_msg.data = lane_state.control_offset
                 self.offset_publisher.publish(offset_msg)
                 
                 is_valid_msg = Bool()
-                is_valid_msg.data = is_valid
+                is_valid_msg.data = lane_state.is_valid
                 self.is_valid_publisher.publish(is_valid_msg)
 
                 stop_request_msg = Bool()
                 stop_request_msg.data = self.stop_request_active
                 self.stop_request_publisher.publish(stop_request_msg)
+                self.publish_lane_state(lane_state)
                 self.published_msgs_window += 1
                 if need_perf_stats:
                     t_publish_done = time.perf_counter()
@@ -648,11 +735,11 @@ class PerceptionDecisionNode(Node):
                 # ⭐ 7. 心跳日志（每秒输出一次）
                 current_time = time.time()
                 if self.enable_status_log and current_time - self.last_heartbeat_time >= self.heartbeat_interval:
-                    road_status = "LOCK" if self.branch_locked else "NORMAL"
+                    road_status = lane_state.road_state
                     branch_info = f"branch={self.locked_branch_side}" if self.branch_locked else "-"
                     
                     self.get_logger().info(
-                        f'{self.driving_direction} | {road_status} ({branch_info}) | Offset: {center_offset:.3f}'
+                        f'{self.driving_direction} | {road_status} ({branch_info}) | Offset: {lane_state.control_offset:.3f}'
                     )
                     self.last_heartbeat_time = current_time
                 
@@ -755,6 +842,11 @@ class PerceptionDecisionNode(Node):
         h, w = seg_map.shape
         current_time = time.time()
         center_offset = 0.0
+        lateral_offset = 0.0
+        heading_error = 0.0
+        curvature = 0.0
+        confidence = 0.0
+        road_state = 'LOW_CONFIDENCE'
         is_valid = False
         
         # ==================== 步骤1: Band 扫描与岔路检测 ====================
@@ -799,6 +891,10 @@ class PerceptionDecisionNode(Node):
                     self.locked_branch_side = target_branch
                     self.lock_start_time = current_time
                     self.exit_confirm_count = 0
+                    self.merge_wide_locked = False
+                    self.merge_wide_side = None
+                    self.merge_wide_confirm_count = 0
+                    self.merge_wide_release_count = 0
                     if self.enable_branch_event_log:
                         self.get_logger().info(f'🚩 Branch detected (score={branch_score}), locking to {self.locked_branch_side}')
             else:
@@ -835,6 +931,9 @@ class PerceptionDecisionNode(Node):
             # ==================== 步骤2: 收集点并拟合 ====================
             target_side = self.locked_branch_side if self.branch_locked else self.outer_side
             last_center_x = self.last_offset * w / 2.0 + w / 2.0
+            if not self.branch_locked:
+                self.update_merge_wide_state(bands, last_center_x)
+            road_state = self.get_current_road_state()
             points = self.collect_centerline_points(bands, self.branch_locked, target_side, 
                                                     last_center_x=last_center_x,
                                                     image_width=w)
@@ -846,7 +945,12 @@ class PerceptionDecisionNode(Node):
                     h * self.branch_bottom_anchor_y_ratio,
                     self.branch_bottom_anchor_weight
                 ))
-            raw_offset, coeffs = self.fit_centerline_and_compute_offset(fit_points, h, w, fit_order)
+            raw_offset, coeffs, lateral_offset, heading_error, curvature = self.fit_centerline_and_compute_offset(
+                fit_points,
+                h,
+                w,
+                fit_order
+            )
             t_fit_done = time.perf_counter()
             
             # ⭐ 保存拟合结果用于可视化
@@ -856,11 +960,14 @@ class PerceptionDecisionNode(Node):
             if raw_offset is not None:
                 center_offset = self.smooth_offset(raw_offset)
                 is_valid = True
+                confidence = self.calculate_lane_confidence(fit_points, bands)
             else:
                 # 保底逻辑：回退到简单底部 ROI 计算
                 bottom_seg = seg_map[int(h*0.8):h, :]
                 center_offset = self._calculate_center_offset(bottom_seg)
+                lateral_offset = center_offset
                 is_valid = bool(np.any(bottom_seg == 1))
+                confidence = 0.2 if is_valid else 0.0
                 
                 # 如果保底也无效，保持上一帧的 offset
                 if not is_valid and abs(self.last_offset) > 0.01:
@@ -876,7 +983,10 @@ class PerceptionDecisionNode(Node):
             half_h = h // 2
             bottom_seg = seg_map[half_h:h, :]
             center_offset = self._calculate_center_offset(bottom_seg)
+            lateral_offset = center_offset
             is_valid = bool(np.any(bottom_seg == 1))
+            confidence = 0.2 if is_valid else 0.0
+            road_state = 'NORMAL' if is_valid else 'LOW_CONFIDENCE'
 
         t_end = time.perf_counter()
         self.last_decision_profile = {
@@ -887,7 +997,20 @@ class PerceptionDecisionNode(Node):
             'collect_fit_ms': (t_fit_done - t_state_done) * 1000.0,
             'smooth_fallback_ms': (t_end - t_fit_done) * 1000.0,
         }
-        return center_offset, is_valid
+        lane_state = LaneState(
+            control_offset=float(center_offset),
+            lateral_offset=float(lateral_offset),
+            heading_error=float(heading_error),
+            curvature=float(curvature),
+            confidence=float(max(0.0, min(1.0, confidence))),
+            is_valid=bool(is_valid),
+            road_state=road_state if is_valid else 'LOW_CONFIDENCE',
+            branch_side=self.locked_branch_side if self.branch_locked else '',
+            task_state='CLEAR',
+            task_bias=0.0,
+            timestamp=current_time
+        )
+        return self.apply_task_bias(lane_state)
     
     def _calculate_center_offset(self, bottom_seg):
         """计算赛道中心偏移量"""
@@ -998,6 +1121,7 @@ class PerceptionDecisionNode(Node):
             segments = self.apply_obstacle_exclusion_to_segments(segments, y0, y1, obstacle_zones)
             
             bands.append({
+                'index': i,
                 'y0': y0,
                 'y1': y1,
                 'y_center': (y0 + y1) / 2.0,
@@ -1240,6 +1364,148 @@ class PerceptionDecisionNode(Node):
             return False
         return (time.time() - self.lock_start_time) >= self.locked_path_continuity_after_time
 
+    def get_current_road_state(self):
+        if self.branch_locked:
+            return 'BRANCH_LOCKED'
+        if self.merge_wide_locked:
+            return 'MERGE_WIDE'
+        return 'NORMAL'
+
+    def calculate_lane_confidence(self, fit_points, bands):
+        valid_band_count = sum(1 for band in bands if band.get('segments'))
+        if valid_band_count <= 0:
+            return 0.0
+        point_ratio = len(fit_points) / max(1.0, float(valid_band_count))
+        return max(0.0, min(1.0, point_ratio))
+
+    def apply_task_bias(self, lane_state: LaneState):
+        """Future hook for obstacle repulsion and coin attraction; no bias is applied now."""
+        lane_state.task_bias = 0.0
+        return lane_state
+
+    def get_band_lane_width(self, band_index):
+        if band_index < 0 or band_index >= len(self.band_lane_widths):
+            return None
+        return self.band_lane_widths[band_index]
+
+    def update_band_lane_width(self, band_index, width):
+        if band_index < 0:
+            return
+        while band_index >= len(self.band_lane_widths):
+            self.band_lane_widths.append(None)
+
+        width = float(width)
+        if width <= 0.0:
+            return
+
+        old_width = self.band_lane_widths[band_index]
+        if old_width is None:
+            self.band_lane_widths[band_index] = width
+            return
+
+        alpha = max(0.0, min(1.0, float(self.merge_wide_lane_width_alpha)))
+        self.band_lane_widths[band_index] = (1.0 - alpha) * float(old_width) + alpha * width
+
+    def is_merge_wide_segment(self, band):
+        if not self.enable_merge_wide_segment_logic:
+            return False
+        segments = band.get('segments', [])
+        if len(segments) != 1:
+            return False
+
+        lane_width = self.get_band_lane_width(int(band.get('index', -1)))
+        if lane_width is None or lane_width <= 0.0:
+            return False
+
+        seg_width = float(segments[0].get('width', 0.0))
+        ratio = max(1.05, float(self.merge_wide_segment_ratio))
+        return seg_width >= lane_width * ratio
+
+    def update_merge_wide_state(self, bands, last_center_x):
+        """Detect a same-direction merge as a single road segment becoming abnormally wide."""
+        if not self.enable_merge_wide_segment_logic:
+            self.merge_wide_locked = False
+            self.merge_wide_side = None
+            return
+
+        wide_bands = []
+        for band in bands:
+            segments = band.get('segments', [])
+            if len(segments) != 1:
+                continue
+
+            seg = segments[0]
+            band_index = int(band.get('index', -1))
+            seg_width = float(seg.get('width', 0.0))
+            lane_width = self.get_band_lane_width(band_index)
+
+            if lane_width is None:
+                self.update_band_lane_width(band_index, seg_width)
+                continue
+
+            if self.is_merge_wide_segment(band):
+                wide_bands.append(band)
+            elif not self.merge_wide_locked:
+                self.update_band_lane_width(band_index, seg_width)
+
+        if len(wide_bands) >= max(1, int(self.merge_wide_min_bands)):
+            self.merge_wide_confirm_count += 1
+            self.merge_wide_release_count = 0
+            if self.merge_wide_confirm_count >= max(1, int(self.merge_wide_confirm_frames)):
+                if not self.merge_wide_locked:
+                    ref_seg = wide_bands[-1]['segments'][0]
+                    self.merge_wide_side = 'left' if last_center_x <= float(ref_seg['center_x']) else 'right'
+                    if self.enable_branch_event_log:
+                        self.get_logger().info(f'🔀 Merge wide road detected, keeping {self.merge_wide_side} lane')
+                self.merge_wide_locked = True
+            return
+
+        self.merge_wide_confirm_count = 0
+        if self.merge_wide_locked:
+            self.merge_wide_release_count += 1
+            if self.merge_wide_release_count >= max(1, int(self.merge_wide_release_frames)):
+                if self.enable_branch_event_log:
+                    self.get_logger().info('🔀 Merge wide road released')
+                self.merge_wide_locked = False
+                self.merge_wide_side = None
+                self.merge_wide_release_count = 0
+
+    def choose_merge_wide_segment(self, band, last_center_x=None):
+        if not self.merge_wide_locked or not self.is_merge_wide_segment(band):
+            return None
+
+        seg = band['segments'][0]
+        lane_width = self.get_band_lane_width(int(band.get('index', -1)))
+        if lane_width is None or lane_width <= 0.0:
+            return None
+
+        side = self.merge_wide_side
+        if side not in ('left', 'right'):
+            if last_center_x is None:
+                side = self.outer_side if self.outer_side in ('left', 'right') else 'left'
+            else:
+                side = 'left' if last_center_x <= float(seg['center_x']) else 'right'
+            self.merge_wide_side = side
+
+        if side == 'left':
+            x0 = float(seg['x0'])
+            x1 = min(float(seg['x1']), x0 + lane_width)
+            target_x = x0 + lane_width * 0.5
+        else:
+            x1 = float(seg['x1'])
+            x0 = max(float(seg['x0']), x1 - lane_width)
+            target_x = x1 - lane_width * 0.5
+
+        target_x = max(float(seg['x0']), min(float(seg['x1']), target_x))
+        return {
+            'x0': int(round(x0)),
+            'x1': int(round(x1)),
+            'width': max(1.0, x1 - x0),
+            'center_x': target_x,
+            'pixel_count': seg.get('pixel_count', 100),
+            'merge_wide_virtual': True,
+        }
+
     def collect_centerline_points(self, bands, branch_locked, outer_side, last_center_x=None, image_width=None):
         """收集用于拟合的中心点"""
         points = []
@@ -1261,14 +1527,16 @@ class PerceptionDecisionNode(Node):
                 if target_seg is None:
                     target_seg = self.choose_target_segment(b, outer_side)
             else:
-                if len(b['segments']) == 1:
-                    target_seg = b['segments'][0]
-                elif last_center_x is not None:
-                    # ⭐ 安全检查：确保 segments 不为空
-                    if b['segments']:
-                        target_seg = min(b['segments'], key=lambda s: abs(s['center_x'] - last_center_x))
-                else:
-                    target_seg = b['segments'][0]
+                target_seg = self.choose_merge_wide_segment(b, last_center_x=last_center_x)
+                if target_seg is None:
+                    if len(b['segments']) == 1:
+                        target_seg = b['segments'][0]
+                    elif last_center_x is not None:
+                        # ⭐ 安全检查：确保 segments 不为空
+                        if b['segments']:
+                            target_seg = min(b['segments'], key=lambda s: abs(s['center_x'] - last_center_x))
+                    else:
+                        target_seg = b['segments'][0]
             
             if target_seg:
                 points.append((target_seg['center_x'], b['y_center']))
@@ -1342,11 +1610,11 @@ class PerceptionDecisionNode(Node):
     def fit_centerline_and_compute_offset(self, points, h, w, fit_order=None):
         """拟合中心线并计算 Offset"""
         if len(points) < self.fit_min_points:
-            return None, None
+            return None, None, 0.0, 0.0, 0.0
         
         order = self.fit_order if fit_order is None else fit_order
         if len(points) <= order:
-            return None, None
+            return None, None, 0.0, 0.0, 0.0
         
         ys = np.array([p[1] for p in points])
         xs = np.array([p[0] for p in points])
@@ -1359,17 +1627,28 @@ class PerceptionDecisionNode(Node):
             
             near_offset = (near_x - w / 2.0) / (w / 2.0)
             heading_error = 0.0
+            curvature = 0.0
             
             if self.use_heading_term and len(coeffs) > 1:
                 # ⭐ 修复：np.polyder 返回的是系数数组，需要用 np.polyval 计算
                 deriv_coeffs = np.polyder(coeffs)
                 dx_dy = np.polyval(deriv_coeffs, near_y)
                 heading_error = np.arctan(dx_dy) / (np.pi / 2) # Normalize to [-1, 1]
+                if len(coeffs) > 2:
+                    second_deriv_coeffs = np.polyder(coeffs, 2)
+                    d2x_dy2 = np.polyval(second_deriv_coeffs, near_y)
+                    curvature = np.clip(float(d2x_dy2) * float(h), -1.0, 1.0)
             
             final_offset = self.near_offset_weight * near_offset + self.heading_weight * heading_error
-            return float(np.clip(final_offset, -1.0, 1.0)), coeffs
+            return (
+                float(np.clip(final_offset, -1.0, 1.0)),
+                coeffs,
+                float(np.clip(near_offset, -1.0, 1.0)),
+                float(np.clip(heading_error, -1.0, 1.0)),
+                float(curvature)
+            )
         except:
-            return None, None
+            return None, None, 0.0, 0.0, 0.0
 
     def smooth_offset(self, raw_offset):
         """Offset 平滑与限幅"""

@@ -20,11 +20,11 @@ import numpy as np
 SEG_COLORS = np.zeros((256, 3), dtype=np.uint8)
 SEG_COLORS[1] = [0, 128, 255]
 
-# 模型输入尺寸 (必须与 pp_liteseg.rknn 模型匹配)
-# 921600 bytes = 640 * 480 * 3
-IMG_SIZE = (640, 480)  # (width, height)
+# 默认语义分割输入尺寸；可由 ROS 参数覆盖以适配低分辨率 RKNN。
+DEFAULT_IMG_SIZE = (640, 480)  # (width, height)
+IMG_SIZE = DEFAULT_IMG_SIZE
 
-def preprocess_image(img, input_format="RGB", model_input_format="RGB"):
+def preprocess_image(img, input_format="RGB", model_input_format="RGB", input_size=DEFAULT_IMG_SIZE):
     """
     预处理图像：Resize, 颜色转换（如果需要）, 归一化
     Args:
@@ -46,15 +46,167 @@ def preprocess_image(img, input_format="RGB", model_input_format="RGB"):
         # 格式一致，不需要转换
         img_converted = img
     
-    # Resize to model input size
-    img_resized = cv2.resize(img_converted, IMG_SIZE, interpolation=cv2.INTER_LINEAR)
+    input_size = (int(input_size[0]), int(input_size[1]))
 
-    img_normalized = img_resized
+    # Resize to model input size
+    if img_converted.shape[1] == input_size[0] and img_converted.shape[0] == input_size[1]:
+        img_resized = img_converted
+    else:
+        img_resized = cv2.resize(img_converted, input_size, interpolation=cv2.INTER_LINEAR)
+
+    img_normalized = np.ascontiguousarray(img_resized)
     # 增加 batch 维度: (H, W, C) -> (1, H, W, C)
     input_data = np.expand_dims(img_normalized, axis=0)
     return input_data
 
-def postprocess_segmentation(output, original_size):
+def sigmoid(x):
+    x = np.clip(x, -50.0, 50.0)
+    return 1.0 / (1.0 + np.exp(-x))
+
+def split_yolov8_seg_outputs(outputs):
+    """Return (proto, pred) for YOLOv8-seg style outputs, otherwise (None, None)."""
+    if not isinstance(outputs, (list, tuple)) or len(outputs) != 2:
+        return None, None
+
+    arrays = [np.asarray(output) for output in outputs]
+    proto = None
+    pred = None
+
+    for array in arrays:
+        if array.ndim == 4:
+            candidate = array[0] if array.shape[0] == 1 else array
+            if candidate.ndim == 3:
+                if candidate.shape[0] <= 64:
+                    proto = candidate
+                elif candidate.shape[-1] <= 64:
+                    proto = np.transpose(candidate, (2, 0, 1))
+        elif array.ndim in (2, 3):
+            pred = array
+
+    if proto is None or pred is None:
+        return None, None
+    return proto.astype(np.float32, copy=False), pred.astype(np.float32, copy=False)
+
+def normalize_yolov8_seg_predictions(pred):
+    if pred.ndim == 3:
+        if pred.shape[0] == 1:
+            pred = pred[0]
+        elif pred.shape[-1] == 1:
+            pred = pred[:, :, 0]
+    if pred.ndim != 2:
+        return None
+
+    # Exports may be (N, attrs) or (attrs, N).
+    if pred.shape[0] <= 128 and pred.shape[1] > pred.shape[0]:
+        pred = pred.T
+    return pred
+
+def boxes_to_xyxy(boxes):
+    boxes = boxes.astype(np.float32, copy=True)
+    if boxes.size == 0:
+        return boxes
+
+    x0, y0, x1, y1 = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
+    xyxy_ratio = np.mean((x1 > x0) & (y1 > y0))
+    if xyxy_ratio >= 0.5:
+        return boxes
+
+    cx, cy, bw, bh = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
+    boxes[:, 0] = cx - bw / 2.0
+    boxes[:, 1] = cy - bh / 2.0
+    boxes[:, 2] = cx + bw / 2.0
+    boxes[:, 3] = cy + bh / 2.0
+    return boxes
+
+def postprocess_yolov8_segmentation(
+    outputs,
+    original_size,
+    input_size=DEFAULT_IMG_SIZE,
+    conf_threshold=0.25,
+    mask_threshold=0.5,
+    max_detections=30,
+):
+    """Convert YOLOv8-seg instance output into the semantic road mask expected downstream."""
+    proto, pred = split_yolov8_seg_outputs(outputs)
+    if proto is None or pred is None:
+        return None
+
+    pred = normalize_yolov8_seg_predictions(pred)
+    if pred is None:
+        return None
+
+    mask_dim, proto_h, proto_w = proto.shape
+    class_count = pred.shape[1] - 4 - mask_dim
+    if class_count <= 0:
+        return None
+
+    orig_h, orig_w = original_size
+    empty_mask = np.zeros((orig_h, orig_w), dtype=np.uint8)
+
+    class_scores = pred[:, 4:4 + class_count].astype(np.float32, copy=False)
+    if class_scores.size == 0:
+        return empty_mask
+    if np.max(class_scores) > 1.0 or np.min(class_scores) < 0.0:
+        class_scores = sigmoid(class_scores)
+
+    scores = np.max(class_scores, axis=1)
+    keep = np.flatnonzero(scores >= float(conf_threshold))
+    if keep.size == 0:
+        return empty_mask
+
+    max_detections = int(max_detections)
+    if max_detections > 0 and keep.size > max_detections:
+        local_scores = scores[keep]
+        top_local = np.argpartition(local_scores, -max_detections)[-max_detections:]
+        keep = keep[top_local]
+    keep = keep[np.argsort(scores[keep])[::-1]]
+
+    boxes = boxes_to_xyxy(pred[keep, :4])
+    coeffs = pred[keep, 4 + class_count:4 + class_count + mask_dim].astype(np.float32, copy=False)
+
+    input_w, input_h = int(input_size[0]), int(input_size[1])
+    boxes[:, [0, 2]] = np.clip(boxes[:, [0, 2]], 0.0, float(input_w))
+    boxes[:, [1, 3]] = np.clip(boxes[:, [1, 3]], 0.0, float(input_h))
+
+    proto_flat = proto.reshape(mask_dim, -1)
+    masks = sigmoid(np.matmul(coeffs, proto_flat)).reshape(-1, proto_h, proto_w)
+
+    road_mask_low = np.zeros((proto_h, proto_w), dtype=bool)
+    scale_x = proto_w / max(float(input_w), 1.0)
+    scale_y = proto_h / max(float(input_h), 1.0)
+
+    for mask, box in zip(masks, boxes):
+        x0 = int(np.floor(box[0] * scale_x))
+        y0 = int(np.floor(box[1] * scale_y))
+        x1 = int(np.ceil(box[2] * scale_x))
+        y1 = int(np.ceil(box[3] * scale_y))
+
+        x0 = max(0, min(x0, proto_w - 1))
+        y0 = max(0, min(y0, proto_h - 1))
+        x1 = max(x0 + 1, min(x1, proto_w))
+        y1 = max(y0 + 1, min(y1, proto_h))
+
+        instance_mask = mask > float(mask_threshold)
+        road_mask_low[y0:y1, x0:x1] |= instance_mask[y0:y1, x0:x1]
+
+    if not np.any(road_mask_low):
+        road_mask_low = np.any(masks > float(mask_threshold), axis=0)
+
+    road_mask = cv2.resize(
+        road_mask_low.astype(np.uint8),
+        (orig_w, orig_h),
+        interpolation=cv2.INTER_NEAREST,
+    )
+    return road_mask.astype(np.uint8)
+
+def postprocess_segmentation(
+    output,
+    original_size,
+    input_size=DEFAULT_IMG_SIZE,
+    conf_threshold=0.25,
+    mask_threshold=0.5,
+    max_detections=30,
+):
     """
     后处理分割结果
     Args:
@@ -64,6 +216,17 @@ def postprocess_segmentation(output, original_size):
         seg_map: 分割掩码 (H, W)，值为类别索引
     """
     try:
+        yolo_mask = postprocess_yolov8_segmentation(
+            output,
+            original_size,
+            input_size=input_size,
+            conf_threshold=conf_threshold,
+            mask_threshold=mask_threshold,
+            max_detections=max_detections,
+        )
+        if yolo_mask is not None:
+            return yolo_mask
+
         # 获取输出数据
         seg_output = output[0] if isinstance(output, list) else output
         
@@ -184,7 +347,18 @@ def seg_visualization(seg_map, img_bgr=None, blend_alpha=None):
         # 直接返回彩色分割图
         result_img = cv2.cvtColor(colored_seg, cv2.COLOR_RGB2BGR)
     return result_img
-def myFunc(rknn_lite, img_bgr, blend_alpha=0.5, show_visualization=True, input_format="RGB", model_input_format="RGB"):
+def myFunc(
+    rknn_lite,
+    img_bgr,
+    blend_alpha=0.5,
+    show_visualization=True,
+    input_format="RGB",
+    model_input_format="RGB",
+    input_size=DEFAULT_IMG_SIZE,
+    conf_threshold=0.25,
+    mask_threshold=0.5,
+    max_detections=30,
+):
     """
     PP-Seg 推理函数（用于 rknnpool）
     Args:
@@ -207,7 +381,12 @@ def myFunc(rknn_lite, img_bgr, blend_alpha=0.5, show_visualization=True, input_f
         original_size = img_bgr.shape[:2]  # (height, width)
         
         # 预处理 - ⭐ 传递颜色格式参数
-        input_data = preprocess_image(img_bgr, input_format=input_format, model_input_format=model_input_format)
+        input_data = preprocess_image(
+            img_bgr,
+            input_format=input_format,
+            model_input_format=model_input_format,
+            input_size=input_size,
+        )
 
         t_rknn_start = time.perf_counter()
         
@@ -222,7 +401,14 @@ def myFunc(rknn_lite, img_bgr, blend_alpha=0.5, show_visualization=True, input_f
             return None, None, False, {}
     
         # 后处理 - 获取分割掩码
-        seg_map = postprocess_segmentation(outputs, original_size)
+        seg_map = postprocess_segmentation(
+            outputs,
+            original_size,
+            input_size=input_size,
+            conf_threshold=conf_threshold,
+            mask_threshold=mask_threshold,
+            max_detections=max_detections,
+        )
 
         t_vis_start = time.perf_counter()
         
@@ -287,7 +473,21 @@ def resolve_model_dir(model_dir):
 class PPSegInfer:
     """PP-Seg 推理封装类"""
     
-    def __init__(self, model_dir="model", model_filename=None, TPEs=1, blend_alpha=None, show_visualization=True, input_format="RGB", model_input_format="RGB", core_ids=None):
+    def __init__(
+        self,
+        model_dir="model",
+        model_filename=None,
+        TPEs=1,
+        blend_alpha=None,
+        show_visualization=True,
+        input_format="RGB",
+        model_input_format="RGB",
+        core_ids=None,
+        input_size=DEFAULT_IMG_SIZE,
+        conf_threshold=0.25,
+        mask_threshold=0.5,
+        max_detections=30,
+    ):
         """
         初始化 PP-Seg 推理器
         Args:
@@ -309,12 +509,18 @@ class PPSegInfer:
         self.input_format = input_format
         self.model_input_format = model_input_format
         self.core_ids = [int(core_id) for core_id in core_ids] if core_ids else None
+        self.input_size = (int(input_size[0]), int(input_size[1]))
+        self.conf_threshold = float(conf_threshold)
+        self.mask_threshold = float(mask_threshold)
+        self.max_detections = int(max_detections)
         self.last_profile = {}
         
         # 创建带有参数的推理函数
         from functools import partial
         infer_func = partial(myFunc, blend_alpha=blend_alpha, show_visualization=show_visualization, 
-                            input_format=input_format, model_input_format=model_input_format)
+                            input_format=input_format, model_input_format=model_input_format,
+                            input_size=self.input_size, conf_threshold=self.conf_threshold,
+                            mask_threshold=self.mask_threshold, max_detections=self.max_detections)
         
         self.rknn_pool = rknnPoolExecutor(
             rknnModel=model_path,
@@ -331,6 +537,11 @@ class PPSegInfer:
         print(f"NPU Core IDs: {self.core_ids if self.core_ids else 'auto 0/1/2'}")
         print(f"Output mode: {mode} (blend_alpha={blend_alpha})")
         print(f"Visualization: {vis_mode}")
+        print(f"Input size: {self.input_size[0]}x{self.input_size[1]}")
+        print(
+            f"YOLOv8-seg thresholds: conf={self.conf_threshold}, "
+            f"mask={self.mask_threshold}, max_det={self.max_detections}"
+        )
 
     def get_model_path(self, model_dir, model_filename=None):
         """获取模型路径 - 支持指定模型文件名"""

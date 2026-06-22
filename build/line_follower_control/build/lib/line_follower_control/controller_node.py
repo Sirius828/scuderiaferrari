@@ -12,6 +12,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from std_msgs.msg import Float32, Bool, String
 from std_srvs.srv import SetBool
 from geometry_msgs.msg import Twist
+import json
 import math
 import time
 
@@ -39,6 +40,10 @@ class LineFollowerController(Node):
         self.declare_parameter('autonomous_enabled_on_start', False)
         self.declare_parameter('publish_stop_when_disabled', True)
         self.declare_parameter('enable_manual_override', True)
+        self.declare_parameter('use_lane_state', True)
+        self.declare_parameter('lane_state_timeout', 0.3)
+        self.declare_parameter('heading_gain', 0.0)
+        self.declare_parameter('curvature_gain', 0.0)
         
         # 日志参数
         self.declare_parameter('controller_log_mode', 'normal')  # normal, pid_tuning, off
@@ -51,12 +56,20 @@ class LineFollowerController(Node):
         
         # ==================== 状态变量 ====================
         self.current_offset = 0.0          # 当前偏移量
+        self.current_lateral_offset = 0.0
+        self.current_heading_error = 0.0
+        self.current_curvature = 0.0
+        self.lane_confidence = 0.0
+        self.road_state = 'UNKNOWN'
+        self.task_state = 'CLEAR'
+        self.last_lane_state_time = None
         self.prev_offset = 0.0             # 上一帧偏移量（用于计算微分）
         self.integral = 0.0                # 积分项累积
         self.prev_time = time.time()       # 上一帧时间
         self.is_valid = True               # 是否有赛道
         self.invalid_start_time = None     # is_valid=False的开始时间
         self.last_pid_terms = (0.0, 0.0, 0.0)
+        self.last_lane_terms = (0.0, 0.0)
         self.last_steering = 0.0
         self.last_tuning_log_time = 0.0
         self.track_lost_logged = False
@@ -99,6 +112,12 @@ class LineFollowerController(Node):
             '/segmentation/is_valid',
             self.valid_callback,
             sensor_qos
+        )
+        self.lane_state_subscription = self.create_subscription(
+            String,
+            '/perception/lane_state',
+            self.lane_state_callback,
+            10
         )
         self.perception_stop_subscription = self.create_subscription(
             Bool,
@@ -164,6 +183,10 @@ class LineFollowerController(Node):
             f'enable_manual_override={self.enable_manual_override}'
         )
         self.get_logger().info(
+            f'   Lane State: use={self.use_lane_state}, timeout={self.lane_state_timeout:.2f}s, '
+            f'heading_gain={self.heading_gain}, curvature_gain={self.curvature_gain}'
+        )
+        self.get_logger().info(
             f'   Log Mode: {self.controller_log_mode}, '
             f'PID Tuning Log Hz: {self.pid_tuning_log_hz}, '
             f'Bar Width: {self.pid_tuning_bar_width}'
@@ -185,6 +208,10 @@ class LineFollowerController(Node):
         self.autonomous_enabled_on_start = self.get_parameter('autonomous_enabled_on_start').value
         self.publish_stop_when_disabled = self.get_parameter('publish_stop_when_disabled').value
         self.enable_manual_override = self.get_parameter('enable_manual_override').value
+        self.use_lane_state = self.get_parameter('use_lane_state').value
+        self.lane_state_timeout = self.get_parameter('lane_state_timeout').value
+        self.heading_gain = self.get_parameter('heading_gain').value
+        self.curvature_gain = self.get_parameter('curvature_gain').value
 
         self.controller_log_mode = self.get_parameter('controller_log_mode').value
         self.pid_tuning_log_hz = self.get_parameter('pid_tuning_log_hz').value
@@ -209,6 +236,10 @@ class LineFollowerController(Node):
             'perception_stop_timeout': self.perception_stop_timeout,
             'publish_stop_when_disabled': self.publish_stop_when_disabled,
             'enable_manual_override': self.enable_manual_override,
+            'use_lane_state': self.use_lane_state,
+            'lane_state_timeout': self.lane_state_timeout,
+            'heading_gain': self.heading_gain,
+            'curvature_gain': self.curvature_gain,
             'controller_log_mode': self.controller_log_mode,
             'pid_tuning_log_hz': self.pid_tuning_log_hz,
             'pid_tuning_bar_width': self.pid_tuning_bar_width,
@@ -233,6 +264,10 @@ class LineFollowerController(Node):
             pending['perception_stop_timeout'] = float(pending['perception_stop_timeout'])
             pending['publish_stop_when_disabled'] = bool(pending['publish_stop_when_disabled'])
             pending['enable_manual_override'] = bool(pending['enable_manual_override'])
+            pending['use_lane_state'] = bool(pending['use_lane_state'])
+            pending['lane_state_timeout'] = float(pending['lane_state_timeout'])
+            pending['heading_gain'] = float(pending['heading_gain'])
+            pending['curvature_gain'] = float(pending['curvature_gain'])
             pending['pid_tuning_log_hz'] = float(pending['pid_tuning_log_hz'])
             pending['pid_tuning_bar_width'] = int(pending['pid_tuning_bar_width'])
             pending['controller_debug_hz'] = float(pending['controller_debug_hz'])
@@ -253,6 +288,8 @@ class LineFollowerController(Node):
             return SetParametersResult(successful=False, reason='invalid_timeout must be >= 0')
         if pending['perception_stop_timeout'] < 0.0:
             return SetParametersResult(successful=False, reason='perception_stop_timeout must be >= 0')
+        if pending['lane_state_timeout'] < 0.0:
+            return SetParametersResult(successful=False, reason='lane_state_timeout must be >= 0')
         if pending['pid_tuning_log_hz'] <= 0.0:
             return SetParametersResult(successful=False, reason='pid_tuning_log_hz must be > 0')
         if pending['controller_debug_hz'] <= 0.0:
@@ -276,6 +313,10 @@ class LineFollowerController(Node):
         self.perception_stop_timeout = pending['perception_stop_timeout']
         self.publish_stop_when_disabled = pending['publish_stop_when_disabled']
         self.enable_manual_override = pending['enable_manual_override']
+        self.use_lane_state = pending['use_lane_state']
+        self.lane_state_timeout = pending['lane_state_timeout']
+        self.heading_gain = pending['heading_gain']
+        self.curvature_gain = pending['curvature_gain']
         self.controller_log_mode = pending['controller_log_mode']
         self.pid_tuning_log_hz = pending['pid_tuning_log_hz']
         self.pid_tuning_bar_width = self.normalize_bar_width(pending['pid_tuning_bar_width'])
@@ -286,7 +327,9 @@ class LineFollowerController(Node):
             'Updated controller parameters: '
             f'Kp={self.Kp}, Ki={self.Ki}, Kd={self.Kd}, '
             f'linear_speed={self.linear_speed_mps}, wheel_radius={self.wheel_radius}, '
-            f'max_steering={self.max_steering}, log_mode={self.controller_log_mode}'
+            f'max_steering={self.max_steering}, '
+            f'heading_gain={self.heading_gain}, curvature_gain={self.curvature_gain}, '
+            f'log_mode={self.controller_log_mode}'
         )
         return SetParametersResult(successful=True)
 
@@ -322,6 +365,30 @@ class LineFollowerController(Node):
             # 重置计时器
             self.invalid_start_time = None
             self.track_lost_logged = False
+
+    def lane_state_callback(self, msg: String):
+        """接收增强车道状态；保留 center_offset 话题作为回退。"""
+        try:
+            data = json.loads(msg.data)
+        except (TypeError, json.JSONDecodeError) as exc:
+            self.get_logger().warn(f'Invalid /perception/lane_state JSON: {exc}')
+            return
+
+        self.current_offset = float(data.get('control_offset', self.current_offset))
+        self.current_lateral_offset = float(data.get('lateral_offset', self.current_lateral_offset))
+        self.current_heading_error = float(data.get('heading_error', 0.0))
+        self.current_curvature = float(data.get('curvature', 0.0))
+        self.lane_confidence = float(data.get('confidence', 0.0))
+        self.road_state = str(data.get('road_state', 'UNKNOWN'))
+        self.task_state = str(data.get('task_state', 'CLEAR'))
+        self.last_lane_state_time = time.time()
+
+    def has_fresh_lane_state(self, current_time: float) -> bool:
+        if not self.use_lane_state or self.last_lane_state_time is None:
+            return False
+        if self.lane_state_timeout <= 0.0:
+            return True
+        return current_time - self.last_lane_state_time <= self.lane_state_timeout
 
     def perception_stop_callback(self, msg: Bool):
         """接收感知层停车请求。"""
@@ -464,8 +531,8 @@ class LineFollowerController(Node):
         # 有赛道，正常控制
         self.invalid_start_time = None
 
-        # ⭐ 标准PID控制
-        steering = self.pid_control(self.current_offset, dt)
+        # 固定速度巡线：只增强转向误差，不动态改速度。
+        steering = self.compute_steering(dt, current_time)
 
         # 限幅
         steering = max(-self.max_steering, min(self.max_steering, steering))
@@ -480,6 +547,19 @@ class LineFollowerController(Node):
         # 更新状态
         self.prev_offset = self.current_offset
         self.prev_time = current_time
+
+    def compute_steering(self, dt: float, current_time: float) -> float:
+        steering = self.pid_control(self.current_offset, dt)
+        heading_term = 0.0
+        curvature_term = 0.0
+
+        if self.has_fresh_lane_state(current_time):
+            heading_term = self.heading_gain * self.current_heading_error
+            curvature_term = self.curvature_gain * self.current_curvature
+            steering += heading_term + curvature_term
+
+        self.last_lane_terms = (heading_term, curvature_term)
+        return steering
     
     def pid_control(self, error: float, dt: float) -> float:
         """
@@ -522,11 +602,14 @@ class LineFollowerController(Node):
                 return
             self.last_tuning_log_time = current_time
             p_term, i_term, d_term = self.last_pid_terms
+            heading_term, curvature_term = self.last_lane_terms
             self.get_logger().info(
                 f'[PID_TUNE] err={self.current_offset:+.3f} '
                 f'{self.format_offset_bar(self.current_offset)} '
                 f'steer={steering:+.3f} '
                 f'P={p_term:+.3f} I={i_term:+.3f} D={d_term:+.3f} '
+                f'H={heading_term:+.3f} C={curvature_term:+.3f} '
+                f'road={self.road_state} conf={self.lane_confidence:.2f} '
                 f'dt={dt*1000:.1f}ms'
             )
             return
@@ -544,10 +627,14 @@ class LineFollowerController(Node):
             self._log_counter = 0
         
         if self._log_counter % 100 == 0:
+            heading_term, curvature_term = self.last_lane_terms
             self.get_logger().info(
                 f'📊 Offset: {self.current_offset:.3f}, '
                 f'Steering: {steering:.3f}, '
                 f'Integral: {self.integral:.3f}, '
+                f'HeadingTerm: {heading_term:.3f}, '
+                f'CurvTerm: {curvature_term:.3f}, '
+                f'Road: {self.road_state}, '
                 f'dt: {dt*1000:.1f}ms'
             )
     
@@ -601,6 +688,11 @@ class LineFollowerController(Node):
             f'estop={self.emergency_stop_active} '
             f'manual={self.manual_override_active} '
             f'offset={self.current_offset:+.3f} '
+            f'heading={self.current_heading_error:+.3f} '
+            f'curvature={self.current_curvature:+.3f} '
+            f'conf={self.lane_confidence:.2f} '
+            f'road={self.road_state} '
+            f'task={self.task_state} '
             f'wheel_rps={self.wheel_speed_rps:.3f} '
             f'loop_hz={loop_hz:.1f} '
             f'cmd_hz={cmd_hz:.1f} '

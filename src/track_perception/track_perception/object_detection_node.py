@@ -34,6 +34,8 @@ class ObjectDetectionNode(Node):
         self.declare_parameter('enable_perf_stats', True)
         self.declare_parameter('perf_interval', 2.0)
         self.declare_parameter('use_fast_postprocess', False)
+        self.declare_parameter('model_input_width', 640)
+        self.declare_parameter('model_input_height', 640)
         
         # 获取参数
         self.shm_name = self.get_parameter('shm_name').get_parameter_value().string_value
@@ -62,6 +64,8 @@ class ObjectDetectionNode(Node):
         self.enable_perf_stats = self.get_parameter('enable_perf_stats').get_parameter_value().bool_value
         self.perf_interval = self.get_parameter('perf_interval').get_parameter_value().double_value
         self.use_fast_postprocess = self.get_parameter('use_fast_postprocess').get_parameter_value().bool_value
+        self.model_input_width = self.get_parameter('model_input_width').get_parameter_value().integer_value
+        self.model_input_height = self.get_parameter('model_input_height').get_parameter_value().integer_value
         
         self.SHM_HEADER_SIZE = 16
         self.last_fid = 0
@@ -75,6 +79,8 @@ class ObjectDetectionNode(Node):
         self.published_msgs_window = 0
         self.rate_limited_skips_window = 0
         self.cur_publish_fps = 0.0
+        self.perf_window_start_time = None
+        self.perf_window_start_fid = None
         
         # ⭐ 性能统计时间控制
         self.last_perf_time = time.time()
@@ -91,7 +97,8 @@ class ObjectDetectionNode(Node):
                 label_list_path=label_list_path_param,
                 TPEs=tpes,
                 core_ids=core_ids,
-                use_fast_postprocess=self.use_fast_postprocess
+                use_fast_postprocess=self.use_fast_postprocess,
+                input_size=(self.model_input_width, self.model_input_height)
             )
             self.get_logger().info('✅ Object Detection model initialized successfully')
             self.get_logger().info(f'   📦 Model: {model_path_param}')
@@ -128,6 +135,7 @@ class ObjectDetectionNode(Node):
         self.get_logger().info(f'   Publish Rate: {publish_mode}')
         self.get_logger().info(f'   Perf Stats: {self.enable_perf_stats} (interval={self.perf_interval:.1f}s)')
         self.get_logger().info(f'   Fast Postprocess: {self.use_fast_postprocess}')
+        self.get_logger().info(f'   Model Input Size: {self.model_input_width}x{self.model_input_height}')
         
         # 启动主循环定时器
         self.timer = self.create_timer(0.001, self.main_loop)  # 1ms 间隔，尽可能快
@@ -183,6 +191,9 @@ class ObjectDetectionNode(Node):
                 return
             
             self.last_fid = fid
+            if self.perf_window_start_fid is None:
+                self.perf_window_start_fid = fid
+                self.perf_window_start_time = current_time
             
             # 2. 读取数据
             size = w * h * 3
@@ -255,6 +266,17 @@ class ObjectDetectionNode(Node):
             if need_perf_stats:
                 t_end = time.perf_counter()
                 publish_window_elapsed = max(current_time - self.publish_fps_t, 1e-6)
+                upstream_window_elapsed = max(
+                    current_time - (self.perf_window_start_time or self.publish_fps_t),
+                    1e-6
+                )
+                upstream_frames_window = max(
+                    0,
+                    int(fid - self.perf_window_start_fid + 1)
+                    if self.perf_window_start_fid is not None else self.processed_frames_window
+                )
+                missed_upstream_frames = max(0, upstream_frames_window - self.processed_frames_window)
+                upstream_fps = upstream_frames_window / upstream_window_elapsed
                 self.cur_publish_fps = self.published_msgs_window / publish_window_elapsed
                 self.log_perf_stats(
                     t_start=t_start,
@@ -273,10 +295,15 @@ class ObjectDetectionNode(Node):
                     processed_window=self.processed_frames_window,
                     published_window=self.published_msgs_window,
                     rate_limited_skips=self.rate_limited_skips_window,
-                    publish_window_elapsed=publish_window_elapsed
+                    publish_window_elapsed=publish_window_elapsed,
+                    upstream_frames_window=upstream_frames_window,
+                    missed_upstream_frames=missed_upstream_frames,
+                    upstream_fps=upstream_fps
                 )
                 self.last_perf_time = current_time
                 self.publish_fps_t = current_time
+                self.perf_window_start_time = current_time
+                self.perf_window_start_fid = fid + 1
                 self.processed_frames_window = 0
                 self.published_msgs_window = 0
                 self.rate_limited_skips_window = 0
@@ -297,7 +324,8 @@ class ObjectDetectionNode(Node):
                        t_inference_start, t_inference_done, t_publish_start,
                        t_publish_done, t_end, fid, frame_shape, detections_count, flag,
                        processed_window, published_window, rate_limited_skips,
-                       publish_window_elapsed):
+                       publish_window_elapsed, upstream_frames_window,
+                       missed_upstream_frames, upstream_fps):
         """打印 detection 单帧端到端耗时和 worker 内部分段耗时。"""
         def ms(a, b):
             if a is None or b is None:
@@ -312,6 +340,7 @@ class ObjectDetectionNode(Node):
         self.get_logger().info(
             '⏱️ Detection frame profile\n'
             f'   fid={fid}, size={frame_shape[0]}x{frame_shape[1]}, flag={flag}, detections={detections_count}, loop_fps≈{self.cur_fps:.1f}\n'
+            f'   upstream: frames={upstream_frames_window}, fps≈{upstream_fps:.1f}, missed_by_node={missed_upstream_frames}\n'
             f'   window: processed={processed_window}, published={published_window}, skipped_by_rate={rate_limited_skips}, publish_fps≈{self.cur_publish_fps:.1f} over {publish_window_elapsed:.2f}s\n'
             f'   node_total:       {total_ms:7.2f} ms ({fps:5.1f} FPS)\n'
             f'   shm_header:       {ms(t_start, t_header_done):7.2f} ms\n'

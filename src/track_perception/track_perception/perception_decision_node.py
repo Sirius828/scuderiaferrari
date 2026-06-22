@@ -50,6 +50,11 @@ class PerceptionDecisionNode(Node):
         # 语义分割模型参数
         self.declare_parameter('seg_model_dir', 'model')
         self.declare_parameter('seg_model_filename', 'pp_liteseg.rknn')  # ⭐ 默认使用旧版本
+        self.declare_parameter('seg_model_input_width', 640)
+        self.declare_parameter('seg_model_input_height', 480)
+        self.declare_parameter('seg_conf_threshold', 0.25)
+        self.declare_parameter('seg_mask_threshold', 0.5)
+        self.declare_parameter('seg_max_detections', 30)
         self.declare_parameter('seg_tpes', 3)
         self.declare_parameter('seg_core_ids', [], ParameterDescriptor(dynamic_typing=True))
         self.declare_parameter('blend_alpha', -1.0)
@@ -148,6 +153,11 @@ class PerceptionDecisionNode(Node):
         self.shm_name = self.get_parameter('shm_name').get_parameter_value().string_value
         seg_model_dir = self.get_parameter('seg_model_dir').get_parameter_value().string_value
         seg_model_filename = self.get_parameter('seg_model_filename').get_parameter_value().string_value
+        seg_model_input_width = self.get_parameter('seg_model_input_width').get_parameter_value().integer_value
+        seg_model_input_height = self.get_parameter('seg_model_input_height').get_parameter_value().integer_value
+        seg_conf_threshold = self.get_parameter('seg_conf_threshold').get_parameter_value().double_value
+        seg_mask_threshold = self.get_parameter('seg_mask_threshold').get_parameter_value().double_value
+        seg_max_detections = self.get_parameter('seg_max_detections').get_parameter_value().integer_value
         seg_tpes = self.get_parameter('seg_tpes').get_parameter_value().integer_value
         seg_core_ids = list(self.get_parameter('seg_core_ids').get_parameter_value().integer_array_value)
         blend_alpha_param = self.get_parameter('blend_alpha').get_parameter_value().double_value
@@ -266,10 +276,19 @@ class PerceptionDecisionNode(Node):
                 show_visualization=self.show_visualization,
                 input_format=self.input_format,
                 model_input_format=self.model_input_format,
-                core_ids=seg_core_ids
+                core_ids=seg_core_ids,
+                input_size=(seg_model_input_width, seg_model_input_height),
+                conf_threshold=seg_conf_threshold,
+                mask_threshold=seg_mask_threshold,
+                max_detections=seg_max_detections,
             )
             self.get_logger().info('✅ Semantic Segmentation model initialized')
             self.get_logger().info(f'   📦 Model: {seg_model_dir}/{seg_model_filename}')
+            self.get_logger().info(f'   Input Size: {seg_model_input_width}x{seg_model_input_height}')
+            self.get_logger().info(
+                f'   Seg Thresholds: conf={seg_conf_threshold:.2f}, '
+                f'mask={seg_mask_threshold:.2f}, max_det={seg_max_detections}'
+            )
             self.get_logger().info(f'   TPEs: {seg_tpes}')
             self.get_logger().info(f'   NPU Core IDs: {seg_core_ids if seg_core_ids else "auto 0/1/2"}')
         except Exception as e:

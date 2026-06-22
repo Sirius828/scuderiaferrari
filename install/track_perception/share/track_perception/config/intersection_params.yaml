@@ -7,7 +7,7 @@
 object_detection_node:
   ros__parameters:
     shm_name: "shm_ar_video"
-    model_path: "model/yolov8_n_det_split_int8(1).rknn"  # 目标检测模型路径，bbox/score拆分输出，转换阶段适配0~1输入
+    model_path: "model/yolov8_n_det_split_int8_v2.rknn"  # 目标检测模型路径，bbox/score拆分输出，转换阶段适配0~1输入
     label_list_path: "model/label_list.txt"
     tpes: 1
     core_ids: [0]
@@ -19,6 +19,8 @@ object_detection_node:
     enable_perf_stats: true
     perf_interval: 2.0  # 每隔多少秒打印一次 detection 单帧耗时
     use_fast_postprocess: false  # false=使用旧后处理，稳定优先；true=启用实验性快速后处理
+    model_input_width: 384
+    model_input_height: 288
 
 # ========================================
 # 感知决策节点配置
@@ -32,7 +34,12 @@ perception_decision_node:
     
     # ⭐ 模型路径参数
     seg_model_dir: "model"  # 语义分割模型目录
-    seg_model_filename: "pp_liteseg_v3.rknn"  # 语义分割模型文件名；yolov8_seg_n_int8 是实例分割输出，不能直接作为语义mask
+    seg_model_filename: "yolov8_seg_n_384x160_int8.rknn"  # 低分辨率YOLOv8-seg模型；后处理会合成为语义道路mask
+    seg_model_input_width: 384
+    seg_model_input_height: 160
+    seg_conf_threshold: 0.25  # YOLOv8-seg道路实例置信度阈值
+    seg_mask_threshold: 0.5  # mask原型合成后的二值化阈值
+    seg_max_detections: 30  # 每帧最多合成多少个道路mask候选
     
     seg_tpes: 2
     seg_core_ids: [1, 2]
@@ -91,6 +98,12 @@ perception_decision_node:
     min_branch_lock_time: 0.8  # 分支锁定的最短持续时间（秒），避免LOCK/NORMAL频繁切换
     exit_single_path_confirm_frames: 5  # 连续多少帧检测到单路径才退出LOCK状态
     exit_single_path_min_ratio: 0.8  # 远端Band中至少多少比例为单路径才允许退出LOCK
+    enable_merge_wide_segment_logic: true  # 启用合流宽路处理：宽单segment内继续沿当前侧取虚拟车道中心
+    merge_wide_segment_ratio: 1.35  # 单segment宽度超过同一band常规车道宽度该倍率时，认为是合流宽路候选
+    merge_wide_min_bands: 2  # 至少多少个band同时变宽才确认合流宽路
+    merge_wide_confirm_frames: 2  # 连续多少帧满足条件才进入合流宽路锁定
+    merge_wide_release_frames: 4  # 连续多少帧不满足条件才释放合流宽路锁定
+    merge_wide_lane_width_alpha: 0.2  # 常规车道宽度的更新系数，越小越稳定
     
     # 中心线拟合参数
     fit_min_points: 5  # 拟合所需的最少点数，二阶拟合建议至少5个点
@@ -99,7 +112,7 @@ perception_decision_node:
     enable_fit_point_jump_filter: true  # 拟合前过滤连续Band中心点x跳变过大的点，抑制边缘误分割参与拟合
     max_fit_point_dx_ratio: 0.22  # 相邻拟合点允许的最大x跳变比例（相对图像宽度）
     max_fit_point_dx_px: 140.0  # 相邻拟合点允许的最大x跳变像素上限；<=0表示只用ratio
-    enable_obstacle_avoidance: true  # 启用Human/Car障碍排斥，将其bbox膨胀区从赛道segment中扣除
+    enable_obstacle_avoidance: false  # 启用Human/Car障碍排斥，将其bbox膨胀区从赛道segment中扣除
     obstacle_labels: "Human,Car"  # 参与避障的检测类别，逗号分隔
     obstacle_min_confidence: 0.45  # 检测置信度低于该值不参与避障
     obstacle_x_margin_px: 25.0  # 障碍bbox左右膨胀像素
@@ -135,12 +148,19 @@ perception_decision_node:
     show_branch_debug: true  # 是否在可视化窗口中绘制Band和Segment
     enable_status_log: true  # 是否输出“直行/NORMAL/Offset”心跳日志
     enable_branch_event_log: false  # 关闭岔路LOCK/释放事件日志
+    publish_lane_state: true  # 发布/perception/lane_state，供控制器和后续避障/金币逻辑复用
 
 
 # ========================================
 # 参数调优指南
 # ========================================
-#
+#ROS_LOCALHOST_ONLY=0
+#ROS_PYTHON_VERSION=3
+#ROS_VERSION=2
+#SESSION_MANAGER=local/orangepi5:@/tmp/.ICE-unix/1863,unix/orangepi5:/tmp/.ICE-unix/1863
+#SHELL=/bin/bash
+#SHLVL=2
+#SSH_AGENT_PID=2137
 # 1. 如果车应该走外圈但走了内圈：
 #    → 修改 outer_side: "left" ↔ "right"
 #

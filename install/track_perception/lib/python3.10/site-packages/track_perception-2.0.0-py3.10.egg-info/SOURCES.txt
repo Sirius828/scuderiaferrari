@@ -20,6 +20,8 @@ model/yolov8_n_custom_int8.rknn
 model/yolov8_n_custom_int8_from_ipynb.rknn
 model/yolov8_n_det_split_int8(1).rknn
 model/yolov8_n_det_split_int8.rknn
+model/yolov8_n_det_split_int8_v2.rknn
+model/yolov8_seg_n_384x160_int8.rknn
 model/yolov8_seg_n_int8.rknn
 model/新建 文本文档.txt
 resource/track_perception

@@ -763,7 +763,7 @@ def run_detection_postprocess(outputs, img_shape, use_fast_postprocess=True, let
     }
 
 
-def detection_inference_func(rknn_instance, img_bgr, use_fast_postprocess=True):
+def detection_inference_func(rknn_instance, img_bgr, use_fast_postprocess=True, input_size=IMG_SIZE):
     """
     目标检测推理回调函数（在线程池中执行）
     
@@ -782,8 +782,8 @@ def detection_inference_func(rknn_instance, img_bgr, use_fast_postprocess=True):
         # 保存原始尺寸
         h_orig, w_orig = img_bgr.shape[:2]
         
-        # YOLOv8 模型按 640x640 letterbox 训练，推理也保持相同比例填充。
-        img_resized, lb_scale, lb_pad_x, lb_pad_y = letterbox_image(img_bgr, IMG_SIZE)
+        # RKNN 输入尺寸必须与转换模型时的 input_size 完全一致。
+        img_resized, lb_scale, lb_pad_x, lb_pad_y = letterbox_image(img_bgr, input_size)
         img_input = np.expand_dims(img_resized, 0)
 
         t_rknn_start = time.perf_counter()
@@ -883,7 +883,15 @@ class ObjectDetectionInfer:
     理论 FPS 提升：从 ~10 FPS 提升到 ~30 FPS（3个 NPU 核心）
     """
     
-    def __init__(self, model_path, label_list_path, TPEs=3, core_ids=None, use_fast_postprocess=False):
+    def __init__(
+        self,
+        model_path,
+        label_list_path,
+        TPEs=3,
+        core_ids=None,
+        use_fast_postprocess=False,
+        input_size=IMG_SIZE,
+    ):
         """
         初始化目标检测推理器
         
@@ -896,6 +904,7 @@ class ObjectDetectionInfer:
         self.TPEs = TPEs
         self.core_ids = [int(core_id) for core_id in core_ids] if core_ids else None
         self.use_fast_postprocess = bool(use_fast_postprocess)
+        self.input_size = (int(input_size[0]), int(input_size[1]))
         self.pool_initialized = False
         self.last_profile = {}
         
@@ -907,7 +916,11 @@ class ObjectDetectionInfer:
         self.rknn_pool = RKNNPoolExecutor(
             rknn_model=model_path,
             tpes=self.TPEs,
-            func=partial(detection_inference_func, use_fast_postprocess=self.use_fast_postprocess),
+            func=partial(
+                detection_inference_func,
+                use_fast_postprocess=self.use_fast_postprocess,
+                input_size=self.input_size,
+            ),
             core_ids=self.core_ids
         )
         
@@ -916,6 +929,7 @@ class ObjectDetectionInfer:
         print(f'   TPEs: {self.TPEs} (parallel inference enabled)')
         print(f'   NPU Core IDs: {self.core_ids if self.core_ids else "auto 0/1/2"}')
         print(f'   Fast Postprocess: {self.use_fast_postprocess}')
+        print(f'   Input Size: {self.input_size[0]}x{self.input_size[1]}')
     
     def _pool_init(self, img_bgr):
         """
