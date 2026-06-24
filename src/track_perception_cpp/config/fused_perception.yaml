@@ -1,0 +1,137 @@
+# C++ fused_perception_node 参数
+# 说明：
+# - V1 已使用：SHM/模型/NPU core/预处理/分割阈值/基础 band 扫描/平滑/红灯停车/终点停车/show_window。
+# - V1 预留：完整岔路 LOCK、合流宽路、二阶拟合、避障、GuideBoard 状态机等参数已声明并可被 ROS 参数系统读取，
+#   但 C++ LaneDecision 当前还是简化实现，后续移植 Python 状态机时直接接入这些参数。
+
+fused_perception_node:
+  ros__parameters:
+    # 基础输入
+    shm_name: "shm_ar_video"
+    enable_flip: true
+    flip_code: 0
+    input_format: "RGB"
+    model_input_format: "RGB"
+
+    # 性能与显示
+    enable_perf_stats: true
+    perf_interval: 2.0
+    show_window: true
+    blend_alpha: 1.0
+    show_branch_debug: true
+    enable_status_log: false
+    enable_branch_event_log: false
+
+    # 目标检测模型
+    det_model_path: "model/yolov8_n_det_split_int8_v2.rknn"
+    label_list_path: "model/label_list.txt"
+    det_core_id: 0
+    det_input_width: 384
+    det_input_height: 288
+    det_conf_threshold: 0.5
+    det_nms_threshold: 0.45
+    publish_detections: true
+    publish_rate: 0
+    use_fast_postprocess: false
+
+    # 实例分割模型
+    seg_model_dir: "model"
+    seg_model_filename: "yolov8_seg_n_384x160_split_int8.rknn"
+    seg_core_ids: "1,2"
+    seg_input_width: 384
+    seg_input_height: 160
+    seg_crop_y0_ratio: 0.0
+    seg_crop_y1_ratio: 1.0
+    seg_pad_value: 0
+    seg_conf_threshold: 0.15
+    seg_mask_threshold: 0.45
+    seg_max_detections: 30
+
+    # 外圈方向
+    outer_side: "left"
+
+    # GuideBoard 岔路选择，V1 预留
+    enable_guideboard_branch_selection: true
+    guideboard_branch: "right"
+    guideboard_detect_y0_ratio: 0.2
+    guideboard_detect_y1_ratio: 0.7
+
+    # Band 扫描，V1 已使用其中一部分
+    enable_segment_branch_logic: true
+    band_count: 13
+    band_y_min_ratio: 0.65
+    band_y_max_ratio: 1.0
+    band_height_ratio: 0.02
+    min_segment_width_px: 25
+    min_segment_gap_px: 40
+    min_pixels_per_band: 80
+
+    # 岔路确认，V1 预留
+    branch_detect_min_bands: 2
+    branch_detect_far_band_ratio: 0.7
+    enable_continuity_branch_selection: false
+    branch_continuity_max_dx_ratio: 0.35
+    branch_continuity_near_band_ratio: 0.5
+    enable_locked_path_continuity: true
+    locked_path_continuity_after_time: 0.5
+    locked_path_continuity_max_dx_ratio: 0.28
+    branch_lock_time: 2.0
+    min_branch_lock_time: 0.8
+    exit_single_path_confirm_frames: 5
+    exit_single_path_min_ratio: 0.8
+
+    # 合流宽路，V1 预留
+    enable_merge_wide_segment_logic: true
+    merge_wide_segment_ratio: 1.35
+    merge_wide_min_bands: 2
+    merge_wide_confirm_frames: 2
+    merge_wide_release_frames: 4
+    merge_wide_lane_width_alpha: 0.2
+
+    # 中心线拟合，V1 简化使用 offset_smoothing/max_offset_jump
+    fit_min_points: 5
+    fit_order: 2
+    branch_fit_order: 2
+    enable_fit_point_jump_filter: true
+    max_fit_point_dx_ratio: 0.22
+    max_fit_point_dx_px: 140.0
+    lookahead_y_ratio: 0.75
+    use_heading_term: true
+    heading_weight: 0.10
+    near_offset_weight: 0.90
+    max_offset_jump: 2.0
+    offset_smoothing_alpha: 0.35
+
+    # 障碍避让，V1 预留
+    enable_obstacle_avoidance: false
+    obstacle_labels: "Human,Car"
+    obstacle_min_confidence: 0.45
+    obstacle_x_margin_px: 25.0
+    obstacle_y_margin_px: 20.0
+    obstacle_max_age: 0.3
+    obstacle_min_bottom_y_ratio: 0.30
+
+    # 红绿灯停车，V1 已使用简化逻辑：red_light + Zebra 到线才 TRAFFIC_STOP
+    enable_traffic_light_stop: true
+    traffic_light_min_confidence: 0.45
+    zebra_min_confidence: 0.45
+    zebra_stop_y_ratio: 0.70
+    traffic_light_max_age: 0.5
+    green_light_confirm_frames: 1
+    red_light_confirm_frames: 1
+
+    # 终点停车，V1 已使用简化逻辑：Stop bbox 底部达到阈值才 FINISH_STOP
+    enable_finish_stop: true
+    finish_stop_min_confidence: 0.45
+    finish_stop_arm_y_ratio: 0.70
+    finish_stop_lost_frames: 3
+    finish_stop_max_age: 0.5
+
+    # LOCK 底部软锚点，V1 预留
+    enable_branch_bottom_anchor: true
+    branch_bottom_anchor_x_ratio: 0.5
+    branch_bottom_anchor_y_ratio: 0.98
+    branch_bottom_anchor_weight: 0.6
+
+    # 话题发布
+    publish_lane_state: true

@@ -1,0 +1,2 @@
+source;share/track_perception_cpp/environment/ament_prefix_path.sh
+source;share/track_perception_cpp/environment/path.sh
