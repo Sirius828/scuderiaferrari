@@ -22,6 +22,7 @@ model/yolov8_n_det_split_int8(1).rknn
 model/yolov8_n_det_split_int8.rknn
 model/yolov8_n_det_split_int8_v2.rknn
 model/yolov8_seg_n_384x160_int8.rknn
+model/yolov8_seg_n_384x160_split_int8.rknn
 model/yolov8_seg_n_int8.rknn
 model/新建 文本文档.txt
 resource/track_perception
@@ -32,3 +33,10 @@ track_perception/perception_decision_node.py
 track_perception/ppseg_infer.py
 track_perception/rknn_pool.py
 track_perception/rknnpool.py
+track_perception.egg-info/PKG-INFO
+track_perception.egg-info/SOURCES.txt
+track_perception.egg-info/dependency_links.txt
+track_perception.egg-info/entry_points.txt
+track_perception.egg-info/requires.txt
+track_perception.egg-info/top_level.txt
+track_perception.egg-info/zip-safe

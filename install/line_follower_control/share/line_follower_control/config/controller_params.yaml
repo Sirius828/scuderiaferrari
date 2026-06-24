@@ -18,8 +18,9 @@
     # ==================== 超时设置 ====================
     invalid_timeout: 0.5   # Timeout for is_valid=False (seconds)
     enable_perception_stop: true  # 是否响应/perception/stop_request停车请求
+    ignore_stop_requests: true  # 是否忽略所有感知停车请求；true时看到Stop/红灯停车请求也继续巡线
     perception_stop_timeout: 0.5  # 停车请求超过该时间未更新则自动解除，避免perception掉线永久停车
-    autonomous_enabled_on_start: false  # 启动后默认待命，等待UI发车服务
+    autonomous_enabled_on_start: true  # 启动后默认待命，等待UI发车服务
     publish_stop_when_disabled: false  # 待命/禁用巡线时不持续刷0；急停/感知停车仍会发布0
     enable_manual_override: true  # 键盘接管时释放/cmd_vel，避免和自动巡线冲突
     use_lane_state: true  # 订阅/perception/lane_state；旧center_offset仍保留为回退

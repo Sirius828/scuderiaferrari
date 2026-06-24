@@ -22,10 +22,10 @@ class ObjectDetectionNode(Node):
         
         # ==================== 参数声明 ====================
         self.declare_parameter('shm_name', 'shm_ar_video')
-        self.declare_parameter('model_path', 'model/rknn_lt.rknn')
+        self.declare_parameter('model_path', 'model/yolov8_n_det_split_int8_v2.rknn')
         self.declare_parameter('label_list_path', 'model/label_list.txt')
-        self.declare_parameter('tpes', 3)
-        self.declare_parameter('core_ids', [], ParameterDescriptor(dynamic_typing=True))
+        self.declare_parameter('tpes', 1)
+        self.declare_parameter('core_ids', [0], ParameterDescriptor(dynamic_typing=True))
         self.declare_parameter('enable_flip', True)
         self.declare_parameter('flip_code', 0)
         self.declare_parameter('input_format', 'RGB')
@@ -34,8 +34,8 @@ class ObjectDetectionNode(Node):
         self.declare_parameter('enable_perf_stats', True)
         self.declare_parameter('perf_interval', 2.0)
         self.declare_parameter('use_fast_postprocess', False)
-        self.declare_parameter('model_input_width', 640)
-        self.declare_parameter('model_input_height', 640)
+        self.declare_parameter('model_input_width', 384)
+        self.declare_parameter('model_input_height', 288)
         
         # 获取参数
         self.shm_name = self.get_parameter('shm_name').get_parameter_value().string_value
@@ -340,35 +340,38 @@ class ObjectDetectionNode(Node):
         self.get_logger().info(
             '⏱️ Detection frame profile\n'
             f'   fid={fid}, size={frame_shape[0]}x{frame_shape[1]}, flag={flag}, detections={detections_count}, loop_fps≈{self.cur_fps:.1f}\n'
-            f'   upstream: frames={upstream_frames_window}, fps≈{upstream_fps:.1f}, missed_by_node={missed_upstream_frames}\n'
-            f'   window: processed={processed_window}, published={published_window}, skipped_by_rate={rate_limited_skips}, publish_fps≈{self.cur_publish_fps:.1f} over {publish_window_elapsed:.2f}s\n'
-            f'   node_total:       {total_ms:7.2f} ms ({fps:5.1f} FPS)\n'
-            f'   shm_header:       {ms(t_start, t_header_done):7.2f} ms\n'
-            f'   shm_copy:         {ms(t_header_done, t_copy_done):7.2f} ms\n'
-            f'   node_preprocess:  {ms(t_copy_done, t_preprocess_done):7.2f} ms\n'
-            f'   infer_wait_total: {ms(t_inference_start, t_inference_done):7.2f} ms\n'
-            f'   publish:          {publish_ms:7.2f} ms\n'
-            f'   worker_total:     {worker.get("worker_total_ms", 0.0):7.2f} ms\n'
-            f'     worker_pre:     {worker.get("worker_preprocess_ms", 0.0):7.2f} ms\n'
-            f'     worker_rknn:    {worker.get("worker_rknn_ms", 0.0):7.2f} ms\n'
-            f'     worker_post:    {worker.get("worker_postprocess_ms", 0.0):7.2f} ms\n'
-            f'     worker_build:   {worker.get("worker_build_result_ms", 0.0):7.2f} ms\n'
-            f'   post_fast_path:   {worker.get("post_fast_path", False)}\n'
-            f'   post_format:      {worker.get("post_format", "unknown")}\n'
-            f'     score_filter:   {worker.get("post_score_filter_ms", 0.0):7.2f} ms\n'
-            f'     per_class_topk: {worker.get("post_topk_ms", 0.0):7.2f} ms\n'
-            f'     dfl_decode:     {worker.get("post_dfl_decode_ms", 0.0):7.2f} ms\n'
-            f'     nms:            {worker.get("post_nms_ms", 0.0):7.2f} ms\n'
-            f'     dedupe:         {worker.get("post_dedupe_ms", 0.0):7.2f} ms, '
+            f'   shm_stream: upstream_frames={upstream_frames_window}, '
+            f'shm_fps≈{upstream_fps:.1f}, missed_by_node={missed_upstream_frames}\n'
+            f'   window:     processed={processed_window}, published={published_window}, '
+            f'skipped_by_rate={rate_limited_skips}, publish_fps≈{self.cur_publish_fps:.1f} over {publish_window_elapsed:.2f}s\n'
+            f'   pipeline:   node_total={total_ms:7.2f} ms ({fps:5.1f} FPS), '
+            f'shm_header={ms(t_start, t_header_done):.2f}, '
+            f'shm_copy={ms(t_header_done, t_copy_done):.2f}, '
+            f'node_pre={ms(t_copy_done, t_preprocess_done):.2f}, '
+            f'infer_wait={ms(t_inference_start, t_inference_done):.2f}, '
+            f'publish={publish_ms:.2f}\n'
+            f'   det_model:  worker_total={worker.get("worker_total_ms", 0.0):7.2f} ms, '
+            f'pre={worker.get("worker_preprocess_ms", 0.0):.2f}, '
+            f'rknn={worker.get("worker_rknn_ms", 0.0):.2f}, '
+            f'post={worker.get("worker_postprocess_ms", 0.0):.2f}, '
+            f'build={worker.get("worker_build_result_ms", 0.0):.2f}, '
+            f'num_det={worker.get("worker_num_detections", 0)}\n'
+            f'   det_post:   format={worker.get("post_format", "unknown")}, '
+            f'fast_path={worker.get("post_fast_path", False)}, '
+            f'score_filter={worker.get("post_score_filter_ms", 0.0):.2f}, '
+            f'topk={worker.get("post_topk_ms", 0.0):.2f}, '
+            f'decode={worker.get("post_dfl_decode_ms", 0.0):.2f}, '
+            f'nms={worker.get("post_nms_ms", 0.0):.2f}, '
+            f'dedupe={worker.get("post_dedupe_ms", 0.0):.2f}, '
             f'removed={worker.get("post_duplicates_removed", 0)}\n'
-            f'     multiclass_nms: {worker.get("post_multiclass_nms", False)}, '
+            f'              multiclass_nms={worker.get("post_multiclass_nms", False)}, '
             f'agnostic_removed={worker.get("post_agnostic_removed", 0)}, '
             f'keep_topk_removed={worker.get("post_keep_topk_removed", 0)}\n'
-            f'     candidates:     {worker.get("post_candidates_before_filter", 0)} -> '
+            f'              candidates={worker.get("post_candidates_before_filter", 0)} -> '
             f'{worker.get("post_candidates_after_filter", 0)} -> '
             f'{worker.get("post_candidates_after_topk", 0)}, '
             f'max_per_class={worker.get("post_nms_input_max_per_class", 0)}\n'
-            f'     flat_scores:    raw=[{worker.get("post_flat_raw_score_min", 0.0):.3f}, '
+            f'              flat_scores raw=[{worker.get("post_flat_raw_score_min", 0.0):.3f}, '
             f'{worker.get("post_flat_raw_score_max", 0.0):.3f}], '
             f'max={worker.get("post_flat_score_max", 0.0):.3f}'
         )

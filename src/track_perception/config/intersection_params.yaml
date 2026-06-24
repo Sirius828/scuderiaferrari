@@ -16,7 +16,7 @@ object_detection_node:
     input_format: "RGB"
     publish_detections: true
     publish_rate: 0  # <=0 表示每个完成的检测结果都发布，不限速
-    enable_perf_stats: false
+    enable_perf_stats: true
     perf_interval: 2.0  # 每隔多少秒打印一次 detection 单帧耗时
     use_fast_postprocess: false  # false=使用旧后处理，稳定优先；true=启用实验性快速后处理
     model_input_width: 384
@@ -33,14 +33,22 @@ perception_decision_node:
     shm_name: "shm_ar_video"
     
     # ⭐ 模型路径参数
-    seg_model_dir: "model"  # 语义分割模型目录
-    seg_model_filename: "pp_liteseg_v3.rknn"  # 语义分割模型文件名；yolov8_seg_n_int8 是实例分割输出，不能直接作为语义mask
+    seg_model_dir: "model"
+    seg_model_filename: "yolov8_seg_n_384x160_split_int8.rknn"
+    seg_model_input_width: 384
+    seg_model_input_height: 160
+    seg_crop_y0_ratio: 0.0
+    seg_crop_y1_ratio: 1.0
+    seg_pad_value: 0
+    seg_conf_threshold: 0.15
+    seg_mask_threshold: 0.45
+    seg_max_detections: 30
     
     seg_tpes: 2
     seg_core_ids: [1, 2]
-    blend_alpha: -1.0  # -1表示只显示分割结果，不混合原图
+    blend_alpha: 1.0  # 在原图上叠加mask，便于确认mask实际位置
     show_window: true
-    enable_perf_stats: false
+    enable_perf_stats: true
     
     # 图像预处理参数
     enable_flip: true
@@ -141,7 +149,7 @@ perception_decision_node:
     
     # 调试参数
     show_branch_debug: true  # 是否在可视化窗口中绘制Band和Segment
-    enable_status_log: true  # 是否输出“直行/NORMAL/Offset”心跳日志
+    enable_status_log: false  # 是否输出“直行/NORMAL/Offset”心跳日志
     enable_branch_event_log: false  # 关闭岔路LOCK/释放事件日志
     publish_lane_state: true  # 发布/perception/lane_state，供控制器和后续避障/金币逻辑复用
 

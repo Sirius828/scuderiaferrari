@@ -49,14 +49,17 @@ class PerceptionDecisionNode(Node):
         
         # 语义分割模型参数
         self.declare_parameter('seg_model_dir', 'model')
-        self.declare_parameter('seg_model_filename', 'pp_liteseg.rknn')  # ⭐ 默认使用旧版本
-        self.declare_parameter('seg_model_input_width', 640)
-        self.declare_parameter('seg_model_input_height', 480)
-        self.declare_parameter('seg_conf_threshold', 0.25)
-        self.declare_parameter('seg_mask_threshold', 0.5)
+        self.declare_parameter('seg_model_filename', 'yolov8_seg_n_384x160_split_int8.rknn')
+        self.declare_parameter('seg_model_input_width', 384)
+        self.declare_parameter('seg_model_input_height', 160)
+        self.declare_parameter('seg_crop_y0_ratio', 0.5)
+        self.declare_parameter('seg_crop_y1_ratio', 1.0)
+        self.declare_parameter('seg_pad_value', 0)
+        self.declare_parameter('seg_conf_threshold', 0.15)
+        self.declare_parameter('seg_mask_threshold', 0.45)
         self.declare_parameter('seg_max_detections', 30)
-        self.declare_parameter('seg_tpes', 3)
-        self.declare_parameter('seg_core_ids', [], ParameterDescriptor(dynamic_typing=True))
+        self.declare_parameter('seg_tpes', 2)
+        self.declare_parameter('seg_core_ids', [1, 2], ParameterDescriptor(dynamic_typing=True))
         self.declare_parameter('blend_alpha', -1.0)
         self.declare_parameter('enable_flip', True)
         self.declare_parameter('flip_code', 0)
@@ -65,7 +68,7 @@ class PerceptionDecisionNode(Node):
         
         # 显示参数
         self.declare_parameter('show_window', False)
-        self.declare_parameter('enable_perf_stats', False)
+        self.declare_parameter('enable_perf_stats', True)
         
         # ⭐ GuideBoard 岔路选择参数
         self.declare_parameter('enable_guideboard_branch_selection', True)
@@ -76,17 +79,17 @@ class PerceptionDecisionNode(Node):
         # ⭐ 高级岔路检测与中心线拟合参数
         self.declare_parameter('enable_segment_branch_logic', True)
         # Band 扫描参数
-        self.declare_parameter('band_count', 8)
-        self.declare_parameter('band_y_min_ratio', 0.25)
-        self.declare_parameter('band_y_max_ratio', 0.95)
-        self.declare_parameter('band_height_ratio', 0.04)
+        self.declare_parameter('band_count', 13)
+        self.declare_parameter('band_y_min_ratio', 0.65)
+        self.declare_parameter('band_y_max_ratio', 1.00)
+        self.declare_parameter('band_height_ratio', 0.02)
         # Segment 提取参数
         self.declare_parameter('min_segment_width_px', 25)
         self.declare_parameter('min_segment_gap_px', 40)
         self.declare_parameter('min_pixels_per_band', 80)
         # 岔路确认参数
-        self.declare_parameter('branch_detect_min_bands', 3)
-        self.declare_parameter('branch_detect_far_band_ratio', 0.6)
+        self.declare_parameter('branch_detect_min_bands', 2)
+        self.declare_parameter('branch_detect_far_band_ratio', 0.7)
         # 分支选择参数
         self.declare_parameter('outer_side', 'left')
         self.declare_parameter('enable_continuity_branch_selection', False)
@@ -107,16 +110,16 @@ class PerceptionDecisionNode(Node):
         self.declare_parameter('merge_wide_release_frames', 4)
         self.declare_parameter('merge_wide_lane_width_alpha', 0.2)
         # 中心线拟合参数
-        self.declare_parameter('fit_min_points', 4)
-        self.declare_parameter('fit_order', 1)
+        self.declare_parameter('fit_min_points', 5)
+        self.declare_parameter('fit_order', 2)
         self.declare_parameter('branch_fit_order', 2)
         self.declare_parameter('enable_fit_point_jump_filter', True)
         self.declare_parameter('max_fit_point_dx_ratio', 0.22)
         self.declare_parameter('max_fit_point_dx_px', 140.0)
-        self.declare_parameter('enable_obstacle_avoidance', True)
+        self.declare_parameter('enable_obstacle_avoidance', False)
         self.declare_parameter('obstacle_labels', 'Human,Car')
         self.declare_parameter('obstacle_min_confidence', 0.45)
-        self.declare_parameter('obstacle_x_margin_px', 45.0)
+        self.declare_parameter('obstacle_x_margin_px', 25.0)
         self.declare_parameter('obstacle_y_margin_px', 20.0)
         self.declare_parameter('obstacle_max_age', 0.3)
         self.declare_parameter('obstacle_min_bottom_y_ratio', 0.30)
@@ -136,15 +139,15 @@ class PerceptionDecisionNode(Node):
         self.declare_parameter('branch_bottom_anchor_x_ratio', 0.5)
         self.declare_parameter('branch_bottom_anchor_y_ratio', 0.98)
         self.declare_parameter('branch_bottom_anchor_weight', 0.6)
-        self.declare_parameter('lookahead_y_ratio', 0.7)
+        self.declare_parameter('lookahead_y_ratio', 0.75)
         self.declare_parameter('use_heading_term', True)
-        self.declare_parameter('heading_weight', 0.35)
-        self.declare_parameter('near_offset_weight', 0.65)
+        self.declare_parameter('heading_weight', 0.10)
+        self.declare_parameter('near_offset_weight', 0.90)
         # 安全参数
-        self.declare_parameter('max_offset_jump', 0.6)
-        self.declare_parameter('offset_smoothing_alpha', 0.4)
+        self.declare_parameter('max_offset_jump', 2.0)
+        self.declare_parameter('offset_smoothing_alpha', 0.35)
         # 调试参数
-        self.declare_parameter('show_branch_debug', False)
+        self.declare_parameter('show_branch_debug', True)
         self.declare_parameter('enable_status_log', False)
         self.declare_parameter('enable_branch_event_log', False)
         self.declare_parameter('publish_lane_state', True)
@@ -155,6 +158,9 @@ class PerceptionDecisionNode(Node):
         seg_model_filename = self.get_parameter('seg_model_filename').get_parameter_value().string_value
         seg_model_input_width = self.get_parameter('seg_model_input_width').get_parameter_value().integer_value
         seg_model_input_height = self.get_parameter('seg_model_input_height').get_parameter_value().integer_value
+        seg_crop_y0_ratio = self.get_parameter('seg_crop_y0_ratio').get_parameter_value().double_value
+        seg_crop_y1_ratio = self.get_parameter('seg_crop_y1_ratio').get_parameter_value().double_value
+        seg_pad_value = self.get_parameter('seg_pad_value').get_parameter_value().integer_value
         seg_conf_threshold = self.get_parameter('seg_conf_threshold').get_parameter_value().double_value
         seg_mask_threshold = self.get_parameter('seg_mask_threshold').get_parameter_value().double_value
         seg_max_detections = self.get_parameter('seg_max_detections').get_parameter_value().integer_value
@@ -261,10 +267,16 @@ class PerceptionDecisionNode(Node):
         self.perf_interval = 2.0
         self.last_perf_time = time.time()
         self.perf_window_t = time.time()
+        self.perf_window_start_time = None
+        self.perf_window_start_fid = None
         self.processed_frames_window = 0
         self.published_msgs_window = 0
         self.cur_publish_fps = 0.0
         self.last_decision_profile = {}
+        self.perf_worker_count = 0
+        self.perf_worker_sums = {}
+        self.perf_worker_mins = {}
+        self.perf_worker_maxs = {}
         
         # ==================== 初始化语义分割推理器 ====================
         try:
@@ -278,6 +290,9 @@ class PerceptionDecisionNode(Node):
                 model_input_format=self.model_input_format,
                 core_ids=seg_core_ids,
                 input_size=(seg_model_input_width, seg_model_input_height),
+                crop_y0_ratio=seg_crop_y0_ratio,
+                crop_y1_ratio=seg_crop_y1_ratio,
+                pad_value=seg_pad_value,
                 conf_threshold=seg_conf_threshold,
                 mask_threshold=seg_mask_threshold,
                 max_detections=seg_max_detections,
@@ -285,6 +300,10 @@ class PerceptionDecisionNode(Node):
             self.get_logger().info('✅ Semantic Segmentation model initialized')
             self.get_logger().info(f'   📦 Model: {seg_model_dir}/{seg_model_filename}')
             self.get_logger().info(f'   Input Size: {seg_model_input_width}x{seg_model_input_height}')
+            self.get_logger().info(
+                f'   Input Crop: y={seg_crop_y0_ratio:.2f}-{seg_crop_y1_ratio:.2f}, '
+                f'pad={seg_pad_value}'
+            )
             self.get_logger().info(
                 f'   Seg Thresholds: conf={seg_conf_threshold:.2f}, '
                 f'mask={seg_mask_threshold:.2f}, max_det={seg_max_detections}'
@@ -649,6 +668,8 @@ class PerceptionDecisionNode(Node):
             t_infer_start = None
             t_infer_done = None
             t_decision_done = None
+            t_task_start = None
+            t_task_done = None
             t_publish_done = None
             t_visualize_done = None
             if need_perf_stats:
@@ -664,6 +685,9 @@ class PerceptionDecisionNode(Node):
                 return
             
             self.last_fid = fid
+            if self.enable_perf_stats and self.perf_window_start_fid is None:
+                self.perf_window_start_fid = fid
+                self.perf_window_start_time = current_time
             
             # 2. 读取数据
             size = w * h * 3
@@ -677,12 +701,6 @@ class PerceptionDecisionNode(Node):
             # 3. 预处理
             if self.enable_flip:
                 frame = cv2.flip(frame, self.flip_code)
-            
-            if self.input_format != self.model_input_format:
-                if self.input_format == "RGB" and self.model_input_format == "BGR":
-                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                elif self.input_format == "BGR" and self.model_input_format == "RGB":
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             if need_perf_stats:
                 t_preprocess_done = time.perf_counter()
             
@@ -700,6 +718,8 @@ class PerceptionDecisionNode(Node):
             seg_frame, seg_map, flag = self.seg_infer.infer(frame)
             if need_perf_stats:
                 t_infer_done = time.perf_counter()
+            if self.enable_perf_stats:
+                self.accumulate_worker_perf()
             
             if flag and seg_map is not None:
                 # 5. 决策逻辑
@@ -709,11 +729,15 @@ class PerceptionDecisionNode(Node):
                 
                 # ⭐ 保存当前偏移量（用于可视化）
                 self.current_offset = lane_state.control_offset
+                if need_perf_stats:
+                    t_task_start = time.perf_counter()
                 self.update_traffic_light_stop_state(h)
                 self.update_finish_stop_state(h)
                 lane_state.task_state = self.get_task_state()
                 lane_state.timestamp = time.time()
                 self.last_lane_state = lane_state
+                if need_perf_stats:
+                    t_task_done = time.perf_counter()
                 
                 # 6. 发布结果
                 offset_msg = Float32()
@@ -752,6 +776,17 @@ class PerceptionDecisionNode(Node):
             if need_perf_stats:
                 t_end = time.perf_counter()
                 window_elapsed = max(current_time - self.perf_window_t, 1e-6)
+                upstream_window_elapsed = max(
+                    current_time - (self.perf_window_start_time or self.perf_window_t),
+                    1e-6
+                )
+                upstream_frames_window = max(
+                    0,
+                    int(fid - self.perf_window_start_fid + 1)
+                    if self.perf_window_start_fid is not None else 0
+                )
+                missed_upstream_frames = max(0, upstream_frames_window - self.processed_frames_window)
+                upstream_fps = upstream_frames_window / upstream_window_elapsed
                 self.cur_publish_fps = self.published_msgs_window / window_elapsed
                 self.log_perf_stats(
                     t_start=t_start,
@@ -761,6 +796,8 @@ class PerceptionDecisionNode(Node):
                     t_infer_start=t_infer_start,
                     t_infer_done=t_infer_done,
                     t_decision_done=t_decision_done,
+                    t_task_start=t_task_start,
+                    t_task_done=t_task_done,
                     t_publish_done=t_publish_done,
                     t_visualize_done=t_visualize_done,
                     t_end=t_end,
@@ -769,12 +806,18 @@ class PerceptionDecisionNode(Node):
                     flag=flag,
                     processed_window=self.processed_frames_window,
                     published_window=self.published_msgs_window,
-                    window_elapsed=window_elapsed
+                    window_elapsed=window_elapsed,
+                    upstream_frames_window=upstream_frames_window,
+                    missed_upstream_frames=missed_upstream_frames,
+                    upstream_fps=upstream_fps
                 )
                 self.last_perf_time = current_time
                 self.perf_window_t = current_time
+                self.perf_window_start_time = current_time
+                self.perf_window_start_fid = fid + 1
                 self.processed_frames_window = 0
                 self.published_msgs_window = 0
+                self.reset_worker_perf_window()
             
         except (ValueError, struct.error, BufferError) as e:
             import traceback
@@ -786,10 +829,53 @@ class PerceptionDecisionNode(Node):
             self.get_logger().error(f'Unexpected error: {e}')
             self.get_logger().error(f'Traceback:\n{traceback.format_exc()}')
 
+    def accumulate_worker_perf(self):
+        """Accumulate worker timing samples for the current perf window."""
+        if not hasattr(self.seg_infer, 'get_last_profile'):
+            return
+        worker = self.seg_infer.get_last_profile()
+        if not isinstance(worker, dict) or not worker:
+            return
+
+        keys = (
+            'worker_image_to_mask_ms',
+            'worker_model_to_mask_ms',
+            'worker_preprocess_ms',
+            'worker_rknn_ms',
+            'worker_postprocess_ms',
+            'worker_visualization_ms',
+        )
+        has_sample = False
+        for key in keys:
+            value = worker.get(key)
+            if not isinstance(value, (int, float, np.integer, np.floating)):
+                continue
+            value = float(value)
+            self.perf_worker_sums[key] = self.perf_worker_sums.get(key, 0.0) + value
+            self.perf_worker_mins[key] = min(self.perf_worker_mins.get(key, value), value)
+            self.perf_worker_maxs[key] = max(self.perf_worker_maxs.get(key, value), value)
+            has_sample = True
+
+        if has_sample:
+            self.perf_worker_count += 1
+
+    def get_worker_perf_avg(self, key):
+        if self.perf_worker_count <= 0:
+            return 0.0
+        return self.perf_worker_sums.get(key, 0.0) / self.perf_worker_count
+
+    def reset_worker_perf_window(self):
+        self.perf_worker_count = 0
+        self.perf_worker_sums.clear()
+        self.perf_worker_mins.clear()
+        self.perf_worker_maxs.clear()
+
     def log_perf_stats(self, t_start, t_header_done, t_copy_done, t_preprocess_done,
-                       t_infer_start, t_infer_done, t_decision_done, t_publish_done,
-                       t_visualize_done, t_end, fid, frame_shape, flag,
-                       processed_window, published_window, window_elapsed):
+                       t_infer_start, t_infer_done, t_decision_done,
+                       t_task_start, t_task_done, t_publish_done, t_visualize_done,
+                       t_end, fid, frame_shape, flag,
+                       processed_window, published_window, window_elapsed,
+                       upstream_frames_window, missed_upstream_frames, upstream_fps):
         """打印 segmentation/decision 单帧端到端耗时和 worker 内部分段耗时。"""
         def ms(a, b):
             if a is None or b is None:
@@ -800,30 +886,59 @@ class PerceptionDecisionNode(Node):
         fps = 1000.0 / total_ms if total_ms > 0 else 0.0
         worker = self.seg_infer.get_last_profile() if hasattr(self.seg_infer, 'get_last_profile') else {}
         decision_profile = self.last_decision_profile if hasattr(self, 'last_decision_profile') else {}
+        image_to_mask_avg = self.get_worker_perf_avg('worker_image_to_mask_ms')
+        model_to_mask_avg = self.get_worker_perf_avg('worker_model_to_mask_ms')
+        image_to_mask_avg_fps = 1000.0 / image_to_mask_avg if image_to_mask_avg > 0 else 0.0
+        model_to_mask_avg_fps = 1000.0 / model_to_mask_avg if model_to_mask_avg > 0 else 0.0
 
         self.get_logger().info(
             '⏱️ Segmentation frame profile\n'
             f'   fid={fid}, size={frame_shape[0]}x{frame_shape[1]}, flag={flag}, loop_fps≈{self.cur_fps:.1f}\n'
             f'   window: processed={processed_window}, published={published_window}, publish_fps≈{self.cur_publish_fps:.1f} over {window_elapsed:.2f}s\n'
-            f'   node_total:       {total_ms:7.2f} ms ({fps:5.1f} FPS)\n'
-            f'   shm_header:       {ms(t_start, t_header_done):7.2f} ms\n'
-            f'   shm_copy:         {ms(t_header_done, t_copy_done):7.2f} ms\n'
-            f'   node_preprocess:  {ms(t_copy_done, t_preprocess_done):7.2f} ms\n'
-            f'   infer_wait_total: {ms(t_infer_start, t_infer_done):7.2f} ms\n'
-            f'   decision:         {ms(t_infer_done, t_decision_done):7.2f} ms\n'
-            f'   publish:          {ms(t_decision_done, t_publish_done):7.2f} ms\n'
-            f'   visualize:        {ms(t_publish_done, t_visualize_done):7.2f} ms\n'
-            f'   worker_total:     {worker.get("worker_total_ms", 0.0):7.2f} ms\n'
-            f'     worker_pre:     {worker.get("worker_preprocess_ms", 0.0):7.2f} ms\n'
-            f'     worker_rknn:    {worker.get("worker_rknn_ms", 0.0):7.2f} ms\n'
-            f'     worker_post:    {worker.get("worker_postprocess_ms", 0.0):7.2f} ms\n'
-            f'     worker_vis:     {worker.get("worker_visualization_ms", 0.0):7.2f} ms\n'
-            f'   decision_total:   {decision_profile.get("total_ms", 0.0):7.2f} ms\n'
-            f'     build_bands:    {decision_profile.get("build_bands_ms", 0.0):7.2f} ms\n'
-            f'     branch_detect:  {decision_profile.get("branch_detect_ms", 0.0):7.2f} ms\n'
-            f'     state_update:   {decision_profile.get("state_update_ms", 0.0):7.2f} ms\n'
-            f'     collect_fit:    {decision_profile.get("collect_fit_ms", 0.0):7.2f} ms\n'
-            f'     smooth_fallback:{decision_profile.get("smooth_fallback_ms", 0.0):7.2f} ms'
+            f'   shm_stream:       upstream_frames={upstream_frames_window}, '
+            f'shm_fps≈{upstream_fps:.1f}, missed_by_node={missed_upstream_frames}\n'
+            f'   pipeline: node_total={total_ms:7.2f} ms ({fps:5.1f} FPS), '
+            f'shm_header={ms(t_start, t_header_done):.2f}, '
+            f'shm_copy={ms(t_header_done, t_copy_done):.2f}, '
+            f'node_pre={ms(t_copy_done, t_preprocess_done):.2f}, '
+            f'infer_wait={ms(t_infer_start, t_infer_done):.2f}, '
+            f'decision={ms(t_infer_done, t_decision_done):.2f}, '
+            f'task_update={ms(t_task_start, t_task_done):.2f}, '
+            f'publish={ms(t_task_done, t_publish_done):.2f}, '
+            f'visualize={ms(t_publish_done, t_visualize_done):.2f}\n'
+            f'   seg_model: image_to_mask={worker.get("worker_image_to_mask_ms", 0.0):7.2f} ms '
+            f'({worker.get("worker_image_to_mask_fps", 0.0):5.1f} FPS)\n'
+            f'              model_to_mask={worker.get("worker_model_to_mask_ms", 0.0):7.2f} ms '
+            f'({worker.get("worker_model_to_mask_fps", 0.0):5.1f} FPS), '
+            f'pre={worker.get("worker_preprocess_ms", 0.0):.2f}, '
+            f'rknn={worker.get("worker_rknn_ms", 0.0):.2f}, '
+            f'post={worker.get("worker_postprocess_ms", 0.0):.2f}, '
+            f'vis={worker.get("worker_visualization_ms", 0.0):.2f}\n'
+            f'   seg_avg:   image_to_mask={image_to_mask_avg:7.2f} ms '
+            f'({image_to_mask_avg_fps:5.1f} FPS), '
+            f'model_to_mask={model_to_mask_avg:7.2f} ms ({model_to_mask_avg_fps:5.1f} FPS), '
+            f'samples={self.perf_worker_count}\n'
+            f'   seg_output: {worker.get("seg_output_shapes", "unknown")} '
+            f'format={worker.get("seg_post_format", "unknown")} '
+            f'score_max={worker.get("seg_score_max", 0.0):.4f} '
+            f'keep={worker.get("seg_score_keep", 0)} '
+            f'nonbox=[{worker.get("seg_nonbox_min", 0.0):.4f},{worker.get("seg_nonbox_max", 0.0):.4f}] '
+            f'mask_sum={worker.get("seg_mask_sum", 0)} shape={worker.get("seg_mask_shape", "unknown")}\n'
+            f'   decision: total={decision_profile.get("total_ms", 0.0):.2f} ms, '
+            f'build_bands={decision_profile.get("build_bands_ms", 0.0):.2f}, '
+            f'branch_detect={decision_profile.get("branch_detect_ms", 0.0):.2f}, '
+            f'state_update={decision_profile.get("state_update_ms", 0.0):.2f}, '
+            f'merge_state={decision_profile.get("merge_state_ms", 0.0):.2f}, '
+            f'center_points={decision_profile.get("center_points_ms", 0.0):.2f}, '
+            f'filter_points={decision_profile.get("filter_points_ms", 0.0):.2f}, '
+            f'fit_curve={decision_profile.get("fit_curve_ms", 0.0):.2f}, '
+            f'smooth_or_fallback={decision_profile.get("smooth_fallback_ms", 0.0):.2f}\n'
+            f'             bands={decision_profile.get("band_count", 0)}, '
+            f'segments={decision_profile.get("segment_count", 0)}, '
+            f'raw_points={decision_profile.get("raw_point_count", 0)}, '
+            f'fit_points={decision_profile.get("fit_point_count", 0)}, '
+            f'fit_order={decision_profile.get("fit_order", 0)}, '
+            f'valid={decision_profile.get("is_valid", False)}'
         )
     
     def make_decision(self, seg_map, img_h, img_w):
@@ -834,7 +949,14 @@ class PerceptionDecisionNode(Node):
         t_bands_done = t_total_start
         t_branch_done = t_total_start
         t_state_done = t_total_start
+        t_merge_done = t_total_start
+        t_collect_done = t_total_start
+        t_filter_done = t_total_start
         t_fit_done = t_total_start
+        bands = []
+        points = []
+        fit_points = []
+        fit_order = self.fit_order
 
         if len(seg_map.shape) == 3:
             seg_map = seg_map[:, :, 0]
@@ -933,12 +1055,15 @@ class PerceptionDecisionNode(Node):
             last_center_x = self.last_offset * w / 2.0 + w / 2.0
             if not self.branch_locked:
                 self.update_merge_wide_state(bands, last_center_x)
+            t_merge_done = time.perf_counter()
             road_state = self.get_current_road_state()
             points = self.collect_centerline_points(bands, self.branch_locked, target_side, 
                                                     last_center_x=last_center_x,
                                                     image_width=w)
+            t_collect_done = time.perf_counter()
             fit_order = self.branch_fit_order if self.branch_locked else self.fit_order
             fit_points = self.filter_centerline_points(points, w, last_center_x=last_center_x)
+            t_filter_done = time.perf_counter()
             if self.branch_locked and self.enable_branch_bottom_anchor and fit_order >= 2:
                 fit_points.append((
                     w * self.branch_bottom_anchor_x_ratio,
@@ -987,15 +1112,33 @@ class PerceptionDecisionNode(Node):
             is_valid = bool(np.any(bottom_seg == 1))
             confidence = 0.2 if is_valid else 0.0
             road_state = 'NORMAL' if is_valid else 'LOW_CONFIDENCE'
+            t_bands_done = time.perf_counter()
+            t_branch_done = t_bands_done
+            t_state_done = t_bands_done
+            t_merge_done = t_bands_done
+            t_collect_done = t_bands_done
+            t_filter_done = t_bands_done
+            t_fit_done = t_bands_done
 
         t_end = time.perf_counter()
+        segment_count = sum(len(b.get('segments', [])) for b in bands)
         self.last_decision_profile = {
             'total_ms': (t_end - t_total_start) * 1000.0,
             'build_bands_ms': (t_bands_done - t_total_start) * 1000.0,
             'branch_detect_ms': (t_branch_done - t_bands_done) * 1000.0,
             'state_update_ms': (t_state_done - t_branch_done) * 1000.0,
+            'merge_state_ms': (t_merge_done - t_state_done) * 1000.0,
+            'center_points_ms': (t_collect_done - t_merge_done) * 1000.0,
+            'filter_points_ms': (t_filter_done - t_collect_done) * 1000.0,
+            'fit_curve_ms': (t_fit_done - t_filter_done) * 1000.0,
             'collect_fit_ms': (t_fit_done - t_state_done) * 1000.0,
             'smooth_fallback_ms': (t_end - t_fit_done) * 1000.0,
+            'band_count': len(bands),
+            'segment_count': int(segment_count),
+            'raw_point_count': len(points),
+            'fit_point_count': len(fit_points),
+            'fit_order': int(fit_order),
+            'is_valid': bool(is_valid),
         }
         lane_state = LaneState(
             control_offset=float(center_offset),

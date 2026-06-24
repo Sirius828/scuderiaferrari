@@ -112,5 +112,6 @@ $env:COLCON_CURRENT_PREFIX=(Get-Item $PSCommandPath).Directory.Parent.Parent.Ful
 
 colcon_package_source_powershell_script "$env:COLCON_CURRENT_PREFIX/share/track_perception/hook/pythonpath.ps1"
 colcon_package_source_powershell_script "$env:COLCON_CURRENT_PREFIX/share/track_perception/hook/ament_prefix_path.ps1"
+colcon_package_source_powershell_script "$env:COLCON_CURRENT_PREFIX/../../build/track_perception/share/track_perception/hook/pythonpath_develop.ps1"
 
 Remove-Item Env:\COLCON_CURRENT_PREFIX

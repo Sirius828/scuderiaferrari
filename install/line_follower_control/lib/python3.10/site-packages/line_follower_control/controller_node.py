@@ -36,6 +36,7 @@ class LineFollowerController(Node):
         self.declare_parameter('max_steering', 1.0)      # 最大转向比例
         self.declare_parameter('invalid_timeout', 0.5)   # is_valid=False超时时间(秒)
         self.declare_parameter('enable_perception_stop', True)
+        self.declare_parameter('ignore_stop_requests', False)
         self.declare_parameter('perception_stop_timeout', 0.5)
         self.declare_parameter('autonomous_enabled_on_start', False)
         self.declare_parameter('publish_stop_when_disabled', True)
@@ -175,7 +176,7 @@ class LineFollowerController(Node):
         self.get_logger().info(f'   Invalid Timeout: {self.invalid_timeout} s')
         self.get_logger().info(
             f'   Perception Stop: {self.enable_perception_stop} '
-            f'(timeout={self.perception_stop_timeout:.2f}s)'
+            f'(ignore={self.ignore_stop_requests}, timeout={self.perception_stop_timeout:.2f}s)'
         )
         self.get_logger().info(
             f'   Autonomous Enabled: {self.autonomous_enabled}, '
@@ -204,6 +205,7 @@ class LineFollowerController(Node):
         self.max_steering = self.get_parameter('max_steering').value
         self.invalid_timeout = self.get_parameter('invalid_timeout').value
         self.enable_perception_stop = self.get_parameter('enable_perception_stop').value
+        self.ignore_stop_requests = self.get_parameter('ignore_stop_requests').value
         self.perception_stop_timeout = self.get_parameter('perception_stop_timeout').value
         self.autonomous_enabled_on_start = self.get_parameter('autonomous_enabled_on_start').value
         self.publish_stop_when_disabled = self.get_parameter('publish_stop_when_disabled').value
@@ -233,6 +235,7 @@ class LineFollowerController(Node):
             'max_steering': self.max_steering,
             'invalid_timeout': self.invalid_timeout,
             'enable_perception_stop': self.enable_perception_stop,
+            'ignore_stop_requests': self.ignore_stop_requests,
             'perception_stop_timeout': self.perception_stop_timeout,
             'publish_stop_when_disabled': self.publish_stop_when_disabled,
             'enable_manual_override': self.enable_manual_override,
@@ -261,6 +264,7 @@ class LineFollowerController(Node):
             pending['max_steering'] = float(pending['max_steering'])
             pending['invalid_timeout'] = float(pending['invalid_timeout'])
             pending['enable_perception_stop'] = bool(pending['enable_perception_stop'])
+            pending['ignore_stop_requests'] = bool(pending['ignore_stop_requests'])
             pending['perception_stop_timeout'] = float(pending['perception_stop_timeout'])
             pending['publish_stop_when_disabled'] = bool(pending['publish_stop_when_disabled'])
             pending['enable_manual_override'] = bool(pending['enable_manual_override'])
@@ -310,6 +314,7 @@ class LineFollowerController(Node):
         self.max_steering = pending['max_steering']
         self.invalid_timeout = pending['invalid_timeout']
         self.enable_perception_stop = pending['enable_perception_stop']
+        self.ignore_stop_requests = pending['ignore_stop_requests']
         self.perception_stop_timeout = pending['perception_stop_timeout']
         self.publish_stop_when_disabled = pending['publish_stop_when_disabled']
         self.enable_manual_override = pending['enable_manual_override']
@@ -442,6 +447,8 @@ class LineFollowerController(Node):
         return response
 
     def should_stop_for_perception(self, current_time: float) -> bool:
+        if self.ignore_stop_requests:
+            return False
         if not self.enable_perception_stop or not self.perception_stop_active:
             return False
         if self.last_perception_stop_time is None:
@@ -685,6 +692,7 @@ class LineFollowerController(Node):
             f'enabled={self.autonomous_enabled} '
             f'valid={self.is_valid} '
             f'pstop={self.perception_stop_active} '
+            f'ignore_stop={self.ignore_stop_requests} '
             f'estop={self.emergency_stop_active} '
             f'manual={self.manual_override_active} '
             f'offset={self.current_offset:+.3f} '

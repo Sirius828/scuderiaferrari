@@ -24,7 +24,16 @@ SEG_COLORS[1] = [0, 128, 255]
 DEFAULT_IMG_SIZE = (640, 480)  # (width, height)
 IMG_SIZE = DEFAULT_IMG_SIZE
 
-def preprocess_image(img, input_format="RGB", model_input_format="RGB", input_size=DEFAULT_IMG_SIZE):
+def preprocess_image(
+    img,
+    input_format="RGB",
+    model_input_format="RGB",
+    input_size=DEFAULT_IMG_SIZE,
+    crop_y0_ratio=0.0,
+    crop_y1_ratio=1.0,
+    pad_value=0,
+    return_meta=False,
+):
     """
     预处理图像：Resize, 颜色转换（如果需要）, 归一化
     Args:
@@ -46,18 +55,80 @@ def preprocess_image(img, input_format="RGB", model_input_format="RGB", input_si
         # 格式一致，不需要转换
         img_converted = img
     
-    input_size = (int(input_size[0]), int(input_size[1]))
+    input_w, input_h = int(input_size[0]), int(input_size[1])
+    orig_h, orig_w = img_converted.shape[:2]
 
-    # Resize to model input size
-    if img_converted.shape[1] == input_size[0] and img_converted.shape[0] == input_size[1]:
-        img_resized = img_converted
-    else:
-        img_resized = cv2.resize(img_converted, input_size, interpolation=cv2.INTER_LINEAR)
+    y0_ratio = max(0.0, min(1.0, float(crop_y0_ratio)))
+    y1_ratio = max(y0_ratio + 1e-6, min(1.0, float(crop_y1_ratio)))
+    crop_y0 = int(round(orig_h * y0_ratio))
+    crop_y1 = int(round(orig_h * y1_ratio))
+    crop_y0 = max(0, min(crop_y0, orig_h - 1))
+    crop_y1 = max(crop_y0 + 1, min(crop_y1, orig_h))
 
-    img_normalized = np.ascontiguousarray(img_resized)
+    crop = img_converted[crop_y0:crop_y1, :]
+    crop_h, crop_w = crop.shape[:2]
+    scale = min(input_w / max(1.0, float(crop_w)), input_h / max(1.0, float(crop_h)))
+    resize_w = max(1, min(input_w, int(round(crop_w * scale))))
+    resize_h = max(1, min(input_h, int(round(crop_h * scale))))
+
+    resized = cv2.resize(crop, (resize_w, resize_h), interpolation=cv2.INTER_LINEAR)
+    pad_x = (input_w - resize_w) // 2
+    pad_y = (input_h - resize_h) // 2
+    canvas = np.full((input_h, input_w, 3), int(pad_value), dtype=img_converted.dtype)
+    canvas[pad_y:pad_y + resize_h, pad_x:pad_x + resize_w] = resized
+
+    img_normalized = np.ascontiguousarray(canvas)
     # 增加 batch 维度: (H, W, C) -> (1, H, W, C)
     input_data = np.expand_dims(img_normalized, axis=0)
-    return input_data
+    if not return_meta:
+        return input_data
+
+    meta = {
+        'orig_w': orig_w,
+        'orig_h': orig_h,
+        'crop_y0': crop_y0,
+        'crop_y1': crop_y1,
+        'crop_w': crop_w,
+        'crop_h': crop_h,
+        'input_w': input_w,
+        'input_h': input_h,
+        'resize_w': resize_w,
+        'resize_h': resize_h,
+        'pad_x': pad_x,
+        'pad_y': pad_y,
+    }
+    return input_data, meta
+
+def restore_mask_to_original(mask, original_size, preprocess_meta=None):
+    """Undo crop + letterbox preprocessing and return a full-frame class mask."""
+    orig_h, orig_w = original_size
+    mask = np.asarray(mask, dtype=np.uint8)
+
+    if preprocess_meta is None:
+        if mask.shape[0] == orig_h and mask.shape[1] == orig_w:
+            return mask.astype(np.uint8)
+        return cv2.resize(mask, (orig_w, orig_h), interpolation=cv2.INTER_NEAREST).astype(np.uint8)
+
+    input_w = int(preprocess_meta['input_w'])
+    input_h = int(preprocess_meta['input_h'])
+    if mask.shape[1] != input_w or mask.shape[0] != input_h:
+        mask = cv2.resize(mask, (input_w, input_h), interpolation=cv2.INTER_NEAREST)
+
+    pad_x = int(preprocess_meta['pad_x'])
+    pad_y = int(preprocess_meta['pad_y'])
+    resize_w = int(preprocess_meta['resize_w'])
+    resize_h = int(preprocess_meta['resize_h'])
+    crop_w = int(preprocess_meta['crop_w'])
+    crop_h = int(preprocess_meta['crop_h'])
+    crop_y0 = int(preprocess_meta['crop_y0'])
+    crop_y1 = int(preprocess_meta['crop_y1'])
+
+    unpadded = mask[pad_y:pad_y + resize_h, pad_x:pad_x + resize_w]
+    crop_mask = cv2.resize(unpadded, (crop_w, crop_h), interpolation=cv2.INTER_NEAREST)
+
+    full_mask = np.zeros((orig_h, orig_w), dtype=np.uint8)
+    full_mask[crop_y0:crop_y1, :crop_w] = crop_mask[:crop_y1 - crop_y0, :orig_w]
+    return full_mask
 
 def sigmoid(x):
     x = np.clip(x, -50.0, 50.0)
@@ -101,51 +172,123 @@ def normalize_yolov8_seg_predictions(pred):
         pred = pred.T
     return pred
 
-def boxes_to_xyxy(boxes):
-    boxes = boxes.astype(np.float32, copy=True)
-    if boxes.size == 0:
-        return boxes
+def normalize_yolov8_split_tensor(output):
+    """Normalize a split YOLOv8 head tensor to (num_anchors, channels)."""
+    tensor = np.asarray(output)
+    if tensor.ndim == 3 and tensor.shape[0] == 1:
+        tensor = tensor[0]
+    if tensor.ndim != 2:
+        return None
 
-    x0, y0, x1, y1 = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
-    xyxy_ratio = np.mean((x1 > x0) & (y1 > y0))
-    if xyxy_ratio >= 0.5:
-        return boxes
+    # RKNN split heads may be (N, C) or (C, N).
+    if tensor.shape[0] <= 128 and tensor.shape[1] > tensor.shape[0]:
+        tensor = tensor.T
+    return tensor.astype(np.float32, copy=False)
 
-    cx, cy, bw, bh = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
-    boxes[:, 0] = cx - bw / 2.0
-    boxes[:, 1] = cy - bh / 2.0
-    boxes[:, 2] = cx + bw / 2.0
-    boxes[:, 3] = cy + bh / 2.0
-    return boxes
+def normalize_yolov8_proto(output):
+    """Normalize a YOLOv8-seg proto tensor to (mask_dim, proto_h, proto_w)."""
+    proto = np.asarray(output)
+    if proto.ndim != 4:
+        return None
 
-def postprocess_yolov8_segmentation(
-    outputs,
+    if proto.shape[0] == 1:
+        proto = proto[0]
+    if proto.ndim != 3:
+        return None
+
+    if proto.shape[0] <= 64:
+        return proto.astype(np.float32, copy=False)
+    if proto.shape[-1] <= 64:
+        return np.transpose(proto, (2, 0, 1)).astype(np.float32, copy=False)
+    return None
+
+def split_yolov8_seg_head_outputs(outputs):
+    """
+    Return split YOLOv8-seg outputs as (proto, boxes, class_scores, coeffs).
+
+    The split RKNN export avoids score quantization loss by emitting:
+      proto=(1, mask_dim, proto_h, proto_w)
+      boxes=(1, anchors, 4)
+      scores=(1, anchors, classes)
+      coeffs=(1, anchors, mask_dim)
+    """
+    if not isinstance(outputs, (list, tuple)) or len(outputs) < 4:
+        return None, None, None, None
+
+    proto = None
+    tensors = []
+    for output in outputs:
+        proto_candidate = normalize_yolov8_proto(output)
+        if proto_candidate is not None:
+            proto = proto_candidate
+            continue
+
+        tensor = normalize_yolov8_split_tensor(output)
+        if tensor is not None:
+            tensors.append(tensor)
+
+    if proto is None:
+        return None, None, None, None
+
+    mask_dim = proto.shape[0]
+    boxes = None
+    scores = None
+    coeffs = None
+
+    for tensor in tensors:
+        channels = tensor.shape[1]
+        if channels == 4 and boxes is None:
+            boxes = tensor
+        elif channels == mask_dim and coeffs is None:
+            coeffs = tensor
+        elif scores is None:
+            scores = tensor
+
+    if boxes is None or scores is None or coeffs is None:
+        return None, None, None, None
+    if not (boxes.shape[0] == scores.shape[0] == coeffs.shape[0]):
+        return None, None, None, None
+
+    return (
+        proto.astype(np.float32, copy=False),
+        boxes.astype(np.float32, copy=False),
+        scores.astype(np.float32, copy=False),
+        coeffs.astype(np.float32, copy=False),
+    )
+
+def build_yolov8_seg_mask(
+    proto,
+    boxes,
+    class_scores,
+    coeffs,
     original_size,
     input_size=DEFAULT_IMG_SIZE,
+    preprocess_meta=None,
     conf_threshold=0.25,
     mask_threshold=0.5,
     max_detections=30,
 ):
-    """Convert YOLOv8-seg instance output into the semantic road mask expected downstream."""
-    proto, pred = split_yolov8_seg_outputs(outputs)
-    if proto is None or pred is None:
-        return None
-
-    pred = normalize_yolov8_seg_predictions(pred)
-    if pred is None:
-        return None
-
-    mask_dim, proto_h, proto_w = proto.shape
-    class_count = pred.shape[1] - 4 - mask_dim
-    if class_count <= 0:
-        return None
-
+    """Build the class-1 semantic road mask from YOLOv8-seg parts."""
     orig_h, orig_w = original_size
     empty_mask = np.zeros((orig_h, orig_w), dtype=np.uint8)
 
-    class_scores = pred[:, 4:4 + class_count].astype(np.float32, copy=False)
-    if class_scores.size == 0:
+    if proto is None or boxes is None or class_scores is None or coeffs is None:
+        return None
+    if boxes.size == 0 or class_scores.size == 0 or coeffs.size == 0:
         return empty_mask
+
+    proto = proto.astype(np.float32, copy=False)
+    boxes = boxes.astype(np.float32, copy=False)
+    class_scores = class_scores.astype(np.float32, copy=False)
+    coeffs = coeffs.astype(np.float32, copy=False)
+
+    if class_scores.ndim == 1:
+        class_scores = class_scores.reshape(-1, 1)
+    if boxes.ndim != 2 or class_scores.ndim != 2 or coeffs.ndim != 2:
+        return None
+    if boxes.shape[0] != class_scores.shape[0] or boxes.shape[0] != coeffs.shape[0]:
+        return None
+
     if np.max(class_scores) > 1.0 or np.min(class_scores) < 0.0:
         class_scores = sigmoid(class_scores)
 
@@ -161,13 +304,14 @@ def postprocess_yolov8_segmentation(
         keep = keep[top_local]
     keep = keep[np.argsort(scores[keep])[::-1]]
 
-    boxes = boxes_to_xyxy(pred[keep, :4])
-    coeffs = pred[keep, 4 + class_count:4 + class_count + mask_dim].astype(np.float32, copy=False)
+    boxes = boxes_to_xyxy(boxes[keep, :4])
+    coeffs = coeffs[keep, :proto.shape[0]]
 
     input_w, input_h = int(input_size[0]), int(input_size[1])
     boxes[:, [0, 2]] = np.clip(boxes[:, [0, 2]], 0.0, float(input_w))
     boxes[:, [1, 3]] = np.clip(boxes[:, [1, 3]], 0.0, float(input_h))
 
+    mask_dim, proto_h, proto_w = proto.shape
     proto_flat = proto.reshape(mask_dim, -1)
     masks = sigmoid(np.matmul(coeffs, proto_flat)).reshape(-1, proto_h, proto_w)
 
@@ -192,17 +336,167 @@ def postprocess_yolov8_segmentation(
     if not np.any(road_mask_low):
         road_mask_low = np.any(masks > float(mask_threshold), axis=0)
 
-    road_mask = cv2.resize(
+    road_mask_model = cv2.resize(
         road_mask_low.astype(np.uint8),
-        (orig_w, orig_h),
+        (input_w, input_h),
         interpolation=cv2.INTER_NEAREST,
     )
-    return road_mask.astype(np.uint8)
+    return restore_mask_to_original(road_mask_model, original_size, preprocess_meta)
+
+def summarize_yolov8_seg_outputs(outputs, conf_threshold=0.25):
+    summary = {}
+    if outputs is None:
+        summary['seg_output_shapes'] = 'None'
+        return summary
+
+    output_shapes = []
+    for output in outputs:
+        array = np.asarray(output)
+        output_shapes.append(str(array.shape))
+    summary['seg_output_shapes'] = ','.join(output_shapes)
+
+    proto, boxes, scores_tensor, coeffs = split_yolov8_seg_head_outputs(outputs)
+    if proto is not None:
+        class_scores = scores_tensor.astype(np.float32, copy=False)
+        if np.max(class_scores) > 1.0 or np.min(class_scores) < 0.0:
+            class_scores = sigmoid(class_scores)
+        scores = np.max(class_scores, axis=1)
+        summary.update({
+            'seg_post_format': 'split_yolov8_seg',
+            'seg_pred_rows': int(boxes.shape[0]),
+            'seg_pred_attrs': int(4 + scores_tensor.shape[1] + coeffs.shape[1]),
+            'seg_mask_dim': int(proto.shape[0]),
+            'seg_class_count': int(scores_tensor.shape[1]),
+            'seg_nonbox_min': float(min(np.min(scores_tensor), np.min(coeffs))),
+            'seg_nonbox_max': float(max(np.max(scores_tensor), np.max(coeffs))),
+            'seg_score_min': float(np.min(scores)),
+            'seg_score_max': float(np.max(scores)),
+            'seg_score_p99': float(np.percentile(scores, 99)),
+            'seg_score_keep': int(np.count_nonzero(scores >= float(conf_threshold))),
+        })
+        return summary
+
+    proto, pred = split_yolov8_seg_outputs(outputs)
+    if proto is None or pred is None:
+        summary['seg_post_format'] = 'semantic_or_unknown'
+        return summary
+
+    pred = normalize_yolov8_seg_predictions(pred)
+    if pred is None:
+        summary['seg_post_format'] = 'yolov8_seg_invalid_pred'
+        return summary
+
+    mask_dim = int(proto.shape[0])
+    attrs = int(pred.shape[1])
+    class_count = attrs - 4 - mask_dim
+    summary.update({
+        'seg_post_format': 'yolov8_seg',
+        'seg_pred_rows': int(pred.shape[0]),
+        'seg_pred_attrs': attrs,
+        'seg_mask_dim': mask_dim,
+        'seg_class_count': int(class_count),
+        'seg_nonbox_min': float(np.min(pred[:, 4:])) if attrs > 4 else 0.0,
+        'seg_nonbox_max': float(np.max(pred[:, 4:])) if attrs > 4 else 0.0,
+    })
+
+    if class_count <= 0:
+        summary['seg_score_max'] = 0.0
+        summary['seg_score_keep'] = 0
+        return summary
+
+    class_scores = pred[:, 4:4 + class_count].astype(np.float32, copy=False)
+    if class_scores.size == 0:
+        summary['seg_score_max'] = 0.0
+        summary['seg_score_keep'] = 0
+        return summary
+
+    if np.max(class_scores) > 1.0 or np.min(class_scores) < 0.0:
+        class_scores = sigmoid(class_scores)
+
+    scores = np.max(class_scores, axis=1)
+    summary.update({
+        'seg_score_min': float(np.min(scores)),
+        'seg_score_max': float(np.max(scores)),
+        'seg_score_p99': float(np.percentile(scores, 99)),
+        'seg_score_keep': int(np.count_nonzero(scores >= float(conf_threshold))),
+    })
+    return summary
+
+def boxes_to_xyxy(boxes):
+    boxes = boxes.astype(np.float32, copy=True)
+    if boxes.size == 0:
+        return boxes
+
+    x0, y0, x1, y1 = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
+    xyxy_ratio = np.mean((x1 > x0) & (y1 > y0))
+    if xyxy_ratio >= 0.5:
+        return boxes
+
+    cx, cy, bw, bh = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
+    boxes[:, 0] = cx - bw / 2.0
+    boxes[:, 1] = cy - bh / 2.0
+    boxes[:, 2] = cx + bw / 2.0
+    boxes[:, 3] = cy + bh / 2.0
+    return boxes
+
+def postprocess_yolov8_segmentation(
+    outputs,
+    original_size,
+    input_size=DEFAULT_IMG_SIZE,
+    preprocess_meta=None,
+    conf_threshold=0.25,
+    mask_threshold=0.5,
+    max_detections=30,
+):
+    """Convert YOLOv8-seg instance output into the semantic road mask expected downstream."""
+    proto, boxes, class_scores, coeffs = split_yolov8_seg_head_outputs(outputs)
+    if proto is not None:
+        return build_yolov8_seg_mask(
+            proto,
+            boxes,
+            class_scores,
+            coeffs,
+            original_size,
+            input_size=input_size,
+            preprocess_meta=preprocess_meta,
+            conf_threshold=conf_threshold,
+            mask_threshold=mask_threshold,
+            max_detections=max_detections,
+        )
+
+    proto, pred = split_yolov8_seg_outputs(outputs)
+    if proto is None or pred is None:
+        return None
+
+    pred = normalize_yolov8_seg_predictions(pred)
+    if pred is None:
+        return None
+
+    mask_dim, proto_h, proto_w = proto.shape
+    class_count = pred.shape[1] - 4 - mask_dim
+    if class_count <= 0:
+        return None
+
+    class_scores = pred[:, 4:4 + class_count].astype(np.float32, copy=False)
+    coeffs = pred[:, 4 + class_count:4 + class_count + mask_dim].astype(np.float32, copy=False)
+    return build_yolov8_seg_mask(
+        proto,
+        pred[:, :4],
+        class_scores,
+        coeffs,
+        original_size,
+        input_size=input_size,
+        preprocess_meta=preprocess_meta,
+        conf_threshold=conf_threshold,
+        mask_threshold=mask_threshold,
+        max_detections=max_detections,
+    )
 
 def postprocess_segmentation(
     output,
     original_size,
     input_size=DEFAULT_IMG_SIZE,
+    preprocess_meta=None,
     conf_threshold=0.25,
     mask_threshold=0.5,
     max_detections=30,
@@ -220,12 +514,16 @@ def postprocess_segmentation(
             output,
             original_size,
             input_size=input_size,
+            preprocess_meta=preprocess_meta,
             conf_threshold=conf_threshold,
             mask_threshold=mask_threshold,
             max_detections=max_detections,
         )
         if yolo_mask is not None:
             return yolo_mask
+        if isinstance(output, (list, tuple)) and len(output) > 2:
+            print(f"[ERROR] Unsupported multi-output segmentation shape: {[np.asarray(o).shape for o in output]}")
+            return np.zeros(original_size, dtype=np.uint8)
 
         # 获取输出数据
         seg_output = output[0] if isinstance(output, list) else output
@@ -262,19 +560,7 @@ def postprocess_segmentation(
             print(f"[ERROR] Unexpected output shape: {seg_output.shape}")
             return None
 
-        # ⭐ 关键优化：只在尺寸不一致时才resize
-        orig_h, orig_w = original_size
-        if seg_map.shape[0] == orig_h and seg_map.shape[1] == orig_w:
-            # 尺寸已经一致，直接返回
-            return seg_map.astype(np.uint8)
-        else:
-            # 需要resize
-            seg_map_resized = cv2.resize(
-                seg_map.astype(np.float32), 
-                (orig_w, orig_h), 
-                interpolation=cv2.INTER_NEAREST
-            ).astype(np.uint8)
-            return seg_map_resized
+        return restore_mask_to_original(seg_map, original_size, preprocess_meta)
     except Exception as e:
         print(f"[ERROR] Error in postprocess_segmentation: {e}")
         import traceback
@@ -291,6 +577,13 @@ def colorize_segmentation(seg_map):
     """
     seg_map = np.asarray(seg_map, dtype=np.uint8)
     return SEG_COLORS[seg_map]
+
+def convert_image_to_bgr(img, image_format):
+    """Return an image in BGR order for OpenCV display/blending."""
+    fmt = str(image_format).upper()
+    if fmt == "RGB":
+        return cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    return img
 
 def blend_images(original_img, colored_seg, alpha=0.5):
     """
@@ -355,6 +648,9 @@ def myFunc(
     input_format="RGB",
     model_input_format="RGB",
     input_size=DEFAULT_IMG_SIZE,
+    crop_y0_ratio=0.0,
+    crop_y1_ratio=1.0,
+    pad_value=0,
     conf_threshold=0.25,
     mask_threshold=0.5,
     max_detections=30,
@@ -381,11 +677,15 @@ def myFunc(
         original_size = img_bgr.shape[:2]  # (height, width)
         
         # 预处理 - ⭐ 传递颜色格式参数
-        input_data = preprocess_image(
+        input_data, preprocess_meta = preprocess_image(
             img_bgr,
             input_format=input_format,
             model_input_format=model_input_format,
             input_size=input_size,
+            crop_y0_ratio=crop_y0_ratio,
+            crop_y1_ratio=crop_y1_ratio,
+            pad_value=pad_value,
+            return_meta=True,
         )
 
         t_rknn_start = time.perf_counter()
@@ -400,11 +700,14 @@ def myFunc(
             print("[ERROR] Model inference returned None or empty output")
             return None, None, False, {}
     
+        post_summary = summarize_yolov8_seg_outputs(outputs, conf_threshold=conf_threshold)
+
         # 后处理 - 获取分割掩码
         seg_map = postprocess_segmentation(
             outputs,
             original_size,
             input_size=input_size,
+            preprocess_meta=preprocess_meta,
             conf_threshold=conf_threshold,
             mask_threshold=mask_threshold,
             max_detections=max_detections,
@@ -424,7 +727,8 @@ def myFunc(
             # 根据 blend_alpha 决定是否混合
             if blend_alpha is not None and 0 < blend_alpha < 1:
                 # 与原图混合
-                result_img = blend_images(img_bgr, colored_seg, alpha=blend_alpha)
+                display_base = convert_image_to_bgr(img_bgr, input_format)
+                result_img = blend_images(display_base, colored_seg, alpha=blend_alpha)
             else:
                 # 直接返回彩色分割图
                 result_img = cv2.cvtColor(colored_seg, cv2.COLOR_RGB2BGR)
@@ -433,14 +737,28 @@ def myFunc(
             result_img = None
 
         t_end = time.perf_counter()
+        worker_preprocess_ms = (t_rknn_start - t_preprocess_start) * 1000.0
+        worker_rknn_ms = (t_post_start - t_rknn_start) * 1000.0
+        worker_postprocess_ms = (t_vis_start - t_post_start) * 1000.0
+        worker_visualization_ms = (t_end - t_vis_start) * 1000.0
+        image_to_mask_ms = worker_preprocess_ms + worker_rknn_ms + worker_postprocess_ms
+        model_to_mask_ms = worker_rknn_ms + worker_postprocess_ms
         profile = {
             'worker_total_ms': (t_end - t_total_start) * 1000.0,
-            'worker_preprocess_ms': (t_rknn_start - t_preprocess_start) * 1000.0,
-            'worker_rknn_ms': (t_post_start - t_rknn_start) * 1000.0,
-            'worker_postprocess_ms': (t_vis_start - t_post_start) * 1000.0,
-            'worker_visualization_ms': (t_end - t_vis_start) * 1000.0,
+            'worker_preprocess_ms': worker_preprocess_ms,
+            'worker_rknn_ms': worker_rknn_ms,
+            'worker_postprocess_ms': worker_postprocess_ms,
+            'worker_visualization_ms': worker_visualization_ms,
+            'worker_image_to_mask_ms': image_to_mask_ms,
+            'worker_image_to_mask_fps': 1000.0 / image_to_mask_ms if image_to_mask_ms > 0 else 0.0,
+            'worker_model_to_mask_ms': model_to_mask_ms,
+            'worker_model_to_mask_fps': 1000.0 / model_to_mask_ms if model_to_mask_ms > 0 else 0.0,
             'worker_show_visualization': show_visualization,
         }
+        profile.update(post_summary)
+        if seg_map is not None:
+            profile['seg_mask_sum'] = int(np.count_nonzero(seg_map == 1))
+            profile['seg_mask_shape'] = f'{seg_map.shape[1]}x{seg_map.shape[0]}'
         
         # 返回3个值：可视化结果（可能为None）、原始seg_map、成功标志
         return result_img, seg_map, True, profile
@@ -484,6 +802,9 @@ class PPSegInfer:
         model_input_format="RGB",
         core_ids=None,
         input_size=DEFAULT_IMG_SIZE,
+        crop_y0_ratio=0.0,
+        crop_y1_ratio=1.0,
+        pad_value=0,
         conf_threshold=0.25,
         mask_threshold=0.5,
         max_detections=30,
@@ -510,6 +831,9 @@ class PPSegInfer:
         self.model_input_format = model_input_format
         self.core_ids = [int(core_id) for core_id in core_ids] if core_ids else None
         self.input_size = (int(input_size[0]), int(input_size[1]))
+        self.crop_y0_ratio = float(crop_y0_ratio)
+        self.crop_y1_ratio = float(crop_y1_ratio)
+        self.pad_value = int(pad_value)
         self.conf_threshold = float(conf_threshold)
         self.mask_threshold = float(mask_threshold)
         self.max_detections = int(max_detections)
@@ -519,7 +843,9 @@ class PPSegInfer:
         from functools import partial
         infer_func = partial(myFunc, blend_alpha=blend_alpha, show_visualization=show_visualization, 
                             input_format=input_format, model_input_format=model_input_format,
-                            input_size=self.input_size, conf_threshold=self.conf_threshold,
+                            input_size=self.input_size, crop_y0_ratio=self.crop_y0_ratio,
+                            crop_y1_ratio=self.crop_y1_ratio, pad_value=self.pad_value,
+                            conf_threshold=self.conf_threshold,
                             mask_threshold=self.mask_threshold, max_detections=self.max_detections)
         
         self.rknn_pool = rknnPoolExecutor(
@@ -538,6 +864,7 @@ class PPSegInfer:
         print(f"Output mode: {mode} (blend_alpha={blend_alpha})")
         print(f"Visualization: {vis_mode}")
         print(f"Input size: {self.input_size[0]}x{self.input_size[1]}")
+        print(f"Crop Y ratio: {self.crop_y0_ratio:.3f}-{self.crop_y1_ratio:.3f}, pad={self.pad_value}")
         print(
             f"YOLOv8-seg thresholds: conf={self.conf_threshold}, "
             f"mask={self.mask_threshold}, max_det={self.max_detections}"
