@@ -4,9 +4,27 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 
 namespace track_perception_cpp {
+
+namespace {
+
+std::string dimsToString(const rknn_tensor_attr& attr) {
+  std::ostringstream ss;
+  ss << "[";
+  for (uint32_t i = 0; i < attr.n_dims; ++i) {
+    if (i > 0) {
+      ss << ",";
+    }
+    ss << attr.dims[i];
+  }
+  ss << "]";
+  return ss.str();
+}
+
+}  // namespace
 
 RknnModel::~RknnModel() { release(); }
 
@@ -92,6 +110,23 @@ bool RknnModel::load(const std::string& model_path, int core_id) {
     input_height_ = input.dims[1];
     input_width_ = input.dims[2];
     input_channels_ = input.dims[3];
+  }
+
+  std::cerr << "RKNN model loaded: " << model_path << " core=" << core_id
+            << " inputs=" << io_num_.n_input << " outputs=" << io_num_.n_output << std::endl;
+  for (uint32_t i = 0; i < io_num_.n_input; ++i) {
+    const auto& attr = input_attrs_[i];
+    std::cerr << "  input[" << i << "] name=" << attr.name << " dims=" << dimsToString(attr)
+              << " n_elems=" << attr.n_elems << " size=" << attr.size
+              << " fmt=" << attr.fmt << " type=" << attr.type << " qnt=" << attr.qnt_type
+              << std::endl;
+  }
+  for (uint32_t i = 0; i < io_num_.n_output; ++i) {
+    const auto& attr = output_attrs_[i];
+    std::cerr << "  output[" << i << "] name=" << attr.name << " dims=" << dimsToString(attr)
+              << " n_elems=" << attr.n_elems << " size=" << attr.size
+              << " fmt=" << attr.fmt << " type=" << attr.type << " qnt=" << attr.qnt_type
+              << std::endl;
   }
 
   loaded_ = true;

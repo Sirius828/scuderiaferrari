@@ -2,10 +2,29 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cctype>
 #include <fstream>
 #include <numeric>
 
 namespace track_perception_cpp {
+
+namespace {
+
+constexpr int kPostTopkPerClass = 50;
+constexpr int kPostKeepTopk = 30;
+constexpr float kClassAgnosticNmsThresh = 0.60f;
+
+std::string trimLabel(std::string text) {
+  text.erase(text.begin(), std::find_if(text.begin(), text.end(), [](unsigned char ch) {
+    return !std::isspace(ch);
+  }));
+  text.erase(std::find_if(text.rbegin(), text.rend(), [](unsigned char ch) {
+    return !std::isspace(ch);
+  }).base(), text.end());
+  return text;
+}
+
+}  // namespace
 
 bool YoloDetector::init(const std::string& model_path, const std::string& label_path, int core_id,
                         int input_width, int input_height, float conf_thresh, float nms_thresh) {
@@ -17,6 +36,7 @@ bool YoloDetector::init(const std::string& model_path, const std::string& label_
   std::ifstream labels_file(label_path);
   std::string line;
   while (std::getline(labels_file, line)) {
+    line = trimLabel(line);
     if (!line.empty()) {
       labels_.push_back(line);
     }
@@ -87,12 +107,6 @@ void YoloDetector::postprocess(const std::vector<TensorData>& outputs, const cv:
   std::vector<Detection> candidates;
   for (int i = 0; i < box_rows; ++i) {
     const float* scores = scores_tensor->data.data() + i * score_cols;
-    int class_id = static_cast<int>(std::max_element(scores, scores + score_cols) - scores);
-    float conf = scores[class_id];
-    if (conf < conf_thresh_) {
-      continue;
-    }
-
     const float* b = boxes_tensor->data.data() + i * 4;
     float x1 = (b[0] - meta.pad_x) / std::max(meta.scale, 1e-6f);
     float y1 = (b[1] - meta.pad_y) / std::max(meta.scale, 1e-6f);
@@ -106,17 +120,42 @@ void YoloDetector::postprocess(const std::vector<TensorData>& outputs, const cv:
       continue;
     }
 
-    Detection det;
-    det.class_id = class_id;
-    det.class_name = class_id >= 0 && class_id < static_cast<int>(labels_.size()) ? labels_[class_id] : "unknown";
-    det.confidence = conf;
-    det.bbox = cv::Rect2f(x1, y1, x2 - x1, y2 - y1);
-    det.center = cv::Point2f((x1 + x2) * 0.5f, (y1 + y2) * 0.5f);
-    candidates.push_back(det);
+    for (int class_id = 0; class_id < score_cols; ++class_id) {
+      float conf = scores[class_id];
+      if (conf < conf_thresh_) {
+        continue;
+      }
+
+      Detection det;
+      det.class_id = class_id;
+      det.class_name = class_id >= 0 && class_id < static_cast<int>(labels_.size()) ? labels_[class_id] : "unknown";
+      det.confidence = conf;
+      det.bbox = cv::Rect2f(x1, y1, x2 - x1, y2 - y1);
+      det.center = cv::Point2f((x1 + x2) * 0.5f, (y1 + y2) * 0.5f);
+      candidates.push_back(det);
+    }
   }
 
   std::sort(candidates.begin(), candidates.end(),
             [](const Detection& a, const Detection& b) { return a.confidence > b.confidence; });
+
+  if (kPostTopkPerClass > 0) {
+    std::vector<int> kept_per_class(static_cast<size_t>(std::max(0, score_cols)), 0);
+    std::vector<Detection> topk_candidates;
+    topk_candidates.reserve(candidates.size());
+    for (const auto& det : candidates) {
+      if (det.class_id < 0 || det.class_id >= static_cast<int>(kept_per_class.size())) {
+        topk_candidates.push_back(det);
+        continue;
+      }
+      if (kept_per_class[det.class_id] >= kPostTopkPerClass) {
+        continue;
+      }
+      ++kept_per_class[det.class_id];
+      topk_candidates.push_back(det);
+    }
+    candidates = std::move(topk_candidates);
+  }
 
   std::vector<bool> removed(candidates.size(), false);
   for (size_t i = 0; i < candidates.size(); ++i) {
@@ -130,6 +169,30 @@ void YoloDetector::postprocess(const std::vector<TensorData>& outputs, const cv:
         removed[j] = true;
       }
     }
+  }
+
+  if (detections.size() > 1) {
+    std::sort(detections.begin(), detections.end(),
+              [](const Detection& a, const Detection& b) { return a.confidence > b.confidence; });
+    std::vector<Detection> agnostic;
+    agnostic.reserve(detections.size());
+    for (const auto& det : detections) {
+      bool duplicate = false;
+      for (const auto& kept : agnostic) {
+        if (iou(det.bbox, kept.bbox) > kClassAgnosticNmsThresh) {
+          duplicate = true;
+          break;
+        }
+      }
+      if (!duplicate) {
+        agnostic.push_back(det);
+      }
+    }
+    detections = std::move(agnostic);
+  }
+
+  if (kPostKeepTopk > 0 && detections.size() > static_cast<size_t>(kPostKeepTopk)) {
+    detections.resize(kPostKeepTopk);
   }
 }
 

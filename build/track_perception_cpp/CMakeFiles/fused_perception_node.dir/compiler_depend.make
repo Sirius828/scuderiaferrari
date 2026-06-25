@@ -138,6 +138,8 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: /home/oran
   /usr/include/aarch64-linux-gnu/bits/types/struct_tm.h \
   /usr/include/aarch64-linux-gnu/bits/types/struct_itimerspec.h \
   /usr/include/c++/11/bits/parse_numbers.h \
+  /usr/include/c++/11/cctype \
+  /usr/include/ctype.h \
   /usr/include/c++/11/filesystem \
   /usr/include/c++/11/bits/fs_fwd.h \
   /usr/include/c++/11/system_error \
@@ -174,8 +176,6 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: /home/oran
   /usr/include/c++/11/clocale \
   /usr/include/locale.h \
   /usr/include/aarch64-linux-gnu/bits/locale.h \
-  /usr/include/c++/11/cctype \
-  /usr/include/ctype.h \
   /usr/include/c++/11/bits/ostream_insert.h \
   /usr/include/c++/11/bits/cxxabi_forced.h \
   /usr/include/c++/11/bits/basic_string.h \
@@ -884,7 +884,8 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: /home/oran
 CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/lane_decision.cpp \
   /usr/include/stdc-predef.h \
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/lane_decision.hpp \
-  /usr/include/c++/11/string \
+  /usr/include/c++/11/optional \
+  /usr/include/c++/11/utility \
   /usr/include/aarch64-linux-gnu/c++/11/bits/c++config.h \
   /usr/include/aarch64-linux-gnu/c++/11/bits/os_defines.h \
   /usr/include/features.h \
@@ -897,22 +898,37 @@ CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: /home/orangepi/scu
   /usr/include/aarch64-linux-gnu/gnu/stubs-lp64.h \
   /usr/include/aarch64-linux-gnu/c++/11/bits/cpu_defines.h \
   /usr/include/c++/11/pstl/pstl_config.h \
+  /usr/include/c++/11/bits/stl_relops.h \
+  /usr/include/c++/11/bits/stl_pair.h \
+  /usr/include/c++/11/bits/move.h \
+  /usr/include/c++/11/type_traits \
+  /usr/include/c++/11/initializer_list \
+  /usr/include/c++/11/exception \
+  /usr/include/c++/11/bits/exception.h \
+  /usr/include/c++/11/bits/exception_ptr.h \
+  /usr/include/c++/11/bits/exception_defines.h \
+  /usr/include/c++/11/bits/cxxabi_init_exception.h \
+  /usr/lib/gcc/aarch64-linux-gnu/11/include/stddef.h \
+  /usr/include/c++/11/typeinfo \
+  /usr/include/c++/11/bits/hash_bytes.h \
+  /usr/include/c++/11/new \
+  /usr/include/c++/11/bits/nested_exception.h \
+  /usr/include/c++/11/bits/enable_special_members.h \
+  /usr/include/c++/11/bits/functional_hash.h \
+  /usr/include/c++/11/bits/stl_construct.h \
+  /usr/include/c++/11/bits/stl_iterator_base_types.h \
+  /usr/include/c++/11/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/11/bits/concept_check.h \
+  /usr/include/c++/11/debug/assertions.h \
+  /usr/include/c++/11/string \
   /usr/include/c++/11/bits/stringfwd.h \
   /usr/include/c++/11/bits/memoryfwd.h \
   /usr/include/c++/11/bits/char_traits.h \
   /usr/include/c++/11/bits/stl_algobase.h \
   /usr/include/c++/11/bits/functexcept.h \
-  /usr/include/c++/11/bits/exception_defines.h \
   /usr/include/c++/11/bits/cpp_type_traits.h \
   /usr/include/c++/11/ext/type_traits.h \
   /usr/include/c++/11/ext/numeric_traits.h \
-  /usr/include/c++/11/bits/stl_pair.h \
-  /usr/include/c++/11/bits/move.h \
-  /usr/include/c++/11/type_traits \
-  /usr/include/c++/11/bits/stl_iterator_base_types.h \
-  /usr/include/c++/11/bits/stl_iterator_base_funcs.h \
-  /usr/include/c++/11/bits/concept_check.h \
-  /usr/include/c++/11/debug/assertions.h \
   /usr/include/c++/11/bits/stl_iterator.h \
   /usr/include/c++/11/bits/ptr_traits.h \
   /usr/include/c++/11/debug/debug.h \
@@ -923,7 +939,6 @@ CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: /home/orangepi/scu
   /usr/include/aarch64-linux-gnu/bits/libc-header-start.h \
   /usr/include/aarch64-linux-gnu/bits/floatn.h \
   /usr/include/aarch64-linux-gnu/bits/floatn-common.h \
-  /usr/lib/gcc/aarch64-linux-gnu/11/include/stddef.h \
   /usr/lib/gcc/aarch64-linux-gnu/11/include/stdarg.h \
   /usr/include/aarch64-linux-gnu/bits/wchar.h \
   /usr/include/aarch64-linux-gnu/bits/types/wint_t.h \
@@ -945,8 +960,6 @@ CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: /home/orangepi/scu
   /usr/include/c++/11/bits/allocator.h \
   /usr/include/aarch64-linux-gnu/c++/11/bits/c++allocator.h \
   /usr/include/c++/11/ext/new_allocator.h \
-  /usr/include/c++/11/new \
-  /usr/include/c++/11/bits/exception.h \
   /usr/include/c++/11/bits/localefwd.h \
   /usr/include/aarch64-linux-gnu/c++/11/bits/c++locale.h \
   /usr/include/c++/11/clocale \
@@ -962,7 +975,6 @@ CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: /home/orangepi/scu
   /usr/include/c++/11/bits/stl_function.h \
   /usr/include/c++/11/backward/binders.h \
   /usr/include/c++/11/bits/range_access.h \
-  /usr/include/c++/11/initializer_list \
   /usr/include/c++/11/bits/basic_string.h \
   /usr/include/c++/11/ext/atomicity.h \
   /usr/include/aarch64-linux-gnu/c++/11/bits/gthr.h \
@@ -997,10 +1009,7 @@ CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: /home/orangepi/scu
   /usr/include/aarch64-linux-gnu/sys/single_threaded.h \
   /usr/include/c++/11/ext/alloc_traits.h \
   /usr/include/c++/11/bits/alloc_traits.h \
-  /usr/include/c++/11/bits/stl_construct.h \
   /usr/include/c++/11/string_view \
-  /usr/include/c++/11/bits/functional_hash.h \
-  /usr/include/c++/11/bits/hash_bytes.h \
   /usr/include/c++/11/bits/string_view.tcc \
   /usr/include/c++/11/ext/string_conversions.h \
   /usr/include/c++/11/cstdlib \
@@ -1039,6 +1048,17 @@ CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: /home/orangepi/scu
   /usr/include/aarch64-linux-gnu/bits/types/error_t.h \
   /usr/include/c++/11/bits/charconv.h \
   /usr/include/c++/11/bits/basic_string.tcc \
+  /usr/include/c++/11/unordered_set \
+  /usr/include/c++/11/ext/aligned_buffer.h \
+  /usr/include/c++/11/bits/hashtable.h \
+  /usr/include/c++/11/bits/hashtable_policy.h \
+  /usr/include/c++/11/tuple \
+  /usr/include/c++/11/array \
+  /usr/include/c++/11/bits/uses_allocator.h \
+  /usr/include/c++/11/bits/invoke.h \
+  /usr/include/c++/11/bits/node_handle.h \
+  /usr/include/c++/11/bits/unordered_set.h \
+  /usr/include/c++/11/bits/erase_if.h \
   /usr/include/c++/11/vector \
   /usr/include/c++/11/bits/stl_uninitialized.h \
   /usr/include/c++/11/bits/stl_vector.h \
@@ -1061,9 +1081,6 @@ CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: /home/orangepi/scu
   /usr/lib/gcc/aarch64-linux-gnu/11/include/arm_neon.h \
   /usr/lib/gcc/aarch64-linux-gnu/11/include/arm_fp16.h \
   /usr/lib/gcc/aarch64-linux-gnu/11/include/arm_bf16.h \
-  /usr/include/c++/11/array \
-  /usr/include/c++/11/utility \
-  /usr/include/c++/11/bits/stl_relops.h \
   /usr/include/opencv4/opencv2/core/base.hpp \
   /usr/include/c++/11/climits \
   /usr/lib/gcc/aarch64-linux-gnu/11/include/limits.h \
@@ -1083,20 +1100,10 @@ CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: /home/orangepi/scu
   /usr/include/c++/11/bits/uniform_int_dist.h \
   /usr/include/c++/11/pstl/glue_algorithm_defs.h \
   /usr/include/c++/11/functional \
-  /usr/include/c++/11/tuple \
-  /usr/include/c++/11/bits/uses_allocator.h \
-  /usr/include/c++/11/bits/invoke.h \
   /usr/include/c++/11/bits/refwrap.h \
   /usr/include/c++/11/bits/std_function.h \
-  /usr/include/c++/11/typeinfo \
   /usr/include/c++/11/unordered_map \
-  /usr/include/c++/11/ext/aligned_buffer.h \
-  /usr/include/c++/11/bits/hashtable.h \
-  /usr/include/c++/11/bits/hashtable_policy.h \
-  /usr/include/c++/11/bits/enable_special_members.h \
-  /usr/include/c++/11/bits/node_handle.h \
   /usr/include/c++/11/bits/unordered_map.h \
-  /usr/include/c++/11/bits/erase_if.h \
   /usr/include/c++/11/pstl/execution_defs.h \
   /usr/include/opencv4/opencv2/core/cvstd.hpp \
   /usr/include/c++/11/cstring \
@@ -1138,10 +1145,6 @@ CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: /home/orangepi/scu
   /usr/include/c++/11/bits/shared_ptr_base.h \
   /usr/include/c++/11/bits/allocated_ptr.h \
   /usr/include/c++/11/ext/concurrence.h \
-  /usr/include/c++/11/exception \
-  /usr/include/c++/11/bits/exception_ptr.h \
-  /usr/include/c++/11/bits/cxxabi_init_exception.h \
-  /usr/include/c++/11/bits/nested_exception.h \
   /usr/include/c++/11/bits/shared_ptr_atomic.h \
   /usr/include/c++/11/bits/atomic_base.h \
   /usr/include/c++/11/bits/atomic_lockfree_defines.h \
@@ -1301,7 +1304,10 @@ CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: /home/orangepi/scu
   /usr/include/opencv4/opencv2/stitching/detail/camera.hpp \
   /usr/include/opencv4/opencv2/video.hpp \
   /usr/include/opencv4/opencv2/video/tracking.hpp \
-  /usr/include/opencv4/opencv2/video/background_segm.hpp
+  /usr/include/opencv4/opencv2/video/background_segm.hpp \
+  /usr/include/c++/11/numeric \
+  /usr/include/c++/11/bits/stl_numeric.h \
+  /usr/include/c++/11/pstl/glue_numeric_defs.h
 
 CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/rknn_model.cpp \
   /usr/include/stdc-predef.h \

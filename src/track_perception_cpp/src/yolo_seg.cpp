@@ -250,6 +250,13 @@ bool YoloSeg::postprocess(const std::vector<TensorData>& outputs, const Preproce
       x1 = cx + bw * 0.5f;
       y1 = cy + bh * 0.5f;
     }
+    float coord_abs_max = std::max({std::abs(x0), std::abs(y0), std::abs(x1), std::abs(y1)});
+    if (coord_abs_max <= 2.0f) {
+      x0 *= input_width_;
+      x1 *= input_width_;
+      y0 *= input_height_;
+      y1 *= input_height_;
+    }
     x0 = std::clamp(x0, 0.0f, static_cast<float>(input_width_));
     y0 = std::clamp(y0, 0.0f, static_cast<float>(input_height_));
     x1 = std::clamp(x1, 0.0f, static_cast<float>(input_width_));

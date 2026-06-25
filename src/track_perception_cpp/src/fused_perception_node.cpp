@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cctype>
 #include <filesystem>
 #include <future>
 #include <memory>
@@ -44,6 +45,24 @@ std::vector<int> parseCoreIds(const std::string& text) {
     ids = {1, 2};
   }
   return ids;
+}
+
+std::unordered_set<std::string> parseLabelSet(const std::string& text) {
+  std::unordered_set<std::string> labels;
+  std::stringstream ss(text);
+  std::string item;
+  while (std::getline(ss, item, ',')) {
+    item.erase(item.begin(), std::find_if(item.begin(), item.end(), [](unsigned char ch) {
+      return !std::isspace(ch);
+    }));
+    item.erase(std::find_if(item.rbegin(), item.rend(), [](unsigned char ch) {
+      return !std::isspace(ch);
+    }).base(), item.end());
+    if (!item.empty()) {
+      labels.insert(item);
+    }
+  }
+  return labels;
 }
 
 std::string joinLabels(const std::vector<std::string>& labels) {
@@ -188,6 +207,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     show_branch_debug_ = get_parameter("show_branch_debug").as_bool();
     publish_detections_ = get_parameter("publish_detections").as_bool();
     publish_lane_state_ = get_parameter("publish_lane_state").as_bool();
+    enable_status_log_ = get_parameter("enable_status_log").as_bool();
+    enable_branch_event_log_ = get_parameter("enable_branch_event_log").as_bool();
 
     det_model_path_ = resolveTrackPerceptionPath(get_parameter("det_model_path").as_string());
     label_list_path_ = resolveTrackPerceptionPath(get_parameter("label_list_path").as_string());
@@ -211,23 +232,72 @@ class FusedPerceptionNode : public rclcpp::Node {
     seg_mask_threshold_ = static_cast<float>(get_parameter("seg_mask_threshold").as_double());
     seg_max_detections_ = static_cast<int>(get_parameter("seg_max_detections").as_int());
 
-    lane_decision_.configure(
-        static_cast<int>(get_parameter("band_count").as_int()),
-        static_cast<float>(get_parameter("band_y_min_ratio").as_double()),
-        static_cast<float>(get_parameter("band_y_max_ratio").as_double()),
-        static_cast<float>(get_parameter("band_height_ratio").as_double()),
-        static_cast<int>(get_parameter("min_segment_width_px").as_int()),
-        static_cast<int>(get_parameter("min_pixels_per_band").as_int()),
-        static_cast<float>(get_parameter("offset_smoothing_alpha").as_double()),
-        static_cast<float>(get_parameter("max_offset_jump").as_double()),
-        get_parameter("outer_side").as_string(),
-        get_parameter("enable_traffic_light_stop").as_bool(),
-        static_cast<float>(get_parameter("traffic_light_min_confidence").as_double()),
-        static_cast<float>(get_parameter("zebra_min_confidence").as_double()),
-        static_cast<float>(get_parameter("zebra_stop_y_ratio").as_double()),
-        get_parameter("enable_finish_stop").as_bool(),
-        static_cast<float>(get_parameter("finish_stop_min_confidence").as_double()),
-        static_cast<float>(get_parameter("finish_stop_arm_y_ratio").as_double()));
+    LaneDecisionConfig lane_cfg;
+    lane_cfg.enable_segment_branch_logic = get_parameter("enable_segment_branch_logic").as_bool();
+    lane_cfg.band_count = static_cast<int>(get_parameter("band_count").as_int());
+    lane_cfg.band_y_min_ratio = static_cast<float>(get_parameter("band_y_min_ratio").as_double());
+    lane_cfg.band_y_max_ratio = static_cast<float>(get_parameter("band_y_max_ratio").as_double());
+    lane_cfg.band_height_ratio = static_cast<float>(get_parameter("band_height_ratio").as_double());
+    lane_cfg.min_segment_width_px = static_cast<int>(get_parameter("min_segment_width_px").as_int());
+    lane_cfg.min_segment_gap_px = static_cast<int>(get_parameter("min_segment_gap_px").as_int());
+    lane_cfg.min_pixels_per_band = static_cast<int>(get_parameter("min_pixels_per_band").as_int());
+    lane_cfg.branch_detect_min_bands = static_cast<int>(get_parameter("branch_detect_min_bands").as_int());
+    lane_cfg.branch_detect_far_band_ratio = static_cast<float>(get_parameter("branch_detect_far_band_ratio").as_double());
+    lane_cfg.outer_side = get_parameter("outer_side").as_string();
+    lane_cfg.enable_guideboard_branch_selection = get_parameter("enable_guideboard_branch_selection").as_bool();
+    lane_cfg.guideboard_branch = get_parameter("guideboard_branch").as_string();
+    lane_cfg.guideboard_detect_y0_ratio = static_cast<float>(get_parameter("guideboard_detect_y0_ratio").as_double());
+    lane_cfg.guideboard_detect_y1_ratio = static_cast<float>(get_parameter("guideboard_detect_y1_ratio").as_double());
+    lane_cfg.enable_continuity_branch_selection = get_parameter("enable_continuity_branch_selection").as_bool();
+    lane_cfg.branch_continuity_max_dx_ratio = static_cast<float>(get_parameter("branch_continuity_max_dx_ratio").as_double());
+    lane_cfg.branch_continuity_near_band_ratio = static_cast<float>(get_parameter("branch_continuity_near_band_ratio").as_double());
+    lane_cfg.enable_locked_path_continuity = get_parameter("enable_locked_path_continuity").as_bool();
+    lane_cfg.locked_path_continuity_after_time = static_cast<float>(get_parameter("locked_path_continuity_after_time").as_double());
+    lane_cfg.locked_path_continuity_max_dx_ratio = static_cast<float>(get_parameter("locked_path_continuity_max_dx_ratio").as_double());
+    lane_cfg.branch_lock_time = static_cast<float>(get_parameter("branch_lock_time").as_double());
+    lane_cfg.min_branch_lock_time = static_cast<float>(get_parameter("min_branch_lock_time").as_double());
+    lane_cfg.exit_single_path_confirm_frames = static_cast<int>(get_parameter("exit_single_path_confirm_frames").as_int());
+    lane_cfg.exit_single_path_min_ratio = static_cast<float>(get_parameter("exit_single_path_min_ratio").as_double());
+    lane_cfg.enable_merge_wide_segment_logic = get_parameter("enable_merge_wide_segment_logic").as_bool();
+    lane_cfg.merge_wide_segment_ratio = static_cast<float>(get_parameter("merge_wide_segment_ratio").as_double());
+    lane_cfg.merge_wide_min_bands = static_cast<int>(get_parameter("merge_wide_min_bands").as_int());
+    lane_cfg.merge_wide_confirm_frames = static_cast<int>(get_parameter("merge_wide_confirm_frames").as_int());
+    lane_cfg.merge_wide_release_frames = static_cast<int>(get_parameter("merge_wide_release_frames").as_int());
+    lane_cfg.merge_wide_lane_width_alpha = static_cast<float>(get_parameter("merge_wide_lane_width_alpha").as_double());
+    lane_cfg.fit_min_points = static_cast<int>(get_parameter("fit_min_points").as_int());
+    lane_cfg.fit_order = static_cast<int>(get_parameter("fit_order").as_int());
+    lane_cfg.branch_fit_order = static_cast<int>(get_parameter("branch_fit_order").as_int());
+    lane_cfg.enable_fit_point_jump_filter = get_parameter("enable_fit_point_jump_filter").as_bool();
+    lane_cfg.max_fit_point_dx_ratio = static_cast<float>(get_parameter("max_fit_point_dx_ratio").as_double());
+    lane_cfg.max_fit_point_dx_px = static_cast<float>(get_parameter("max_fit_point_dx_px").as_double());
+    lane_cfg.enable_branch_bottom_anchor = get_parameter("enable_branch_bottom_anchor").as_bool();
+    lane_cfg.branch_bottom_anchor_x_ratio = static_cast<float>(get_parameter("branch_bottom_anchor_x_ratio").as_double());
+    lane_cfg.branch_bottom_anchor_y_ratio = static_cast<float>(get_parameter("branch_bottom_anchor_y_ratio").as_double());
+    lane_cfg.branch_bottom_anchor_weight = static_cast<float>(get_parameter("branch_bottom_anchor_weight").as_double());
+    lane_cfg.lookahead_y_ratio = static_cast<float>(get_parameter("lookahead_y_ratio").as_double());
+    lane_cfg.use_heading_term = get_parameter("use_heading_term").as_bool();
+    lane_cfg.heading_weight = static_cast<float>(get_parameter("heading_weight").as_double());
+    lane_cfg.near_offset_weight = static_cast<float>(get_parameter("near_offset_weight").as_double());
+    lane_cfg.max_offset_jump = static_cast<float>(get_parameter("max_offset_jump").as_double());
+    lane_cfg.offset_smoothing_alpha = static_cast<float>(get_parameter("offset_smoothing_alpha").as_double());
+    lane_cfg.enable_obstacle_avoidance = get_parameter("enable_obstacle_avoidance").as_bool();
+    lane_cfg.obstacle_labels = parseLabelSet(get_parameter("obstacle_labels").as_string());
+    lane_cfg.obstacle_min_confidence = static_cast<float>(get_parameter("obstacle_min_confidence").as_double());
+    lane_cfg.obstacle_x_margin_px = static_cast<float>(get_parameter("obstacle_x_margin_px").as_double());
+    lane_cfg.obstacle_y_margin_px = static_cast<float>(get_parameter("obstacle_y_margin_px").as_double());
+    lane_cfg.obstacle_min_bottom_y_ratio = static_cast<float>(get_parameter("obstacle_min_bottom_y_ratio").as_double());
+    lane_cfg.enable_traffic_light_stop = get_parameter("enable_traffic_light_stop").as_bool();
+    lane_cfg.traffic_light_min_confidence = static_cast<float>(get_parameter("traffic_light_min_confidence").as_double());
+    lane_cfg.zebra_min_confidence = static_cast<float>(get_parameter("zebra_min_confidence").as_double());
+    lane_cfg.zebra_stop_y_ratio = static_cast<float>(get_parameter("zebra_stop_y_ratio").as_double());
+    lane_cfg.green_light_confirm_frames = static_cast<int>(get_parameter("green_light_confirm_frames").as_int());
+    lane_cfg.red_light_confirm_frames = static_cast<int>(get_parameter("red_light_confirm_frames").as_int());
+    lane_cfg.enable_finish_stop = get_parameter("enable_finish_stop").as_bool();
+    lane_cfg.finish_stop_min_confidence = static_cast<float>(get_parameter("finish_stop_min_confidence").as_double());
+    lane_cfg.finish_stop_arm_y_ratio = static_cast<float>(get_parameter("finish_stop_arm_y_ratio").as_double());
+    lane_cfg.finish_stop_lost_frames = static_cast<int>(get_parameter("finish_stop_lost_frames").as_int());
+    lane_cfg.enable_branch_event_log = get_parameter("enable_branch_event_log").as_bool();
+    lane_decision_.configure(lane_cfg);
   }
 
   std::string resolveTrackPerceptionPath(const std::string& path) const {
@@ -334,10 +404,12 @@ class FusedPerceptionNode : public rclcpp::Node {
     LaneState lane_state = lane_decision_.decide(seg_map, detections);
     auto t_decision1 = std::chrono::steady_clock::now();
     stats.decision_ms = std::chrono::duration<double, std::milli>(t_decision1 - t_decision0).count();
+    const LaneDebugInfo& lane_debug = lane_decision_.debugInfo();
+    logDecisionStatus(lane_state, lane_debug);
 
     refreshDebugParameters();
     if (show_window_) {
-      showDebugWindow(frame_rgb, seg_map, detections, lane_state, lane_decision_.debugInfo());
+      showDebugWindow(frame_rgb, seg_map, detections, lane_state, lane_debug);
     }
 
     auto t_pub0 = std::chrono::steady_clock::now();
@@ -378,6 +450,15 @@ class FusedPerceptionNode : public rclcpp::Node {
     if (publish_detections_) {
       detection_pub_->publish(det_msg);
     }
+
+    std_msgs::msg::String labels_msg;
+    std::vector<std::string> current_labels;
+    current_labels.reserve(detections.size());
+    for (const auto& det : detections) {
+      current_labels.push_back(det.class_name);
+    }
+    labels_msg.data = joinLabels(current_labels);
+    label_pub_->publish(labels_msg);
 
     std_msgs::msg::Float32 offset_msg;
     offset_msg.data = lane_state.control_offset;
@@ -485,16 +566,40 @@ class FusedPerceptionNode : public rclcpp::Node {
 
     const auto& points = debug_info.fit_points;
     for (const auto& point : points) {
-      cv::circle(vis, point, 4, cv::Scalar(0, 255, 255), -1);
+      cv::circle(vis, cv::Point(static_cast<int>(std::round(point.x)), static_cast<int>(std::round(point.y))),
+                 4, cv::Scalar(0, 255, 255), -1);
     }
-    for (size_t i = 1; i < points.size(); ++i) {
-      cv::Point p0(static_cast<int>(std::round(points[i - 1].x)),
-                   static_cast<int>(std::round(points[i - 1].y)));
-      cv::Point p1(static_cast<int>(std::round(points[i].x)),
-                   static_cast<int>(std::round(points[i].y)));
-      if (p0.x >= 0 && p0.x < vis.cols && p0.y >= 0 && p0.y < vis.rows &&
-          p1.x >= 0 && p1.x < vis.cols && p1.y >= 0 && p1.y < vis.rows) {
-        cv::line(vis, p0, p1, cv::Scalar(0, 0, 255), 3, cv::LINE_AA);
+
+    if (!debug_info.fit_coeffs.empty()) {
+      int y0 = debug_info.bands.empty() ? 0 : debug_info.bands.front().y0;
+      int y1 = debug_info.bands.empty() ? vis.rows - 1 : debug_info.bands.back().y1;
+      cv::Point prev;
+      bool has_prev = false;
+      for (int i = 0; i < 100; ++i) {
+        double t = i / 99.0;
+        double y = y0 + (y1 - y0) * t;
+        double x = 0.0;
+        for (double c : debug_info.fit_coeffs) {
+          x = x * y + c;
+        }
+        cv::Point cur(static_cast<int>(std::round(x)), static_cast<int>(std::round(y)));
+        if (has_prev && prev.x >= 0 && prev.x < vis.cols && prev.y >= 0 && prev.y < vis.rows &&
+            cur.x >= 0 && cur.x < vis.cols && cur.y >= 0 && cur.y < vis.rows) {
+          cv::line(vis, prev, cur, cv::Scalar(0, 0, 255), 3, cv::LINE_AA);
+        }
+        prev = cur;
+        has_prev = true;
+      }
+    } else {
+      for (size_t i = 1; i < points.size(); ++i) {
+        cv::Point p0(static_cast<int>(std::round(points[i - 1].x)),
+                     static_cast<int>(std::round(points[i - 1].y)));
+        cv::Point p1(static_cast<int>(std::round(points[i].x)),
+                     static_cast<int>(std::round(points[i].y)));
+        if (p0.x >= 0 && p0.x < vis.cols && p0.y >= 0 && p0.y < vis.rows &&
+            p1.x >= 0 && p1.x < vis.cols && p1.y >= 0 && p1.y < vis.rows) {
+          cv::line(vis, p0, p1, cv::Scalar(0, 0, 255), 3, cv::LINE_AA);
+        }
       }
     }
   }
@@ -503,6 +608,75 @@ class FusedPerceptionNode : public rclcpp::Node {
     show_window_ = get_parameter("show_window").as_bool();
     blend_alpha_ = std::clamp(static_cast<float>(get_parameter("blend_alpha").as_double()), 0.0f, 1.0f);
     show_branch_debug_ = get_parameter("show_branch_debug").as_bool();
+    enable_status_log_ = get_parameter("enable_status_log").as_bool();
+    enable_branch_event_log_ = get_parameter("enable_branch_event_log").as_bool();
+  }
+
+  void logDecisionStatus(const LaneState& lane_state, const LaneDebugInfo& debug_info) {
+    if (enable_branch_event_log_) {
+      if (debug_info.guideboard_seen && !last_guideboard_seen_) {
+        RCLCPP_INFO(get_logger(),
+                    "GuideBoard usable: roi_count=%d total=%d best_conf=%.2f center=(%.1f,%.1f); "
+                    "branch_detected=%d score=%d locked=%d side=%s",
+                    debug_info.guideboard_roi_count, debug_info.guideboard_count,
+                    debug_info.guideboard_best_confidence, debug_info.guideboard_best_center.x,
+                    debug_info.guideboard_best_center.y, debug_info.branch_detected,
+                    debug_info.branch_score, debug_info.branch_locked,
+                    debug_info.locked_branch_side.c_str());
+      } else if (!debug_info.guideboard_seen && debug_info.guideboard_count > 0 &&
+                 !last_guideboard_seen_) {
+        RCLCPP_INFO(get_logger(),
+                    "GuideBoard detected but not usable: roi_count=%d total=%d best_conf=%.2f "
+                    "center=(%.1f,%.1f)",
+                    debug_info.guideboard_roi_count, debug_info.guideboard_count,
+                    debug_info.guideboard_best_confidence, debug_info.guideboard_best_center.x,
+                    debug_info.guideboard_best_center.y);
+      }
+      if (debug_info.branch_detected != last_branch_detected_ ||
+          debug_info.branch_score != last_branch_score_) {
+        RCLCPP_INFO(get_logger(), "branch_detected=%d score=%d segments=%d raw_points=%d fit_points=%d",
+                    debug_info.branch_detected, debug_info.branch_score, debug_info.segment_count,
+                    debug_info.raw_point_count, debug_info.fit_point_count);
+      }
+      if (lane_state.road_state != last_road_state_ ||
+          lane_state.branch_side != last_branch_side_) {
+        RCLCPP_INFO(get_logger(), "road_state=%s branch_side=%s offset=%.3f valid=%d guideboard=%d",
+                    lane_state.road_state.c_str(), lane_state.branch_side.c_str(),
+                    lane_state.control_offset, lane_state.is_valid, debug_info.guideboard_seen);
+      }
+      if (lane_state.task_state != last_task_state_) {
+        RCLCPP_INFO(get_logger(), "task_state=%s stop_request=%d",
+                    lane_state.task_state.c_str(), lane_state.task_state != "CLEAR");
+      }
+
+      last_guideboard_seen_ = debug_info.guideboard_seen;
+      last_branch_detected_ = debug_info.branch_detected;
+      last_branch_score_ = debug_info.branch_score;
+      last_road_state_ = lane_state.road_state;
+      last_branch_side_ = lane_state.branch_side;
+      last_task_state_ = lane_state.task_state;
+    }
+
+    if (!enable_status_log_) {
+      return;
+    }
+    double now = nowSeconds();
+    if (now - last_status_log_sec_ < 0.5) {
+      return;
+    }
+    RCLCPP_INFO(get_logger(),
+                "status road=%s branch=%s offset=%.3f lateral=%.3f heading=%.3f conf=%.2f valid=%d "
+                "branch_detected=%d score=%d guideboard_roi=%d/%d guideboard_best=%.2f@(%.0f,%.0f) "
+                "segments=%d points=%d/%d task=%s",
+                lane_state.road_state.c_str(), lane_state.branch_side.c_str(),
+                lane_state.control_offset, lane_state.lateral_offset, lane_state.heading_error,
+                lane_state.confidence, lane_state.is_valid, debug_info.branch_detected,
+                debug_info.branch_score, debug_info.guideboard_roi_count, debug_info.guideboard_count,
+                debug_info.guideboard_best_confidence, debug_info.guideboard_best_center.x,
+                debug_info.guideboard_best_center.y, debug_info.segment_count,
+                debug_info.raw_point_count, debug_info.fit_point_count,
+                lane_state.task_state.c_str());
+    last_status_log_sec_ = now;
   }
 
   void logPerfIfNeeded() {
@@ -548,6 +722,8 @@ class FusedPerceptionNode : public rclcpp::Node {
   bool show_branch_debug_{true};
   bool publish_detections_{true};
   bool publish_lane_state_{true};
+  bool enable_status_log_{false};
+  bool enable_branch_event_log_{false};
 
   std::string det_model_path_;
   std::string label_list_path_;
@@ -593,6 +769,13 @@ class FusedPerceptionNode : public rclcpp::Node {
   double sum_decision_ms_{0.0};
   double sum_publish_ms_{0.0};
   size_t last_det_count_{0};
+  double last_status_log_sec_{0.0};
+  bool last_guideboard_seen_{false};
+  bool last_branch_detected_{false};
+  int last_branch_score_{-1};
+  std::string last_road_state_;
+  std::string last_branch_side_;
+  std::string last_task_state_;
 };
 
 }  // namespace track_perception_cpp
