@@ -14,7 +14,7 @@ fused_perception_node:
     model_input_format: "RGB"
 
     # 性能日志：只看 FPS、RKNN 推理耗时、后处理耗时、发布耗时
-    enable_perf_stats: false
+    enable_perf_stats: true
     perf_interval: 2.0
 
     # 画面显示：只影响 OpenCV 预览窗口，不影响终端日志
@@ -25,7 +25,7 @@ fused_perception_node:
     # 决策日志：
     # - enable_status_log: 每 0.5s 打印一次当前 road_state/branch/GuideBoard/点数等状态
     # - enable_branch_event_log: 只在 GuideBoard、岔路、任务状态变化时打印
-    enable_status_log: true
+    enable_status_log: false
     enable_branch_event_log: false
 
     # 目标检测模型

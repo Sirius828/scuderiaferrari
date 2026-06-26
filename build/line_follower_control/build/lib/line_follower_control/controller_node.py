@@ -34,6 +34,7 @@ class LineFollowerController(Node):
         self.declare_parameter('linear_speed', 0.3)      # 前进线速度 (m/s)
         self.declare_parameter('wheel_radius', 0.035)    # 轮子半径 (m)，默认3.5cm
         self.declare_parameter('max_steering', 1.0)      # 最大转向比例
+        self.declare_parameter('steering_slew_rate', 0.0)  # 最大转向变化率，0表示关闭
         self.declare_parameter('invalid_timeout', 0.5)   # is_valid=False超时时间(秒)
         self.declare_parameter('enable_perception_stop', True)
         self.declare_parameter('ignore_stop_requests', False)
@@ -203,6 +204,7 @@ class LineFollowerController(Node):
         self.linear_speed_mps = self.get_parameter('linear_speed').value
         self.wheel_radius = self.get_parameter('wheel_radius').value
         self.max_steering = self.get_parameter('max_steering').value
+        self.steering_slew_rate = self.get_parameter('steering_slew_rate').value
         self.invalid_timeout = self.get_parameter('invalid_timeout').value
         self.enable_perception_stop = self.get_parameter('enable_perception_stop').value
         self.ignore_stop_requests = self.get_parameter('ignore_stop_requests').value
@@ -233,6 +235,7 @@ class LineFollowerController(Node):
             'linear_speed': self.linear_speed_mps,
             'wheel_radius': self.wheel_radius,
             'max_steering': self.max_steering,
+            'steering_slew_rate': self.steering_slew_rate,
             'invalid_timeout': self.invalid_timeout,
             'enable_perception_stop': self.enable_perception_stop,
             'ignore_stop_requests': self.ignore_stop_requests,
@@ -262,6 +265,7 @@ class LineFollowerController(Node):
             pending['linear_speed'] = float(pending['linear_speed'])
             pending['wheel_radius'] = float(pending['wheel_radius'])
             pending['max_steering'] = float(pending['max_steering'])
+            pending['steering_slew_rate'] = float(pending['steering_slew_rate'])
             pending['invalid_timeout'] = float(pending['invalid_timeout'])
             pending['enable_perception_stop'] = bool(pending['enable_perception_stop'])
             pending['ignore_stop_requests'] = bool(pending['ignore_stop_requests'])
@@ -288,6 +292,8 @@ class LineFollowerController(Node):
             return SetParametersResult(successful=False, reason='wheel_radius must be >= 0')
         if pending['max_steering'] < 0.0:
             return SetParametersResult(successful=False, reason='max_steering must be >= 0')
+        if pending['steering_slew_rate'] < 0.0:
+            return SetParametersResult(successful=False, reason='steering_slew_rate must be >= 0')
         if pending['invalid_timeout'] < 0.0:
             return SetParametersResult(successful=False, reason='invalid_timeout must be >= 0')
         if pending['perception_stop_timeout'] < 0.0:
@@ -312,6 +318,7 @@ class LineFollowerController(Node):
         self.linear_speed_mps = pending['linear_speed']
         self.wheel_radius = pending['wheel_radius']
         self.max_steering = pending['max_steering']
+        self.steering_slew_rate = pending['steering_slew_rate']
         self.invalid_timeout = pending['invalid_timeout']
         self.enable_perception_stop = pending['enable_perception_stop']
         self.ignore_stop_requests = pending['ignore_stop_requests']
@@ -332,7 +339,7 @@ class LineFollowerController(Node):
             'Updated controller parameters: '
             f'Kp={self.Kp}, Ki={self.Ki}, Kd={self.Kd}, '
             f'linear_speed={self.linear_speed_mps}, wheel_radius={self.wheel_radius}, '
-            f'max_steering={self.max_steering}, '
+            f'max_steering={self.max_steering}, steering_slew_rate={self.steering_slew_rate}, '
             f'heading_gain={self.heading_gain}, curvature_gain={self.curvature_gain}, '
             f'log_mode={self.controller_log_mode}'
         )
@@ -543,6 +550,7 @@ class LineFollowerController(Node):
 
         # 限幅
         steering = max(-self.max_steering, min(self.max_steering, steering))
+        steering = self.apply_steering_slew_limit(steering, dt)
 
         # 发布控制指令
         self.last_control_mode = 'run'
@@ -554,6 +562,18 @@ class LineFollowerController(Node):
         # 更新状态
         self.prev_offset = self.current_offset
         self.prev_time = current_time
+
+    def apply_steering_slew_limit(self, steering: float, dt: float) -> float:
+        """限制舵量变化率，降低高速下短周期左右猛打。"""
+        if self.steering_slew_rate <= 0.0 or dt <= 0.0:
+            return steering
+        max_delta = self.steering_slew_rate * dt
+        delta = steering - self.last_steering
+        if delta > max_delta:
+            return self.last_steering + max_delta
+        if delta < -max_delta:
+            return self.last_steering - max_delta
+        return steering
 
     def compute_steering(self, dt: float, current_time: float) -> float:
         steering = self.pid_control(self.current_offset, dt)

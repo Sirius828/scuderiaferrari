@@ -3,17 +3,19 @@
 /**:
   ros__parameters:
     # ==================== 标准PID参数 ====================
-    Kp: 1.139            # 比例增益 - 响应速度
-    Ki: 0.03            # 积分增益 - 消除稳态误差
-    Kd: 0.035            # 微分增益 - 抑制振荡
+    # 50Hz控制循环下先以P/D为主，Ki只用于很小的稳态偏差修正。
+    Kp: 1.16             # 比例增益：大了响应快但容易左右摆
+    Ki: 0.0              # 积分增益：初调关闭，避免视觉噪声导致积分过冲
+    Kd: 0.024            # 微分增益：抑制快速摆动，过大会放大offset噪声
     
     # ==================== 车辆参数 ====================
-    linear_speed: 0.50     # Linear speed in m/s
+    linear_speed: 0.70     # Linear speed in m/s
     wheel_radius: 0.032    # Wheel radius in meters
     
     # ==================== 积分限幅 ====================
-    integral_max: 1.0   # 积分项最大值，防止积分饱和
+    integral_max: 0.25  # 积分项最大值，防止积分饱和
     max_steering: 1.0      # Maximum steering ratio (-1.0 to 1.0)
+    steering_slew_rate: 0.0  # 最大转向变化率(比例/秒)，0表示关闭
     
     # ==================== 超时设置 ====================
     invalid_timeout: 0.5   # Timeout for is_valid=False (seconds)
