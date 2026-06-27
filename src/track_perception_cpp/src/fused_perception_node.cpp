@@ -162,11 +162,28 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("max_fit_point_dx_px", 140.0);
     declare_parameter<bool>("enable_obstacle_avoidance", false);
     declare_parameter<std::string>("obstacle_labels", "Human,Car");
+    declare_parameter<std::string>("obstacle_stop_labels", "Human");
     declare_parameter<double>("obstacle_min_confidence", 0.45);
     declare_parameter<double>("obstacle_x_margin_px", 25.0);
     declare_parameter<double>("obstacle_y_margin_px", 20.0);
     declare_parameter<double>("obstacle_max_age", 0.3);
     declare_parameter<double>("obstacle_min_bottom_y_ratio", 0.30);
+    declare_parameter<bool>("enable_obstacle_stop", true);
+    declare_parameter<double>("obstacle_stop_bottom_y_ratio", 0.82);
+    declare_parameter<int>("obstacle_stop_confirm_frames", 2);
+    declare_parameter<int>("obstacle_stop_lost_frames", 3);
+    declare_parameter<bool>("enable_label_fit_points", true);
+    declare_parameter<std::string>("fit_point_labels", "Go");
+    declare_parameter<double>("fit_point_min_confidence", 0.45);
+    declare_parameter<double>("fit_point_y0_ratio", 0.45);
+    declare_parameter<double>("fit_point_y1_ratio", 1.0);
+    declare_parameter<double>("fit_point_weight", 1.0);
+    declare_parameter<bool>("enable_start_boost_trigger", true);
+    declare_parameter<std::string>("start_boost_labels", "Go,Gate");
+    declare_parameter<double>("start_boost_min_confidence", 0.45);
+    declare_parameter<double>("start_boost_y0_ratio", 0.0);
+    declare_parameter<double>("start_boost_y1_ratio", 1.0);
+    declare_parameter<int>("start_boost_lost_frames", 3);
     declare_parameter<bool>("enable_traffic_light_stop", true);
     declare_parameter<double>("traffic_light_min_confidence", 0.45);
     declare_parameter<double>("zebra_min_confidence", 0.45);
@@ -282,10 +299,27 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.offset_smoothing_alpha = static_cast<float>(get_parameter("offset_smoothing_alpha").as_double());
     lane_cfg.enable_obstacle_avoidance = get_parameter("enable_obstacle_avoidance").as_bool();
     lane_cfg.obstacle_labels = parseLabelSet(get_parameter("obstacle_labels").as_string());
+    lane_cfg.obstacle_stop_labels = parseLabelSet(get_parameter("obstacle_stop_labels").as_string());
     lane_cfg.obstacle_min_confidence = static_cast<float>(get_parameter("obstacle_min_confidence").as_double());
     lane_cfg.obstacle_x_margin_px = static_cast<float>(get_parameter("obstacle_x_margin_px").as_double());
     lane_cfg.obstacle_y_margin_px = static_cast<float>(get_parameter("obstacle_y_margin_px").as_double());
     lane_cfg.obstacle_min_bottom_y_ratio = static_cast<float>(get_parameter("obstacle_min_bottom_y_ratio").as_double());
+    lane_cfg.enable_obstacle_stop = get_parameter("enable_obstacle_stop").as_bool();
+    lane_cfg.obstacle_stop_bottom_y_ratio = static_cast<float>(get_parameter("obstacle_stop_bottom_y_ratio").as_double());
+    lane_cfg.obstacle_stop_confirm_frames = static_cast<int>(get_parameter("obstacle_stop_confirm_frames").as_int());
+    lane_cfg.obstacle_stop_lost_frames = static_cast<int>(get_parameter("obstacle_stop_lost_frames").as_int());
+    lane_cfg.enable_label_fit_points = get_parameter("enable_label_fit_points").as_bool();
+    lane_cfg.fit_point_labels = parseLabelSet(get_parameter("fit_point_labels").as_string());
+    lane_cfg.fit_point_min_confidence = static_cast<float>(get_parameter("fit_point_min_confidence").as_double());
+    lane_cfg.fit_point_y0_ratio = static_cast<float>(get_parameter("fit_point_y0_ratio").as_double());
+    lane_cfg.fit_point_y1_ratio = static_cast<float>(get_parameter("fit_point_y1_ratio").as_double());
+    lane_cfg.fit_point_weight = static_cast<float>(get_parameter("fit_point_weight").as_double());
+    lane_cfg.enable_start_boost_trigger = get_parameter("enable_start_boost_trigger").as_bool();
+    lane_cfg.start_boost_labels = parseLabelSet(get_parameter("start_boost_labels").as_string());
+    lane_cfg.start_boost_min_confidence = static_cast<float>(get_parameter("start_boost_min_confidence").as_double());
+    lane_cfg.start_boost_y0_ratio = static_cast<float>(get_parameter("start_boost_y0_ratio").as_double());
+    lane_cfg.start_boost_y1_ratio = static_cast<float>(get_parameter("start_boost_y1_ratio").as_double());
+    lane_cfg.start_boost_lost_frames = static_cast<int>(get_parameter("start_boost_lost_frames").as_int());
     lane_cfg.enable_traffic_light_stop = get_parameter("enable_traffic_light_stop").as_bool();
     lane_cfg.traffic_light_min_confidence = static_cast<float>(get_parameter("traffic_light_min_confidence").as_double());
     lane_cfg.zebra_min_confidence = static_cast<float>(get_parameter("zebra_min_confidence").as_double());
@@ -667,13 +701,13 @@ class FusedPerceptionNode : public rclcpp::Node {
     RCLCPP_INFO(get_logger(),
                 "status road=%s branch=%s offset=%.3f lateral=%.3f heading=%.3f conf=%.2f valid=%d "
                 "branch_detected=%d score=%d guideboard_roi=%d/%d guideboard_best=%.2f@(%.0f,%.0f) "
-                "segments=%d points=%d/%d task=%s",
+                "obstacles=%zu segments=%d points=%d/%d task=%s",
                 lane_state.road_state.c_str(), lane_state.branch_side.c_str(),
                 lane_state.control_offset, lane_state.lateral_offset, lane_state.heading_error,
                 lane_state.confidence, lane_state.is_valid, debug_info.branch_detected,
                 debug_info.branch_score, debug_info.guideboard_roi_count, debug_info.guideboard_count,
                 debug_info.guideboard_best_confidence, debug_info.guideboard_best_center.x,
-                debug_info.guideboard_best_center.y, debug_info.segment_count,
+                debug_info.guideboard_best_center.y, debug_info.obstacle_zones.size(), debug_info.segment_count,
                 debug_info.raw_point_count, debug_info.fit_point_count,
                 lane_state.task_state.c_str());
     last_status_log_sec_ = now;

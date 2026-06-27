@@ -46,6 +46,11 @@ class LineFollowerController(Node):
         self.declare_parameter('lane_state_timeout', 0.3)
         self.declare_parameter('heading_gain', 0.0)
         self.declare_parameter('curvature_gain', 0.0)
+        self.declare_parameter('enable_start_boost', True)
+        self.declare_parameter('start_boost_task_state', 'START_BOOST')
+        self.declare_parameter('start_boost_duration', 0.8)
+        self.declare_parameter('start_boost_speed', 0.90)
+        self.declare_parameter('start_boost_steering', 0.0)
         
         # 日志参数
         self.declare_parameter('controller_log_mode', 'normal')  # normal, pid_tuning, off
@@ -83,6 +88,10 @@ class LineFollowerController(Node):
         self.manual_override_active = False
         self.disabled_stop_logged = False
         self.manual_override_logged = False
+        self.start_boost_active = False
+        self.start_boost_used = False
+        self.start_boost_start_time = None
+        self.start_boost_logged = False
         self.last_control_mode = 'init'
         self.debug_window_start = time.time()
         self.debug_loop_count = 0
@@ -189,6 +198,11 @@ class LineFollowerController(Node):
             f'heading_gain={self.heading_gain}, curvature_gain={self.curvature_gain}'
         )
         self.get_logger().info(
+            f'   Start Boost: enable={self.enable_start_boost}, state={self.start_boost_task_state}, '
+            f'duration={self.start_boost_duration:.2f}s, speed={self.start_boost_speed_mps:.2f}m/s, '
+            f'steering={self.start_boost_steering:.2f}'
+        )
+        self.get_logger().info(
             f'   Log Mode: {self.controller_log_mode}, '
             f'PID Tuning Log Hz: {self.pid_tuning_log_hz}, '
             f'Bar Width: {self.pid_tuning_bar_width}'
@@ -216,6 +230,11 @@ class LineFollowerController(Node):
         self.lane_state_timeout = self.get_parameter('lane_state_timeout').value
         self.heading_gain = self.get_parameter('heading_gain').value
         self.curvature_gain = self.get_parameter('curvature_gain').value
+        self.enable_start_boost = self.get_parameter('enable_start_boost').value
+        self.start_boost_task_state = self.get_parameter('start_boost_task_state').value
+        self.start_boost_duration = self.get_parameter('start_boost_duration').value
+        self.start_boost_speed_mps = self.get_parameter('start_boost_speed').value
+        self.start_boost_steering = self.get_parameter('start_boost_steering').value
 
         self.controller_log_mode = self.get_parameter('controller_log_mode').value
         self.pid_tuning_log_hz = self.get_parameter('pid_tuning_log_hz').value
@@ -246,6 +265,11 @@ class LineFollowerController(Node):
             'lane_state_timeout': self.lane_state_timeout,
             'heading_gain': self.heading_gain,
             'curvature_gain': self.curvature_gain,
+            'enable_start_boost': self.enable_start_boost,
+            'start_boost_task_state': self.start_boost_task_state,
+            'start_boost_duration': self.start_boost_duration,
+            'start_boost_speed': self.start_boost_speed_mps,
+            'start_boost_steering': self.start_boost_steering,
             'controller_log_mode': self.controller_log_mode,
             'pid_tuning_log_hz': self.pid_tuning_log_hz,
             'pid_tuning_bar_width': self.pid_tuning_bar_width,
@@ -276,6 +300,11 @@ class LineFollowerController(Node):
             pending['lane_state_timeout'] = float(pending['lane_state_timeout'])
             pending['heading_gain'] = float(pending['heading_gain'])
             pending['curvature_gain'] = float(pending['curvature_gain'])
+            pending['enable_start_boost'] = bool(pending['enable_start_boost'])
+            pending['start_boost_task_state'] = str(pending['start_boost_task_state'])
+            pending['start_boost_duration'] = float(pending['start_boost_duration'])
+            pending['start_boost_speed'] = float(pending['start_boost_speed'])
+            pending['start_boost_steering'] = float(pending['start_boost_steering'])
             pending['pid_tuning_log_hz'] = float(pending['pid_tuning_log_hz'])
             pending['pid_tuning_bar_width'] = int(pending['pid_tuning_bar_width'])
             pending['controller_debug_hz'] = float(pending['controller_debug_hz'])
@@ -300,6 +329,12 @@ class LineFollowerController(Node):
             return SetParametersResult(successful=False, reason='perception_stop_timeout must be >= 0')
         if pending['lane_state_timeout'] < 0.0:
             return SetParametersResult(successful=False, reason='lane_state_timeout must be >= 0')
+        if pending['start_boost_duration'] < 0.0:
+            return SetParametersResult(successful=False, reason='start_boost_duration must be >= 0')
+        if pending['start_boost_speed'] < 0.0:
+            return SetParametersResult(successful=False, reason='start_boost_speed must be >= 0')
+        if abs(pending['start_boost_steering']) > 1.0:
+            return SetParametersResult(successful=False, reason='start_boost_steering must be in [-1, 1]')
         if pending['pid_tuning_log_hz'] <= 0.0:
             return SetParametersResult(successful=False, reason='pid_tuning_log_hz must be > 0')
         if pending['controller_debug_hz'] <= 0.0:
@@ -329,6 +364,11 @@ class LineFollowerController(Node):
         self.lane_state_timeout = pending['lane_state_timeout']
         self.heading_gain = pending['heading_gain']
         self.curvature_gain = pending['curvature_gain']
+        self.enable_start_boost = pending['enable_start_boost']
+        self.start_boost_task_state = pending['start_boost_task_state']
+        self.start_boost_duration = pending['start_boost_duration']
+        self.start_boost_speed_mps = pending['start_boost_speed']
+        self.start_boost_steering = pending['start_boost_steering']
         self.controller_log_mode = pending['controller_log_mode']
         self.pid_tuning_log_hz = pending['pid_tuning_log_hz']
         self.pid_tuning_bar_width = self.normalize_bar_width(pending['pid_tuning_bar_width'])
@@ -440,6 +480,11 @@ class LineFollowerController(Node):
         self.integral = 0.0
         self.prev_offset = self.current_offset
         self.prev_time = time.time()
+        self.start_boost_active = False
+        self.start_boost_start_time = None
+        self.start_boost_logged = False
+        if self.autonomous_enabled:
+            self.start_boost_used = False
         self.disabled_stop_logged = False
         self.manual_override_logged = False
         self.perception_stop_logged = False
@@ -466,6 +511,45 @@ class LineFollowerController(Node):
                 self.perception_stop_active = False
                 self.perception_stop_logged = False
                 return False
+        return True
+
+    def handle_start_boost(self, current_time: float) -> bool:
+        """Run one-shot open-loop launch while perception reports START_BOOST."""
+        if not self.enable_start_boost:
+            self.start_boost_active = False
+            return False
+
+        if self.start_boost_active:
+            elapsed = current_time - self.start_boost_start_time
+            if self.task_state != self.start_boost_task_state or elapsed >= self.start_boost_duration:
+                self.start_boost_active = False
+                self.start_boost_used = True
+                self.start_boost_start_time = None
+                self.start_boost_logged = False
+                self.integral = 0.0
+                self.last_control_mode = 'run'
+                self.get_logger().info('Start boost finished; returning to PID line following')
+                return False
+
+            self.last_control_mode = 'start_boost'
+            self.publish_start_boost()
+            return True
+
+        if self.start_boost_used or self.task_state != self.start_boost_task_state:
+            return False
+
+        self.start_boost_active = True
+        self.start_boost_start_time = current_time
+        self.integral = 0.0
+        self.last_steering = self.start_boost_steering
+        if not self.start_boost_logged:
+            self.get_logger().warn(
+                f'START_BOOST active: speed={self.start_boost_speed_mps:.2f}m/s, '
+                f'steering={self.start_boost_steering:.2f}, max_duration={self.start_boost_duration:.2f}s'
+            )
+            self.start_boost_logged = True
+        self.last_control_mode = 'start_boost'
+        self.publish_start_boost()
         return True
     
     def control_loop(self):
@@ -505,6 +589,11 @@ class LineFollowerController(Node):
             if not self.disabled_stop_logged:
                 self.get_logger().info('Autonomous disabled; waiting for /line_follower/set_enabled')
                 self.disabled_stop_logged = True
+            self.prev_offset = self.current_offset
+            self.prev_time = current_time
+            return
+
+        if self.handle_start_boost(current_time):
             self.prev_offset = self.current_offset
             self.prev_time = current_time
             return
@@ -684,6 +773,17 @@ class LineFollowerController(Node):
         # chassis_controller 期望的是 rps (转/秒，1 rps = 360°/s)
         twist_msg.linear.x = self.wheel_speed_rps  # 轮子转速 (rps)
         twist_msg.angular.z = steering               # 转向比例 (-1.0 ~ 1.0)
+        self.cmd_vel_publisher.publish(twist_msg)
+        self.debug_cmd_count += 1
+
+    def publish_start_boost(self):
+        """发布弹射起步开环速度；linear.x 仍使用底盘期望的轮速 rps。"""
+        twist_msg = Twist()
+        if self.wheel_radius > 0:
+            twist_msg.linear.x = self.start_boost_speed_mps / (2 * math.pi * self.wheel_radius)
+        else:
+            twist_msg.linear.x = self.start_boost_speed_mps
+        twist_msg.angular.z = max(-1.0, min(1.0, self.start_boost_steering))
         self.cmd_vel_publisher.publish(twist_msg)
         self.debug_cmd_count += 1
     

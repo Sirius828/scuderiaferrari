@@ -1,8 +1,7 @@
-# C++ fused_perception_node 参数
+# C++ fused_perception_node 参数 - V2 baseline
 # 说明：
-# - V1 已使用：SHM/模型/NPU core/预处理/分割阈值/基础 band 扫描/平滑/红灯停车/终点停车/show_window。
-# - V1 预留：完整岔路 LOCK、合流宽路、二阶拟合、避障、GuideBoard 状态机等参数已声明并可被 ROS 参数系统读取，
-#   但 C++ LaneDecision 当前还是简化实现，后续移植 Python 状态机时直接接入这些参数。
+# - V1: 巡线、岔路、GuideBoard、红灯/终点停车。
+# - V2: 在 V1 基础上启用障碍区域扣除和近距离障碍停车；控制器需要响应 /perception/stop_request。
 
 fused_perception_node:
   ros__parameters:
@@ -14,7 +13,7 @@ fused_perception_node:
     model_input_format: "RGB"
 
     # 性能日志：只看 FPS、RKNN 推理耗时、后处理耗时、发布耗时
-    enable_perf_stats: true
+    enable_perf_stats: false
     perf_interval: 2.0
 
     # 画面显示：只影响 OpenCV 预览窗口，不影响终端日志
@@ -26,7 +25,7 @@ fused_perception_node:
     # - enable_status_log: 每 0.5s 打印一次当前 road_state/branch/GuideBoard/点数等状态
     # - enable_branch_event_log: 只在 GuideBoard、岔路、任务状态变化时打印
     enable_status_log: false
-    enable_branch_event_log: false
+    enable_branch_event_log: true
 
     # 目标检测模型
     det_model_path: "model/yolov8_n_det_split_int8_v2.rknn"
@@ -34,7 +33,7 @@ fused_perception_node:
     det_core_id: 0
     det_input_width: 384
     det_input_height: 288
-    det_conf_threshold: 0.30
+    det_conf_threshold: 0.40
     det_nms_threshold: 0.35
     publish_detections: true
     publish_rate: 0
@@ -62,17 +61,17 @@ fused_perception_node:
     guideboard_detect_y0_ratio: 0.2
     guideboard_detect_y1_ratio: 0.7
 
-    # Band 扫描，V1 已使用其中一部分
+    # Band 扫描
     enable_segment_branch_logic: true
-    band_count: 13
-    band_y_min_ratio: 0.65
+    band_count: 12
+    band_y_min_ratio: 0.60
     band_y_max_ratio: 1.0
     band_height_ratio: 0.02
-    min_segment_width_px: 25
+    min_segment_width_px: 60
     min_segment_gap_px: 40
     min_pixels_per_band: 80
 
-    # 岔路确认，V1 预留
+    # 岔路确认
     branch_detect_min_bands: 2
     branch_detect_far_band_ratio: 0.7
     enable_continuity_branch_selection: false
@@ -86,7 +85,7 @@ fused_perception_node:
     exit_single_path_confirm_frames: 5
     exit_single_path_min_ratio: 0.8
 
-    # 合流宽路，V1 预留
+    # 合流宽路
     enable_merge_wide_segment_logic: true
     merge_wide_segment_ratio: 1.35
     merge_wide_min_bands: 2
@@ -94,8 +93,8 @@ fused_perception_node:
     merge_wide_release_frames: 4
     merge_wide_lane_width_alpha: 0.2
 
-    # 中心线拟合，V1 简化使用 offset_smoothing/max_offset_jump
-    fit_min_points: 5
+    # 中心线拟合
+    fit_min_points: 4
     fit_order: 2
     branch_fit_order: 2
     enable_fit_point_jump_filter: true
@@ -108,16 +107,42 @@ fused_perception_node:
     max_offset_jump: 2.0
     offset_smoothing_alpha: 0.35
 
-    # 障碍避让，V1 预留
-    enable_obstacle_avoidance: false
+    # 障碍避让 V2：
+    # - obstacle_labels: 从 band segment 中扣除这些障碍区域，仍输出可通行 control_offset
+    # - obstacle_stop_labels: 只有这些类别靠太近才发布 /perception/stop_request=true
+    # Car 固定在赛道一侧，只绕开不停车；Rock 和 GuideBoard 同时出现时走 right 岔路，默认不纳入避障。
+    enable_obstacle_avoidance: true
     obstacle_labels: "Human,Car"
+    obstacle_stop_labels: "Human"
     obstacle_min_confidence: 0.45
-    obstacle_x_margin_px: 25.0
+    obstacle_x_margin_px: 35.0
     obstacle_y_margin_px: 20.0
     obstacle_max_age: 0.3
-    obstacle_min_bottom_y_ratio: 0.30
+    obstacle_min_bottom_y_ratio: 0.35
+    enable_obstacle_stop: true
+    obstacle_stop_bottom_y_ratio: 0.75
+    obstacle_stop_confirm_frames: 1
+    obstacle_stop_lost_frames: 3
 
-    # 红绿灯停车，V1 已使用简化逻辑：red_light + Zebra 到线才 TRAFFIC_STOP
+    # 检测标签补充拟合点：弹射起步启用后，Go/Gate 阶段不走 PID，默认关闭 Go 拟合补点
+    enable_label_fit_points: false
+    fit_point_labels: "Go"
+    fit_point_min_confidence: 0.45
+    fit_point_y0_ratio: 0.45
+    fit_point_y1_ratio: 1.0
+    fit_point_weight: 1.0
+
+    # 弹射起步触发：只有同一帧同时检测到 Go 和 Gate 才输出 task_state=START_BOOST；
+    # Go/Gate 连续丢失若干帧后恢复 CLEAR，且本次运行不再重复触发。
+    enable_start_boost_trigger: true
+    start_boost_labels: "Go,Gate"
+    start_boost_min_confidence: 0.45
+    start_boost_y0_ratio: 0.0
+    start_boost_y1_ratio: 1.0
+    start_boost_lost_frames: 3
+
+    # 红绿灯停车：red_light + Zebra 到线才 TRAFFIC_STOP
+    # 6.27日 红绿灯都是15s,黄灯2.5s
     enable_traffic_light_stop: true
     traffic_light_min_confidence: 0.45
     zebra_min_confidence: 0.45
@@ -126,14 +151,14 @@ fused_perception_node:
     green_light_confirm_frames: 1
     red_light_confirm_frames: 1
 
-    # 终点停车，V1 已使用简化逻辑：Stop bbox 底部达到阈值才 FINISH_STOP
-    enable_finish_stop: true
+    # 终点停车：Stop bbox 底部达到阈值才 FINISH_STOP
+    enable_finish_stop: false
     finish_stop_min_confidence: 0.45
     finish_stop_arm_y_ratio: 0.70
     finish_stop_lost_frames: 3
     finish_stop_max_age: 0.5
 
-    # LOCK 底部软锚点，V1 预留
+    # LOCK 底部软锚点
     enable_branch_bottom_anchor: true
     branch_bottom_anchor_x_ratio: 0.5
     branch_bottom_anchor_y_ratio: 0.98

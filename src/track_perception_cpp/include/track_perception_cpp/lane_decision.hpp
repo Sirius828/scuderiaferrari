@@ -63,10 +63,29 @@ struct LaneDecisionConfig {
 
   bool enable_obstacle_avoidance{false};
   std::unordered_set<std::string> obstacle_labels{"Human", "Car"};
+  std::unordered_set<std::string> obstacle_stop_labels{"Human"};
   float obstacle_min_confidence{0.45f};
   float obstacle_x_margin_px{25.0f};
   float obstacle_y_margin_px{20.0f};
   float obstacle_min_bottom_y_ratio{0.30f};
+  bool enable_obstacle_stop{true};
+  float obstacle_stop_bottom_y_ratio{0.82f};
+  int obstacle_stop_confirm_frames{2};
+  int obstacle_stop_lost_frames{3};
+
+  bool enable_label_fit_points{true};
+  std::unordered_set<std::string> fit_point_labels{"Go"};
+  float fit_point_min_confidence{0.45f};
+  float fit_point_y0_ratio{0.45f};
+  float fit_point_y1_ratio{1.0f};
+  float fit_point_weight{1.0f};
+
+  bool enable_start_boost_trigger{true};
+  std::unordered_set<std::string> start_boost_labels{"Go", "Gate"};
+  float start_boost_min_confidence{0.45f};
+  float start_boost_y0_ratio{0.0f};
+  float start_boost_y1_ratio{1.0f};
+  int start_boost_lost_frames{3};
 
   bool enable_traffic_light_stop{true};
   float traffic_light_min_confidence{0.45f};
@@ -181,6 +200,9 @@ class LaneDecision {
   std::vector<cv::Point3f> filterCenterlinePoints(const std::vector<cv::Point3f>& points,
                                                   int image_width,
                                                   std::optional<double> last_center_x) const;
+  void appendDetectionFitPoints(std::vector<cv::Point3f>& points,
+                                const std::vector<Detection>& detections,
+                                int image_height) const;
   bool fitCenterlineAndComputeOffset(const std::vector<cv::Point3f>& points, int h, int w,
                                      int fit_order, double* final_offset,
                                      std::vector<double>* coeffs, double* lateral_offset,
@@ -190,6 +212,8 @@ class LaneDecision {
   bool checkGuideboardInFarRoi(const std::vector<Detection>& detections, int h) const;
   void updateTrafficLightStopState(const std::vector<Detection>& detections, int image_height);
   void updateFinishStopState(const std::vector<Detection>& detections, int image_height);
+  void updateObstacleStopState(const std::vector<Detection>& detections, int image_height);
+  void updateStartBoostState(const std::vector<Detection>& detections, int image_height);
   std::string taskState() const;
   void populateDebugInfo(const std::vector<Band>& bands, const std::vector<ObstacleZone>& zones,
                          const std::vector<cv::Point3f>& fit_points,
@@ -213,10 +237,17 @@ class LaneDecision {
   std::vector<std::optional<double>> band_lane_widths_;
   bool traffic_stop_active_{false};
   bool finish_stop_active_{false};
+  bool obstacle_stop_active_{false};
+  bool start_boost_active_{false};
+  bool start_boost_used_{false};
   bool stop_request_active_{false};
   std::string traffic_light_state_{"CLEAR"};
   std::string finish_stop_state_{"CLEAR"};
+  std::string obstacle_stop_state_{"CLEAR"};
   int finish_stop_lost_count_{0};
+  int obstacle_stop_confirm_count_{0};
+  int obstacle_stop_lost_count_{0};
+  int start_boost_lost_count_{0};
   int red_light_confirm_count_{0};
   int green_light_confirm_count_{0};
 };

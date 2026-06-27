@@ -9,18 +9,18 @@
     Kd: 0.024            # 微分增益：抑制快速摆动，过大会放大offset噪声
     
     # ==================== 车辆参数 ====================
-    linear_speed: 0.75     # Linear speed in m/s
+    linear_speed: 0.70     # Linear speed in m/s
     wheel_radius: 0.032    # Wheel radius in meters
     
     # ==================== 积分限幅 ====================
     integral_max: 0.25  # 积分项最大值，防止积分饱和
     max_steering: 1.0      # Maximum steering ratio (-1.0 to 1.0)
-    steering_slew_rate: 3.0  # 最大转向变化率(比例/秒)，0表示关闭
+    steering_slew_rate: 0.0  # 最大转向变化率(比例/秒)，0表示关闭
     
     # ==================== 超时设置 ====================
     invalid_timeout: 0.5   # Timeout for is_valid=False (seconds)
     enable_perception_stop: true  # 是否响应/perception/stop_request停车请求
-    ignore_stop_requests: true  # 是否忽略所有感知停车请求；true时看到Stop/红灯停车请求也继续巡线
+    ignore_stop_requests: false  # 是否忽略所有感知停车请求；false时响应Stop/红灯/障碍停车请求
     perception_stop_timeout: 0.5  # 停车请求超过该时间未更新则自动解除，避免perception掉线永久停车
     autonomous_enabled_on_start: true  # 启动后默认待命，等待UI发车服务
     publish_stop_when_disabled: false  # 待命/禁用巡线时不持续刷0；急停/感知停车仍会发布0
@@ -29,6 +29,14 @@
     lane_state_timeout: 0.3  # lane_state超过该时间未更新时，仅使用旧center_offset
     heading_gain: 0.0  # 额外航向角转向项；默认0保持原控制行为
     curvature_gain: 0.0  # 额外曲率前馈项；默认0保持原控制行为
+
+    # ==================== 弹射起步 ====================
+    # 感知发布 task_state=START_BOOST 时触发一次开环冲刺；Go/Gate消失或超过时长后恢复PID。
+    enable_start_boost: true
+    start_boost_task_state: "START_BOOST"
+    start_boost_duration: 0.8
+    start_boost_speed: 0.90
+    start_boost_steering: 0.0
     
     # ==================== 日志设置 ====================
     # normal: 原有低频控制日志

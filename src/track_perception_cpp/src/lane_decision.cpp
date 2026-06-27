@@ -259,6 +259,7 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     raw_points = collectCenterlinePoints(bands, branch_locked_, target_side, last_center_x, w, current_time);
     int fit_order = branch_locked_ ? cfg_.branch_fit_order : cfg_.fit_order;
     fit_points = filterCenterlinePoints(raw_points, w, last_center_x);
+    appendDetectionFitPoints(fit_points, detections, h);
     if (branch_locked_ && cfg_.enable_branch_bottom_anchor && fit_order >= 2) {
       fit_points.emplace_back(w * cfg_.branch_bottom_anchor_x_ratio,
                               h * cfg_.branch_bottom_anchor_y_ratio,
@@ -295,6 +296,8 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
 
   updateTrafficLightStopState(detections, h);
   updateFinishStopState(detections, h);
+  updateObstacleStopState(detections, h);
+  updateStartBoostState(detections, h);
 
   state.control_offset = static_cast<float>(center_offset);
   state.lateral_offset = static_cast<float>(lateral_offset);
@@ -849,6 +852,31 @@ std::vector<cv::Point3f> LaneDecision::filterCenterlinePoints(
                            [&](const auto& a, const auto& b) { return score(a) < score(b); });
 }
 
+void LaneDecision::appendDetectionFitPoints(std::vector<cv::Point3f>& points,
+                                            const std::vector<Detection>& detections,
+                                            int image_height) const {
+  if (!cfg_.enable_label_fit_points || cfg_.fit_point_labels.empty()) {
+    return;
+  }
+
+  float y0 = image_height * clampValue(cfg_.fit_point_y0_ratio, 0.0f, 1.0f);
+  float y1 = image_height * clampValue(cfg_.fit_point_y1_ratio, 0.0f, 1.0f);
+  if (y1 < y0) {
+    std::swap(y0, y1);
+  }
+  float weight = std::max(0.01f, cfg_.fit_point_weight);
+
+  for (const auto& det : detections) {
+    if (!cfg_.fit_point_labels.count(det.class_name) || det.confidence < cfg_.fit_point_min_confidence) {
+      continue;
+    }
+    if (det.center.y < y0 || det.center.y > y1) {
+      continue;
+    }
+    points.emplace_back(det.center.x, det.center.y, weight);
+  }
+}
+
 bool LaneDecision::fitCenterlineAndComputeOffset(const std::vector<cv::Point3f>& points,
                                                  int h, int w, int fit_order,
                                                  double* final_offset,
@@ -1022,12 +1050,115 @@ void LaneDecision::updateFinishStopState(const std::vector<Detection>& detection
   stop_request_active_ = traffic_stop_active_ || finish_stop_active_;
 }
 
+void LaneDecision::updateObstacleStopState(const std::vector<Detection>& detections, int image_height) {
+  if (!cfg_.enable_obstacle_avoidance || !cfg_.enable_obstacle_stop) {
+    obstacle_stop_active_ = false;
+    obstacle_stop_state_ = "CLEAR";
+    obstacle_stop_confirm_count_ = 0;
+    obstacle_stop_lost_count_ = 0;
+    stop_request_active_ = traffic_stop_active_ || finish_stop_active_;
+    return;
+  }
+
+  double stop_y = image_height * clampValue(cfg_.obstacle_stop_bottom_y_ratio, 0.0f, 1.0f);
+  bool obstacle_reached = false;
+  for (const auto& det : detections) {
+    if (!cfg_.obstacle_stop_labels.count(det.class_name) || det.confidence < cfg_.obstacle_min_confidence) {
+      continue;
+    }
+    if (det.bbox.y + det.bbox.height >= stop_y) {
+      obstacle_reached = true;
+      break;
+    }
+  }
+
+  if (obstacle_reached) {
+    obstacle_stop_confirm_count_++;
+    obstacle_stop_lost_count_ = 0;
+  } else {
+    obstacle_stop_confirm_count_ = 0;
+    if (obstacle_stop_active_) {
+      obstacle_stop_lost_count_++;
+    }
+  }
+
+  if (!obstacle_stop_active_ &&
+      obstacle_stop_confirm_count_ >= std::max(1, cfg_.obstacle_stop_confirm_frames)) {
+    obstacle_stop_active_ = true;
+    obstacle_stop_state_ = "OBSTACLE_STOP";
+  }
+
+  if (obstacle_stop_active_ &&
+      obstacle_stop_lost_count_ >= std::max(1, cfg_.obstacle_stop_lost_frames)) {
+    obstacle_stop_active_ = false;
+    obstacle_stop_state_ = "CLEAR";
+    obstacle_stop_lost_count_ = 0;
+  }
+
+  stop_request_active_ = traffic_stop_active_ || finish_stop_active_ || obstacle_stop_active_;
+}
+
+void LaneDecision::updateStartBoostState(const std::vector<Detection>& detections, int image_height) {
+  if (!cfg_.enable_start_boost_trigger || start_boost_used_) {
+    start_boost_active_ = false;
+    start_boost_lost_count_ = 0;
+    return;
+  }
+
+  float y0 = image_height * clampValue(cfg_.start_boost_y0_ratio, 0.0f, 1.0f);
+  float y1 = image_height * clampValue(cfg_.start_boost_y1_ratio, 0.0f, 1.0f);
+  if (y1 < y0) {
+    std::swap(y0, y1);
+  }
+
+  std::unordered_set<std::string> seen;
+  for (const auto& det : detections) {
+    if (!cfg_.start_boost_labels.count(det.class_name) ||
+        det.confidence < cfg_.start_boost_min_confidence) {
+      continue;
+    }
+    if (det.center.y < y0 || det.center.y > y1) {
+      continue;
+    }
+    seen.insert(det.class_name);
+  }
+
+  bool all_seen = !cfg_.start_boost_labels.empty();
+  for (const auto& label : cfg_.start_boost_labels) {
+    if (!seen.count(label)) {
+      all_seen = false;
+      break;
+    }
+  }
+
+  if (all_seen) {
+    start_boost_active_ = true;
+    start_boost_lost_count_ = 0;
+    return;
+  }
+
+  if (start_boost_active_) {
+    ++start_boost_lost_count_;
+    if (start_boost_lost_count_ >= std::max(1, cfg_.start_boost_lost_frames)) {
+      start_boost_active_ = false;
+      start_boost_used_ = true;
+      start_boost_lost_count_ = 0;
+    }
+  }
+}
+
 std::string LaneDecision::taskState() const {
   if (finish_stop_active_) {
     return "FINISH_STOP";
   }
   if (traffic_stop_active_) {
     return "TRAFFIC_STOP";
+  }
+  if (obstacle_stop_active_) {
+    return "OBSTACLE_STOP";
+  }
+  if (start_boost_active_) {
+    return "START_BOOST";
   }
   return "CLEAR";
 }
