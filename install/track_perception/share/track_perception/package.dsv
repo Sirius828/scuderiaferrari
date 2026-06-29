@@ -4,6 +4,3 @@ source;share/track_perception/hook/pythonpath.sh
 source;share/track_perception/hook/ament_prefix_path.ps1
 source;share/track_perception/hook/ament_prefix_path.dsv
 source;share/track_perception/hook/ament_prefix_path.sh
-source;../../build/track_perception/share/track_perception/hook/pythonpath_develop.ps1
-source;../../build/track_perception/share/track_perception/hook/pythonpath_develop.dsv
-source;../../build/track_perception/share/track_perception/hook/pythonpath_develop.sh

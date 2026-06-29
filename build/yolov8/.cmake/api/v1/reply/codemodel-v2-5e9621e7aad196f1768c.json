@@ -1,0 +1,106 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"jsonFile" : "directory-.-Release-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.22"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				},
+				{
+					"build" : "utils",
+					"jsonFile" : "directory-utils-Release-ecc62ddb27eede1f7ffa.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.22"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "utils",
+					"targetIndexes" : 
+					[
+						3
+					]
+				}
+			],
+			"name" : "Release",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0,
+						1
+					],
+					"name" : "yolov8",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "camera_demo::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-camera_demo-Release-cb68724003769f6f549c.json",
+					"name" : "camera_demo",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "imagefile_demo::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-imagefile_demo-Release-5d27fb83b3dd42e7a9ee.json",
+					"name" : "imagefile_demo",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "videofile_demo::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-videofile_demo-Release-30135cf0362f9005e0cb.json",
+					"name" : "videofile_demo",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "yolov8-kaylordut::@c810615cce0f7acb82dc",
+					"jsonFile" : "target-yolov8-kaylordut-Release-c0f70bcdc1149e695da7.json",
+					"name" : "yolov8-kaylordut",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/orangepi/scuderiaferrari/build/yolov8",
+		"source" : "/home/orangepi/scuderiaferrari/src/rk3588-yolo-demo-master/src/yolov8"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

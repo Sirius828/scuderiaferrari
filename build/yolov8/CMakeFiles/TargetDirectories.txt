@@ -1,0 +1,8 @@
+/home/orangepi/scuderiaferrari/build/yolov8/CMakeFiles/videofile_demo.dir
+/home/orangepi/scuderiaferrari/build/yolov8/CMakeFiles/camera_demo.dir
+/home/orangepi/scuderiaferrari/build/yolov8/CMakeFiles/imagefile_demo.dir
+/home/orangepi/scuderiaferrari/build/yolov8/CMakeFiles/edit_cache.dir
+/home/orangepi/scuderiaferrari/build/yolov8/CMakeFiles/rebuild_cache.dir
+/home/orangepi/scuderiaferrari/build/yolov8/utils/CMakeFiles/yolov8-kaylordut.dir
+/home/orangepi/scuderiaferrari/build/yolov8/utils/CMakeFiles/edit_cache.dir
+/home/orangepi/scuderiaferrari/build/yolov8/utils/CMakeFiles/rebuild_cache.dir

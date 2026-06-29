@@ -1,1 +1,0 @@
-/home/orangepi/scuderiaferrari/src/track_perception/setup.py

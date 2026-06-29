@@ -135,6 +135,7 @@ std::string laneStateToJson(const LaneState& state) {
 void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_ = config;
   cfg_.band_count = std::max(1, cfg_.band_count);
+  cfg_.branch_confirm_frames = std::max(1, cfg_.branch_confirm_frames);
   cfg_.fit_order = clampValue(cfg_.fit_order, 1, 2);
   cfg_.branch_fit_order = clampValue(cfg_.branch_fit_order, 1, 2);
   locked_branch_side_ = cfg_.outer_side;
@@ -200,6 +201,11 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
 
     if (!branch_locked_) {
       if (branch_detected) {
+        ++branch_confirm_count_;
+      } else {
+        branch_confirm_count_ = 0;
+      }
+      if (branch_confirm_count_ >= cfg_.branch_confirm_frames) {
         double last_center_x = last_offset_ * w / 2.0 + w / 2.0;
         std::string target_branch = cfg_.outer_side;
         if (guideboard_seen) {
@@ -217,9 +223,11 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
         branch_locked_ = true;
         locked_branch_side_ = target_branch;
         lock_start_time_ = current_time;
+        branch_confirm_count_ = 0;
         exit_confirm_count_ = 0;
         merge_wide_locked_ = false;
         merge_wide_side_.clear();
+        merge_wide_lock_start_time_ = 0.0;
         merge_wide_confirm_count_ = 0;
         merge_wide_release_count_ = 0;
         (void)branch_score;
@@ -236,16 +244,18 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
       int single_path_required = std::max(
           cfg_.branch_detect_min_bands,
           static_cast<int>(std::ceil(far_bands_count * cfg_.exit_single_path_min_ratio)));
-      if (lock_duration >= cfg_.min_branch_lock_time && single_path_count >= single_path_required) {
+      bool branch_fully_lost = !branch_detected && branch_score == 0;
+      if (lock_duration >= cfg_.min_branch_lock_time && branch_fully_lost &&
+          single_path_count >= single_path_required) {
         ++exit_confirm_count_;
       } else {
         exit_confirm_count_ = 0;
       }
-      if ((lock_duration >= cfg_.min_branch_lock_time &&
-           exit_confirm_count_ >= cfg_.exit_single_path_confirm_frames) ||
-          lock_duration > cfg_.branch_lock_time) {
+      if (lock_duration >= cfg_.min_branch_lock_time &&
+          exit_confirm_count_ >= cfg_.exit_single_path_confirm_frames) {
         branch_locked_ = false;
         locked_branch_side_ = cfg_.outer_side;
+        branch_confirm_count_ = 0;
         exit_confirm_count_ = 0;
       }
     }
@@ -549,6 +559,11 @@ std::optional<LaneDecision::Segment> LaneDecision::chooseTargetSegment(
   }
   if (band.segments.size() == 1) {
     Segment seg = band.segments.front();
+    auto lane_width = getBandLaneWidth(band.index);
+    if (!lane_width || *lane_width <= 0.0 ||
+        seg.width < *lane_width * std::max(1.05f, cfg_.merge_wide_segment_ratio)) {
+      return seg;
+    }
     double width = seg.x1 - seg.x0;
     double target_x = side == "left" ? seg.x0 + width * 0.20 : seg.x0 + width * 0.80;
     Segment out = seg;
@@ -663,11 +678,17 @@ void LaneDecision::updateMergeWideState(const std::vector<Band>& bands, double l
   if (!cfg_.enable_merge_wide_segment_logic) {
     merge_wide_locked_ = false;
     merge_wide_side_.clear();
+    merge_wide_lock_start_time_ = 0.0;
     return;
   }
   std::vector<const Band*> wide_bands;
+  std::vector<const Band*> current_run;
+  std::vector<const Band*> best_run;
+  int previous_wide_index = -1000000;
   for (const auto& band : bands) {
     if (band.segments.size() != 1) {
+      current_run.clear();
+      previous_wide_index = -1000000;
       continue;
     }
     double width = band.segments.front().width;
@@ -678,10 +699,22 @@ void LaneDecision::updateMergeWideState(const std::vector<Band>& bands, double l
     }
     if (isMergeWideSegment(band)) {
       wide_bands.push_back(&band);
+      if (band.index == previous_wide_index + 1) {
+        current_run.push_back(&band);
+      } else {
+        current_run = {&band};
+      }
+      if (current_run.size() > best_run.size()) {
+        best_run = current_run;
+      }
+      previous_wide_index = band.index;
     } else if (!merge_wide_locked_) {
       updateBandLaneWidth(band.index, width);
+      current_run.clear();
+      previous_wide_index = -1000000;
     }
   }
+  wide_bands = best_run;
   if (static_cast<int>(wide_bands.size()) >= std::max(1, cfg_.merge_wide_min_bands)) {
     ++merge_wide_confirm_count_;
     merge_wide_release_count_ = 0;
@@ -689,8 +722,27 @@ void LaneDecision::updateMergeWideState(const std::vector<Band>& bands, double l
       if (!merge_wide_locked_) {
         const auto& ref = wide_bands.back()->segments.front();
         merge_wide_side_ = last_center_x <= ref.center_x ? "left" : "right";
+        merge_wide_lock_start_time_ = nowSeconds();
       }
       merge_wide_locked_ = true;
+    }
+    double max_duration = cfg_.merge_wide_max_duration;
+    if (merge_wide_locked_ && max_duration > 0.0 &&
+        merge_wide_lock_start_time_ > 0.0 &&
+        nowSeconds() - merge_wide_lock_start_time_ >= max_duration) {
+      for (const auto* band : wide_bands) {
+        if (band && band->segments.size() == 1) {
+          if (band->index >= static_cast<int>(band_lane_widths_.size())) {
+            band_lane_widths_.resize(static_cast<size_t>(band->index + 1));
+          }
+          band_lane_widths_[band->index] = band->segments.front().width;
+        }
+      }
+      merge_wide_locked_ = false;
+      merge_wide_side_.clear();
+      merge_wide_lock_start_time_ = 0.0;
+      merge_wide_confirm_count_ = 0;
+      merge_wide_release_count_ = 0;
     }
     return;
   }
@@ -700,6 +752,7 @@ void LaneDecision::updateMergeWideState(const std::vector<Band>& bands, double l
     if (merge_wide_release_count_ >= std::max(1, cfg_.merge_wide_release_frames)) {
       merge_wide_locked_ = false;
       merge_wide_side_.clear();
+      merge_wide_lock_start_time_ = 0.0;
       merge_wide_release_count_ = 0;
     }
   }
@@ -745,17 +798,86 @@ std::vector<cv::Point3f> LaneDecision::collectCenterlinePoints(
   std::vector<cv::Point3f> points;
   bool use_locked_continuity = branch_locked && last_center_x &&
                                shouldUseLockedPathContinuity(now);
+  std::optional<double> branch_split_y;
+  std::optional<double> branch_entry_x;
+  double bottom_y = 0.0;
+  double top_y = bands.empty() ? 0.0 : bands.front().y_center;
+  double inner_ratio = clampValue(cfg_.branch_racing_line_inner_ratio, 0.0f, 0.5f);
+  if (branch_locked && (cfg_.enable_branch_approach_bias || cfg_.enable_branch_racing_line)) {
+    for (const auto& band : bands) {
+      bottom_y = std::max(bottom_y, band.y_center);
+      top_y = std::min(top_y, band.y_center);
+      if (band.segments.size() < 2) {
+        continue;
+      }
+      auto target = chooseTargetSegment(band, side);
+      if (!target) {
+        continue;
+      }
+      if (!branch_split_y || band.y_center > *branch_split_y) {
+        branch_split_y = band.y_center;
+        branch_entry_x = side == "left"
+                             ? target->x1 - target->width * inner_ratio
+                             : target->x0 + target->width * inner_ratio;
+      }
+    }
+  }
   for (auto& band : bands) {
     if (band.segments.empty()) {
       continue;
     }
     std::optional<Segment> target;
     if (branch_locked) {
-      if (use_locked_continuity) {
-        target = chooseLockedSegmentByContinuity(band, image_width, *last_center_x);
-      }
-      if (!target) {
+      if (band.segments.size() >= 2) {
         target = chooseTargetSegment(band, side);
+        if (target && cfg_.enable_branch_racing_line &&
+            branch_split_y && branch_entry_x && band.y_center <= *branch_split_y &&
+            *branch_split_y > top_y + 1.0) {
+          double progress = (*branch_split_y - band.y_center) / (*branch_split_y - top_y);
+          progress = clampValue(progress, 0.0, 1.0);
+          double gain = clampValue(cfg_.branch_racing_line_gain, 0.0f, 1.0f);
+          double exponent = std::max(0.1f, cfg_.branch_racing_line_exponent);
+          double blend = clampValue(gain * std::pow(progress, exponent), 0.0, 1.0);
+          Segment out = *target;
+          double inside_x = side == "left"
+                                ? target->x1 - target->width * inner_ratio
+                                : target->x0 + target->width * inner_ratio;
+          double start_x = 0.5 * inside_x + 0.5 * *branch_entry_x;
+          double target_x = start_x + (target->center_x - start_x) * blend;
+          out.center_x = clampValue(target_x, static_cast<double>(target->x0), static_cast<double>(target->x1));
+          out.x0 = static_cast<int>(std::max<double>(target->x0, out.center_x - target->width * 0.2));
+          out.x1 = static_cast<int>(std::min<double>(target->x1, out.center_x + target->width * 0.2));
+          out.width = std::max(1.0, static_cast<double>(out.x1 - out.x0));
+          out.pixel_count = std::max(1, target->pixel_count / 2);
+          out.virtual_segment = true;
+          target = out;
+        }
+      } else {
+        if (cfg_.enable_branch_approach_bias &&
+            branch_split_y && branch_entry_x && band.y_center > *branch_split_y &&
+            bottom_y > *branch_split_y + 1.0) {
+          Segment seg = band.segments.front();
+          double progress = (bottom_y - band.y_center) / (bottom_y - *branch_split_y);
+          progress = clampValue(progress, 0.0, 1.0);
+          double gain = clampValue(cfg_.branch_approach_bias_gain, 0.0f, 1.0f);
+          double exponent = std::max(0.1f, cfg_.branch_approach_bias_exponent);
+          double bias = gain * std::pow(progress, exponent);
+          double target_x = seg.center_x + (*branch_entry_x - seg.center_x) * bias;
+          Segment out = seg;
+          out.center_x = clampValue(target_x, static_cast<double>(seg.x0), static_cast<double>(seg.x1));
+          out.x0 = static_cast<int>(std::max<double>(seg.x0, out.center_x - seg.width * 0.2));
+          out.x1 = static_cast<int>(std::min<double>(seg.x1, out.center_x + seg.width * 0.2));
+          out.width = std::max(1.0, static_cast<double>(out.x1 - out.x0));
+          out.pixel_count = std::max(1, seg.pixel_count / 2);
+          out.virtual_segment = true;
+          target = out;
+        }
+        if (!target && use_locked_continuity) {
+          target = chooseLockedSegmentByContinuity(band, image_width, *last_center_x);
+        }
+        if (!target) {
+          target = chooseTargetSegment(band, side);
+        }
       }
     } else {
       target = chooseMergeWideSegment(band, last_center_x);

@@ -1,1 +1,13 @@
-/home/orangepi/scuderiaferrari/build/track_perception/model/label_list.txt
+Car
+Human
+Gold
+Go
+Gate
+GuideBoard
+Speed_Limit
+red_light
+yellow_light
+green_light
+Stop
+Rock
+Zebra

@@ -132,6 +132,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<int>("min_segment_gap_px", 40);
     declare_parameter<int>("min_pixels_per_band", 80);
     declare_parameter<int>("branch_detect_min_bands", 2);
+    declare_parameter<int>("branch_confirm_frames", 2);
     declare_parameter<double>("branch_detect_far_band_ratio", 0.7);
     declare_parameter<bool>("enable_guideboard_branch_selection", true);
     declare_parameter<std::string>("guideboard_branch", "right");
@@ -154,6 +155,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<int>("merge_wide_confirm_frames", 2);
     declare_parameter<int>("merge_wide_release_frames", 4);
     declare_parameter<double>("merge_wide_lane_width_alpha", 0.2);
+    declare_parameter<double>("merge_wide_max_duration", 1.5);
     declare_parameter<int>("fit_min_points", 5);
     declare_parameter<int>("fit_order", 2);
     declare_parameter<int>("branch_fit_order", 2);
@@ -200,6 +202,13 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("branch_bottom_anchor_x_ratio", 0.5);
     declare_parameter<double>("branch_bottom_anchor_y_ratio", 0.98);
     declare_parameter<double>("branch_bottom_anchor_weight", 0.6);
+    declare_parameter<bool>("enable_branch_approach_bias", true);
+    declare_parameter<double>("branch_approach_bias_gain", 0.75);
+    declare_parameter<double>("branch_approach_bias_exponent", 1.4);
+    declare_parameter<bool>("enable_branch_racing_line", true);
+    declare_parameter<double>("branch_racing_line_gain", 1.0);
+    declare_parameter<double>("branch_racing_line_exponent", 1.6);
+    declare_parameter<double>("branch_racing_line_inner_ratio", 0.25);
     declare_parameter<double>("lookahead_y_ratio", 0.75);
     declare_parameter<bool>("use_heading_term", true);
     declare_parameter<double>("heading_weight", 0.10);
@@ -259,6 +268,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.min_segment_gap_px = static_cast<int>(get_parameter("min_segment_gap_px").as_int());
     lane_cfg.min_pixels_per_band = static_cast<int>(get_parameter("min_pixels_per_band").as_int());
     lane_cfg.branch_detect_min_bands = static_cast<int>(get_parameter("branch_detect_min_bands").as_int());
+    lane_cfg.branch_confirm_frames = static_cast<int>(get_parameter("branch_confirm_frames").as_int());
     lane_cfg.branch_detect_far_band_ratio = static_cast<float>(get_parameter("branch_detect_far_band_ratio").as_double());
     lane_cfg.outer_side = get_parameter("outer_side").as_string();
     lane_cfg.enable_guideboard_branch_selection = get_parameter("enable_guideboard_branch_selection").as_bool();
@@ -281,6 +291,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.merge_wide_confirm_frames = static_cast<int>(get_parameter("merge_wide_confirm_frames").as_int());
     lane_cfg.merge_wide_release_frames = static_cast<int>(get_parameter("merge_wide_release_frames").as_int());
     lane_cfg.merge_wide_lane_width_alpha = static_cast<float>(get_parameter("merge_wide_lane_width_alpha").as_double());
+    lane_cfg.merge_wide_max_duration = static_cast<float>(get_parameter("merge_wide_max_duration").as_double());
     lane_cfg.fit_min_points = static_cast<int>(get_parameter("fit_min_points").as_int());
     lane_cfg.fit_order = static_cast<int>(get_parameter("fit_order").as_int());
     lane_cfg.branch_fit_order = static_cast<int>(get_parameter("branch_fit_order").as_int());
@@ -291,6 +302,13 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.branch_bottom_anchor_x_ratio = static_cast<float>(get_parameter("branch_bottom_anchor_x_ratio").as_double());
     lane_cfg.branch_bottom_anchor_y_ratio = static_cast<float>(get_parameter("branch_bottom_anchor_y_ratio").as_double());
     lane_cfg.branch_bottom_anchor_weight = static_cast<float>(get_parameter("branch_bottom_anchor_weight").as_double());
+    lane_cfg.enable_branch_approach_bias = get_parameter("enable_branch_approach_bias").as_bool();
+    lane_cfg.branch_approach_bias_gain = static_cast<float>(get_parameter("branch_approach_bias_gain").as_double());
+    lane_cfg.branch_approach_bias_exponent = static_cast<float>(get_parameter("branch_approach_bias_exponent").as_double());
+    lane_cfg.enable_branch_racing_line = get_parameter("enable_branch_racing_line").as_bool();
+    lane_cfg.branch_racing_line_gain = static_cast<float>(get_parameter("branch_racing_line_gain").as_double());
+    lane_cfg.branch_racing_line_exponent = static_cast<float>(get_parameter("branch_racing_line_exponent").as_double());
+    lane_cfg.branch_racing_line_inner_ratio = static_cast<float>(get_parameter("branch_racing_line_inner_ratio").as_double());
     lane_cfg.lookahead_y_ratio = static_cast<float>(get_parameter("lookahead_y_ratio").as_double());
     lane_cfg.use_heading_term = get_parameter("use_heading_term").as_bool();
     lane_cfg.heading_weight = static_cast<float>(get_parameter("heading_weight").as_double());
@@ -585,6 +603,11 @@ class FusedPerceptionNode : public rclcpp::Node {
         int x0 = std::clamp(seg.x0, 0, std::max(0, vis.cols - 1));
         int x1 = std::clamp(seg.x1, 0, std::max(0, vis.cols - 1));
         int cy = (y0 + y1) / 2;
+        if (seg.virtual_segment) {
+          cv::circle(vis, cv::Point(std::clamp(seg.center_x, 0, std::max(0, vis.cols - 1)), cy),
+                     2, cv::Scalar(0, 255, 0), -1, cv::LINE_AA);
+          continue;
+        }
         cv::line(vis, cv::Point(x0, y0), cv::Point(x0, y1 - 1), cv::Scalar(0, 255, 0), 1);
         cv::line(vis, cv::Point(x1, y0), cv::Point(x1, y1 - 1), cv::Scalar(0, 255, 0), 1);
         cv::circle(vis, cv::Point(std::clamp(seg.center_x, 0, std::max(0, vis.cols - 1)), cy),
@@ -594,14 +617,14 @@ class FusedPerceptionNode : public rclcpp::Node {
       if (band.selected_center_x >= 0) {
         int cy = (y0 + y1) / 2;
         cv::circle(vis, cv::Point(std::clamp(band.selected_center_x, 0, std::max(0, vis.cols - 1)), cy),
-                   5, cv::Scalar(0, 128, 255), 2);
+                   2, cv::Scalar(0, 255, 0), -1, cv::LINE_AA);
       }
     }
 
     const auto& points = debug_info.fit_points;
     for (const auto& point : points) {
       cv::circle(vis, cv::Point(static_cast<int>(std::round(point.x)), static_cast<int>(std::round(point.y))),
-                 4, cv::Scalar(0, 255, 255), -1);
+                 1, cv::Scalar(0, 255, 0), -1);
     }
 
     if (!debug_info.fit_coeffs.empty()) {

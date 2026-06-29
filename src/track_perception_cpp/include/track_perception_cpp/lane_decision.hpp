@@ -20,6 +20,7 @@ struct LaneDecisionConfig {
   int min_pixels_per_band{80};
 
   int branch_detect_min_bands{2};
+  int branch_confirm_frames{2};
   float branch_detect_far_band_ratio{0.7f};
   std::string outer_side{"left"};
   bool enable_guideboard_branch_selection{true};
@@ -43,6 +44,7 @@ struct LaneDecisionConfig {
   int merge_wide_confirm_frames{2};
   int merge_wide_release_frames{4};
   float merge_wide_lane_width_alpha{0.2f};
+  float merge_wide_max_duration{1.5f};
 
   int fit_min_points{5};
   int fit_order{2};
@@ -54,6 +56,13 @@ struct LaneDecisionConfig {
   float branch_bottom_anchor_x_ratio{0.5f};
   float branch_bottom_anchor_y_ratio{0.98f};
   float branch_bottom_anchor_weight{0.6f};
+  bool enable_branch_approach_bias{true};
+  float branch_approach_bias_gain{0.75f};
+  float branch_approach_bias_exponent{1.4f};
+  bool enable_branch_racing_line{true};
+  float branch_racing_line_gain{1.0f};
+  float branch_racing_line_exponent{1.6f};
+  float branch_racing_line_inner_ratio{0.25f};
   float lookahead_y_ratio{0.75f};
   bool use_heading_term{true};
   float heading_weight{0.10f};
@@ -229,9 +238,11 @@ class LaneDecision {
   bool branch_locked_{false};
   std::string locked_branch_side_{"left"};
   double lock_start_time_{0.0};
+  int branch_confirm_count_{0};
   int exit_confirm_count_{0};
   bool merge_wide_locked_{false};
   std::string merge_wide_side_;
+  double merge_wide_lock_start_time_{0.0};
   int merge_wide_confirm_count_{0};
   int merge_wide_release_count_{0};
   std::vector<std::optional<double>> band_lane_widths_;

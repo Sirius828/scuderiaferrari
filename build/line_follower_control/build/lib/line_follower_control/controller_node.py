@@ -32,6 +32,25 @@ class LineFollowerController(Node):
         
         # 车辆参数
         self.declare_parameter('linear_speed', 0.3)      # 前进线速度 (m/s)
+        self.declare_parameter('enable_dynamic_speed', False)
+        self.declare_parameter('min_linear_speed', 0.2)
+        self.declare_parameter('speed_offset_start', 0.05)
+        self.declare_parameter('speed_offset_full_slow', 0.7)
+        self.declare_parameter('speed_curve_exponent', 1.0)
+        self.declare_parameter('speed_accel_rate', 0.35)
+        self.declare_parameter('speed_decel_rate', 2.0)
+        self.declare_parameter('enable_curve_adaptive_control', False)
+        self.declare_parameter('curve_offset_limit', 0.45)
+        self.declare_parameter('curve_heading_limit', 0.35)
+        self.declare_parameter('curve_curvature_limit', 0.35)
+        self.declare_parameter('curve_factor_smoothing_alpha', 0.35)
+        self.declare_parameter('curve_factor_attack_alpha', 0.55)
+        self.declare_parameter('curve_factor_release_alpha', 0.08)
+        self.declare_parameter('offset_deadband', 0.0)
+        self.declare_parameter('straight_max_steering', 0.30)
+        self.declare_parameter('curve_max_steering', 0.85)
+        self.declare_parameter('straight_steering_slew_rate', 1.8)
+        self.declare_parameter('curve_steering_slew_rate', 4.0)
         self.declare_parameter('wheel_radius', 0.035)    # 轮子半径 (m)，默认3.5cm
         self.declare_parameter('max_steering', 1.0)      # 最大转向比例
         self.declare_parameter('steering_slew_rate', 0.0)  # 最大转向变化率，0表示关闭
@@ -78,6 +97,11 @@ class LineFollowerController(Node):
         self.last_pid_terms = (0.0, 0.0, 0.0)
         self.last_lane_terms = (0.0, 0.0)
         self.last_steering = 0.0
+        self.current_speed_mps = self.linear_speed_mps
+        self.current_wheel_speed_rps = self.wheel_speed_rps
+        self.current_curve_factor = 0.0
+        self.current_max_steering = self.max_steering
+        self.current_steering_slew_rate = self.steering_slew_rate
         self.last_tuning_log_time = 0.0
         self.track_lost_logged = False
         self.perception_stop_active = False
@@ -180,6 +204,21 @@ class LineFollowerController(Node):
         self.get_logger().info(f'   PID Gains: Kp={self.Kp}, Ki={self.Ki}, Kd={self.Kd}')
         self.get_logger().info(f'   Integral Max: {self.integral_max}')
         self.get_logger().info(f'   Linear Speed: {self.linear_speed_mps} m/s')
+        self.get_logger().info(
+            f'   Dynamic Speed: enable={self.enable_dynamic_speed}, '
+            f'min={self.min_linear_speed_mps:.2f}m/s, '
+            f'offset_start={self.speed_offset_start:.2f}, '
+            f'full_slow={self.speed_offset_full_slow:.2f}, '
+            f'exponent={self.speed_curve_exponent:.2f}'
+        )
+        self.get_logger().info(
+            f'   Curve Adaptive: enable={self.enable_curve_adaptive_control}, '
+            f'offset_limit={self.curve_offset_limit:.2f}, '
+            f'heading_limit={self.curve_heading_limit:.2f}, '
+            f'curvature_limit={self.curve_curvature_limit:.2f}, '
+            f'steer={self.straight_max_steering:.2f}->{self.curve_max_steering:.2f}, '
+            f'slew={self.straight_steering_slew_rate:.2f}->{self.curve_steering_slew_rate:.2f}'
+        )
         self.get_logger().info(f'   Wheel Radius: {self.wheel_radius} m')
         self.get_logger().info(f'   Wheel Speed: {self.wheel_speed_rps:.2f} rps (revolutions per second)')
         self.get_logger().info(f'   Max Steering: {self.max_steering}')
@@ -216,6 +255,25 @@ class LineFollowerController(Node):
         self.integral_max = self.get_parameter('integral_max').value
 
         self.linear_speed_mps = self.get_parameter('linear_speed').value
+        self.enable_dynamic_speed = self.get_parameter('enable_dynamic_speed').value
+        self.min_linear_speed_mps = self.get_parameter('min_linear_speed').value
+        self.speed_offset_start = self.get_parameter('speed_offset_start').value
+        self.speed_offset_full_slow = self.get_parameter('speed_offset_full_slow').value
+        self.speed_curve_exponent = self.get_parameter('speed_curve_exponent').value
+        self.speed_accel_rate = self.get_parameter('speed_accel_rate').value
+        self.speed_decel_rate = self.get_parameter('speed_decel_rate').value
+        self.enable_curve_adaptive_control = self.get_parameter('enable_curve_adaptive_control').value
+        self.curve_offset_limit = self.get_parameter('curve_offset_limit').value
+        self.curve_heading_limit = self.get_parameter('curve_heading_limit').value
+        self.curve_curvature_limit = self.get_parameter('curve_curvature_limit').value
+        self.curve_factor_smoothing_alpha = self.get_parameter('curve_factor_smoothing_alpha').value
+        self.curve_factor_attack_alpha = self.get_parameter('curve_factor_attack_alpha').value
+        self.curve_factor_release_alpha = self.get_parameter('curve_factor_release_alpha').value
+        self.offset_deadband = self.get_parameter('offset_deadband').value
+        self.straight_max_steering = self.get_parameter('straight_max_steering').value
+        self.curve_max_steering = self.get_parameter('curve_max_steering').value
+        self.straight_steering_slew_rate = self.get_parameter('straight_steering_slew_rate').value
+        self.curve_steering_slew_rate = self.get_parameter('curve_steering_slew_rate').value
         self.wheel_radius = self.get_parameter('wheel_radius').value
         self.max_steering = self.get_parameter('max_steering').value
         self.steering_slew_rate = self.get_parameter('steering_slew_rate').value
@@ -252,6 +310,25 @@ class LineFollowerController(Node):
             'Kd': self.Kd,
             'integral_max': self.integral_max,
             'linear_speed': self.linear_speed_mps,
+            'enable_dynamic_speed': self.enable_dynamic_speed,
+            'min_linear_speed': self.min_linear_speed_mps,
+            'speed_offset_start': self.speed_offset_start,
+            'speed_offset_full_slow': self.speed_offset_full_slow,
+            'speed_curve_exponent': self.speed_curve_exponent,
+            'speed_accel_rate': self.speed_accel_rate,
+            'speed_decel_rate': self.speed_decel_rate,
+            'enable_curve_adaptive_control': self.enable_curve_adaptive_control,
+            'curve_offset_limit': self.curve_offset_limit,
+            'curve_heading_limit': self.curve_heading_limit,
+            'curve_curvature_limit': self.curve_curvature_limit,
+            'curve_factor_smoothing_alpha': self.curve_factor_smoothing_alpha,
+            'curve_factor_attack_alpha': self.curve_factor_attack_alpha,
+            'curve_factor_release_alpha': self.curve_factor_release_alpha,
+            'offset_deadband': self.offset_deadband,
+            'straight_max_steering': self.straight_max_steering,
+            'curve_max_steering': self.curve_max_steering,
+            'straight_steering_slew_rate': self.straight_steering_slew_rate,
+            'curve_steering_slew_rate': self.curve_steering_slew_rate,
             'wheel_radius': self.wheel_radius,
             'max_steering': self.max_steering,
             'steering_slew_rate': self.steering_slew_rate,
@@ -287,6 +364,25 @@ class LineFollowerController(Node):
             pending['Kd'] = float(pending['Kd'])
             pending['integral_max'] = float(pending['integral_max'])
             pending['linear_speed'] = float(pending['linear_speed'])
+            pending['enable_dynamic_speed'] = bool(pending['enable_dynamic_speed'])
+            pending['min_linear_speed'] = float(pending['min_linear_speed'])
+            pending['speed_offset_start'] = float(pending['speed_offset_start'])
+            pending['speed_offset_full_slow'] = float(pending['speed_offset_full_slow'])
+            pending['speed_curve_exponent'] = float(pending['speed_curve_exponent'])
+            pending['speed_accel_rate'] = float(pending['speed_accel_rate'])
+            pending['speed_decel_rate'] = float(pending['speed_decel_rate'])
+            pending['enable_curve_adaptive_control'] = bool(pending['enable_curve_adaptive_control'])
+            pending['curve_offset_limit'] = float(pending['curve_offset_limit'])
+            pending['curve_heading_limit'] = float(pending['curve_heading_limit'])
+            pending['curve_curvature_limit'] = float(pending['curve_curvature_limit'])
+            pending['curve_factor_smoothing_alpha'] = float(pending['curve_factor_smoothing_alpha'])
+            pending['curve_factor_attack_alpha'] = float(pending['curve_factor_attack_alpha'])
+            pending['curve_factor_release_alpha'] = float(pending['curve_factor_release_alpha'])
+            pending['offset_deadband'] = float(pending['offset_deadband'])
+            pending['straight_max_steering'] = float(pending['straight_max_steering'])
+            pending['curve_max_steering'] = float(pending['curve_max_steering'])
+            pending['straight_steering_slew_rate'] = float(pending['straight_steering_slew_rate'])
+            pending['curve_steering_slew_rate'] = float(pending['curve_steering_slew_rate'])
             pending['wheel_radius'] = float(pending['wheel_radius'])
             pending['max_steering'] = float(pending['max_steering'])
             pending['steering_slew_rate'] = float(pending['steering_slew_rate'])
@@ -319,6 +415,47 @@ class LineFollowerController(Node):
             return SetParametersResult(successful=False, reason='integral_max must be >= 0')
         if pending['wheel_radius'] < 0.0:
             return SetParametersResult(successful=False, reason='wheel_radius must be >= 0')
+        if pending['linear_speed'] < 0.0:
+            return SetParametersResult(successful=False, reason='linear_speed must be >= 0')
+        if pending['min_linear_speed'] < 0.0:
+            return SetParametersResult(successful=False, reason='min_linear_speed must be >= 0')
+        if pending['min_linear_speed'] > pending['linear_speed']:
+            return SetParametersResult(successful=False, reason='min_linear_speed must be <= linear_speed')
+        if pending['speed_offset_start'] < 0.0:
+            return SetParametersResult(successful=False, reason='speed_offset_start must be >= 0')
+        if pending['speed_offset_full_slow'] <= pending['speed_offset_start']:
+            return SetParametersResult(
+                successful=False,
+                reason='speed_offset_full_slow must be > speed_offset_start'
+            )
+        if pending['speed_curve_exponent'] <= 0.0:
+            return SetParametersResult(successful=False, reason='speed_curve_exponent must be > 0')
+        if pending['speed_accel_rate'] < 0.0:
+            return SetParametersResult(successful=False, reason='speed_accel_rate must be >= 0')
+        if pending['speed_decel_rate'] < 0.0:
+            return SetParametersResult(successful=False, reason='speed_decel_rate must be >= 0')
+        if pending['curve_offset_limit'] <= 0.0:
+            return SetParametersResult(successful=False, reason='curve_offset_limit must be > 0')
+        if pending['curve_heading_limit'] <= 0.0:
+            return SetParametersResult(successful=False, reason='curve_heading_limit must be > 0')
+        if pending['curve_curvature_limit'] <= 0.0:
+            return SetParametersResult(successful=False, reason='curve_curvature_limit must be > 0')
+        if not 0.0 <= pending['curve_factor_smoothing_alpha'] <= 1.0:
+            return SetParametersResult(successful=False, reason='curve_factor_smoothing_alpha must be in [0, 1]')
+        if not 0.0 <= pending['curve_factor_attack_alpha'] <= 1.0:
+            return SetParametersResult(successful=False, reason='curve_factor_attack_alpha must be in [0, 1]')
+        if not 0.0 <= pending['curve_factor_release_alpha'] <= 1.0:
+            return SetParametersResult(successful=False, reason='curve_factor_release_alpha must be in [0, 1]')
+        if pending['offset_deadband'] < 0.0:
+            return SetParametersResult(successful=False, reason='offset_deadband must be >= 0')
+        if pending['straight_max_steering'] < 0.0:
+            return SetParametersResult(successful=False, reason='straight_max_steering must be >= 0')
+        if pending['curve_max_steering'] < 0.0:
+            return SetParametersResult(successful=False, reason='curve_max_steering must be >= 0')
+        if pending['straight_steering_slew_rate'] < 0.0:
+            return SetParametersResult(successful=False, reason='straight_steering_slew_rate must be >= 0')
+        if pending['curve_steering_slew_rate'] < 0.0:
+            return SetParametersResult(successful=False, reason='curve_steering_slew_rate must be >= 0')
         if pending['max_steering'] < 0.0:
             return SetParametersResult(successful=False, reason='max_steering must be >= 0')
         if pending['steering_slew_rate'] < 0.0:
@@ -351,6 +488,25 @@ class LineFollowerController(Node):
         self.integral_max = pending['integral_max']
         self.integral = max(-self.integral_max, min(self.integral_max, self.integral))
         self.linear_speed_mps = pending['linear_speed']
+        self.enable_dynamic_speed = pending['enable_dynamic_speed']
+        self.min_linear_speed_mps = pending['min_linear_speed']
+        self.speed_offset_start = pending['speed_offset_start']
+        self.speed_offset_full_slow = pending['speed_offset_full_slow']
+        self.speed_curve_exponent = pending['speed_curve_exponent']
+        self.speed_accel_rate = pending['speed_accel_rate']
+        self.speed_decel_rate = pending['speed_decel_rate']
+        self.enable_curve_adaptive_control = pending['enable_curve_adaptive_control']
+        self.curve_offset_limit = pending['curve_offset_limit']
+        self.curve_heading_limit = pending['curve_heading_limit']
+        self.curve_curvature_limit = pending['curve_curvature_limit']
+        self.curve_factor_smoothing_alpha = pending['curve_factor_smoothing_alpha']
+        self.curve_factor_attack_alpha = pending['curve_factor_attack_alpha']
+        self.curve_factor_release_alpha = pending['curve_factor_release_alpha']
+        self.offset_deadband = pending['offset_deadband']
+        self.straight_max_steering = pending['straight_max_steering']
+        self.curve_max_steering = pending['curve_max_steering']
+        self.straight_steering_slew_rate = pending['straight_steering_slew_rate']
+        self.curve_steering_slew_rate = pending['curve_steering_slew_rate']
         self.wheel_radius = pending['wheel_radius']
         self.max_steering = pending['max_steering']
         self.steering_slew_rate = pending['steering_slew_rate']
@@ -378,7 +534,9 @@ class LineFollowerController(Node):
         self.get_logger().info(
             'Updated controller parameters: '
             f'Kp={self.Kp}, Ki={self.Ki}, Kd={self.Kd}, '
-            f'linear_speed={self.linear_speed_mps}, wheel_radius={self.wheel_radius}, '
+            f'linear_speed={self.linear_speed_mps}, dynamic_speed={self.enable_dynamic_speed}, '
+            f'min_linear_speed={self.min_linear_speed_mps}, wheel_radius={self.wheel_radius}, '
+            f'curve_adaptive={self.enable_curve_adaptive_control}, '
             f'max_steering={self.max_steering}, steering_slew_rate={self.steering_slew_rate}, '
             f'heading_gain={self.heading_gain}, curvature_gain={self.curvature_gain}, '
             f'log_mode={self.controller_log_mode}'
@@ -393,11 +551,16 @@ class LineFollowerController(Node):
 
     def update_wheel_speed(self):
         """将线速度(m/s)转换为底盘控制器期望的轮速(rps)。"""
-        if self.wheel_radius > 0:
-            self.wheel_speed_rps = self.linear_speed_mps / (2 * math.pi * self.wheel_radius)
-        else:
-            self.wheel_speed_rps = self.linear_speed_mps
+        self.wheel_speed_rps = self.speed_to_wheel_rps(self.linear_speed_mps)
+        self.current_speed_mps = self.linear_speed_mps
+        self.current_wheel_speed_rps = self.wheel_speed_rps
+        if self.wheel_radius <= 0:
             self.get_logger().warn('⚠️ wheel_radius=0, using linear_speed directly as wheel speed')
+
+    def speed_to_wheel_rps(self, speed_mps: float) -> float:
+        if self.wheel_radius > 0:
+            return speed_mps / (2 * math.pi * self.wheel_radius)
+        return speed_mps
     
     def offset_callback(self, msg: Float32):
         """接收center_offset"""
@@ -480,6 +643,7 @@ class LineFollowerController(Node):
         self.integral = 0.0
         self.prev_offset = self.current_offset
         self.prev_time = time.time()
+        self.current_curve_factor = 0.0
         self.start_boost_active = False
         self.start_boost_start_time = None
         self.start_boost_logged = False
@@ -634,11 +798,15 @@ class LineFollowerController(Node):
         # 有赛道，正常控制
         self.invalid_start_time = None
 
-        # 固定速度巡线：只增强转向误差，不动态改速度。
+        self.update_curve_adaptive_state(current_time)
+        target_speed_mps = self.compute_target_speed(self.current_offset)
+        self.current_speed_mps = self.apply_speed_slew_limit(target_speed_mps, dt)
+        self.current_wheel_speed_rps = self.speed_to_wheel_rps(self.current_speed_mps)
+
         steering = self.compute_steering(dt, current_time)
 
         # 限幅
-        steering = max(-self.max_steering, min(self.max_steering, steering))
+        steering = max(-self.current_max_steering, min(self.current_max_steering, steering))
         steering = self.apply_steering_slew_limit(steering, dt)
 
         # 发布控制指令
@@ -654,9 +822,9 @@ class LineFollowerController(Node):
 
     def apply_steering_slew_limit(self, steering: float, dt: float) -> float:
         """限制舵量变化率，降低高速下短周期左右猛打。"""
-        if self.steering_slew_rate <= 0.0 or dt <= 0.0:
+        if self.current_steering_slew_rate <= 0.0 or dt <= 0.0:
             return steering
-        max_delta = self.steering_slew_rate * dt
+        max_delta = self.current_steering_slew_rate * dt
         delta = steering - self.last_steering
         if delta > max_delta:
             return self.last_steering + max_delta
@@ -676,6 +844,90 @@ class LineFollowerController(Node):
 
         self.last_lane_terms = (heading_term, curvature_term)
         return steering
+
+    def update_curve_adaptive_state(self, current_time: float):
+        if not self.enable_curve_adaptive_control:
+            self.current_curve_factor = 0.0
+            self.current_max_steering = self.max_steering
+            self.current_steering_slew_rate = self.steering_slew_rate
+            return
+
+        raw_factor = self.compute_curve_factor(current_time)
+        if raw_factor >= self.current_curve_factor:
+            alpha = self.curve_factor_attack_alpha
+        else:
+            alpha = self.curve_factor_release_alpha
+        alpha = max(0.0, min(1.0, alpha))
+        self.current_curve_factor = (
+            alpha * raw_factor + (1.0 - alpha) * self.current_curve_factor
+        )
+        self.current_max_steering = self.lerp(
+            self.straight_max_steering,
+            self.curve_max_steering,
+            self.current_curve_factor
+        )
+        self.current_steering_slew_rate = self.lerp(
+            self.straight_steering_slew_rate,
+            self.curve_steering_slew_rate,
+            self.current_curve_factor
+        )
+
+    def compute_curve_factor(self, current_time: float) -> float:
+        effective_offset = self.apply_offset_deadband(self.current_offset)
+        offset_factor = abs(effective_offset) / self.curve_offset_limit
+        heading_factor = 0.0
+        curvature_factor = 0.0
+
+        if self.has_fresh_lane_state(current_time):
+            heading_factor = abs(self.current_heading_error) / self.curve_heading_limit
+            curvature_factor = abs(self.current_curvature) / self.curve_curvature_limit
+
+        return max(0.0, min(1.0, max(offset_factor, heading_factor, curvature_factor)))
+
+    def lerp(self, start: float, end: float, factor: float) -> float:
+        factor = max(0.0, min(1.0, factor))
+        return start + (end - start) * factor
+
+    def compute_target_speed(self, offset: float) -> float:
+        """根据横向偏移动态调整线速度；offset越小速度越接近linear_speed。"""
+        if not self.enable_dynamic_speed:
+            return self.linear_speed_mps
+
+        if self.enable_curve_adaptive_control:
+            slowdown = math.pow(self.current_curve_factor, self.speed_curve_exponent)
+            speed_range = self.linear_speed_mps - self.min_linear_speed_mps
+            return self.linear_speed_mps - speed_range * slowdown
+
+        abs_offset = abs(offset)
+        if abs_offset <= self.speed_offset_start:
+            return self.linear_speed_mps
+        if abs_offset >= self.speed_offset_full_slow:
+            return self.min_linear_speed_mps
+
+        span = self.speed_offset_full_slow - self.speed_offset_start
+        ratio = (abs_offset - self.speed_offset_start) / span
+        ratio = max(0.0, min(1.0, ratio))
+        slowdown = math.pow(ratio, self.speed_curve_exponent)
+        speed_range = self.linear_speed_mps - self.min_linear_speed_mps
+        return self.linear_speed_mps - speed_range * slowdown
+
+    def apply_speed_slew_limit(self, target_speed_mps: float, dt: float) -> float:
+        """加速慢、减速快，避免offset刚回小就立即冲出去。"""
+        if dt <= 0.0:
+            return target_speed_mps
+
+        delta = target_speed_mps - self.current_speed_mps
+        if delta > 0.0 and self.speed_accel_rate > 0.0:
+            return self.current_speed_mps + min(delta, self.speed_accel_rate * dt)
+        if delta < 0.0 and self.speed_decel_rate > 0.0:
+            return self.current_speed_mps + max(delta, -self.speed_decel_rate * dt)
+        return target_speed_mps
+
+    def apply_offset_deadband(self, offset: float) -> float:
+        deadband = max(0.0, self.offset_deadband)
+        if abs(offset) <= deadband:
+            return 0.0
+        return math.copysign(abs(offset) - deadband, offset)
     
     def pid_control(self, error: float, dt: float) -> float:
         """
@@ -688,17 +940,20 @@ class LineFollowerController(Node):
         Returns:
             float: 控制输出 (steering)
         """
+        effective_error = self.apply_offset_deadband(error)
+
         # 1. 比例项
-        P = self.Kp * error
+        P = self.Kp * effective_error
         
         # 2. 积分项（累积误差）
-        self.integral += error * dt
+        self.integral += effective_error * dt
         # 积分限幅，防止积分饱和
         self.integral = max(-self.integral_max, min(self.integral_max, self.integral))
         I = self.Ki * self.integral
         
         # 3. 微分项（误差变化率）
-        d_error = (error - self.prev_offset) / dt if dt > 0 else 0.0
+        prev_effective_error = self.apply_offset_deadband(self.prev_offset)
+        d_error = (effective_error - prev_effective_error) / dt if dt > 0 else 0.0
         D = self.Kd * d_error
         self.last_pid_terms = (P, I, D)
         
@@ -723,6 +978,10 @@ class LineFollowerController(Node):
                 f'[PID_TUNE] err={self.current_offset:+.3f} '
                 f'{self.format_offset_bar(self.current_offset)} '
                 f'steer={steering:+.3f} '
+                f'speed={self.current_speed_mps:.2f}m/s '
+                f'curve={self.current_curve_factor:.2f} '
+                f'maxS={self.current_max_steering:.2f} '
+                f'slew={self.current_steering_slew_rate:.2f} '
                 f'P={p_term:+.3f} I={i_term:+.3f} D={d_term:+.3f} '
                 f'H={heading_term:+.3f} C={curvature_term:+.3f} '
                 f'road={self.road_state} conf={self.lane_confidence:.2f} '
@@ -747,6 +1006,9 @@ class LineFollowerController(Node):
             self.get_logger().info(
                 f'📊 Offset: {self.current_offset:.3f}, '
                 f'Steering: {steering:.3f}, '
+                f'Speed: {self.current_speed_mps:.2f}m/s, '
+                f'Curve: {self.current_curve_factor:.2f}, '
+                f'MaxSteer: {self.current_max_steering:.2f}, '
                 f'Integral: {self.integral:.3f}, '
                 f'HeadingTerm: {heading_term:.3f}, '
                 f'CurvTerm: {curvature_term:.3f}, '
@@ -771,7 +1033,7 @@ class LineFollowerController(Node):
         twist_msg = Twist()
         # ⭐ 关键修复：发送转速 (rps) 而不是角速度 (rad/s)
         # chassis_controller 期望的是 rps (转/秒，1 rps = 360°/s)
-        twist_msg.linear.x = self.wheel_speed_rps  # 轮子转速 (rps)
+        twist_msg.linear.x = self.current_wheel_speed_rps  # 轮子转速 (rps)
         twist_msg.angular.z = steering               # 转向比例 (-1.0 ~ 1.0)
         self.cmd_vel_publisher.publish(twist_msg)
         self.debug_cmd_count += 1
@@ -816,12 +1078,16 @@ class LineFollowerController(Node):
             f'estop={self.emergency_stop_active} '
             f'manual={self.manual_override_active} '
             f'offset={self.current_offset:+.3f} '
+            f'speed_mps={self.current_speed_mps:.3f} '
+            f'curve_factor={self.current_curve_factor:.3f} '
+            f'max_steer={self.current_max_steering:.3f} '
+            f'slew_rate={self.current_steering_slew_rate:.3f} '
             f'heading={self.current_heading_error:+.3f} '
             f'curvature={self.current_curvature:+.3f} '
             f'conf={self.lane_confidence:.2f} '
             f'road={self.road_state} '
             f'task={self.task_state} '
-            f'wheel_rps={self.wheel_speed_rps:.3f} '
+            f'wheel_rps={self.current_wheel_speed_rps:.3f} '
             f'loop_hz={loop_hz:.1f} '
             f'cmd_hz={cmd_hz:.1f} '
             f'stop_hz={stop_hz:.1f} '
@@ -858,12 +1124,17 @@ def main(args=None):
     finally:
         if controller is not None:
             # ⭐ Ctrl-C/退出时发布停车指令；无赛道运行中不发布cmd_vel。
-            controller.get_logger().info('🛑 Shutting down - sending stop commands...')
-            for _ in range(3):
-                controller.publish_stop(log=False)
-                rclpy.spin_once(controller, timeout_sec=0.05)
+            if rclpy.ok():
+                controller.get_logger().info('🛑 Shutting down - sending stop commands...')
+                for _ in range(3):
+                    try:
+                        controller.publish_stop(log=False)
+                        rclpy.spin_once(controller, timeout_sec=0.05)
+                    except Exception as exc:
+                        controller.get_logger().warn(f'Failed to publish shutdown stop command: {exc}')
+                        break
 
-            controller.get_logger().info('✅ Stop commands sent, destroying node...')
+                controller.get_logger().info('✅ Stop commands sent, destroying node...')
             controller.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()

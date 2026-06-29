@@ -13,7 +13,7 @@ fused_perception_node:
     model_input_format: "RGB"
 
     # 性能日志：只看 FPS、RKNN 推理耗时、后处理耗时、发布耗时
-    enable_perf_stats: false
+    enable_perf_stats: true
     perf_interval: 2.0
 
     # 画面显示：只影响 OpenCV 预览窗口，不影响终端日志
@@ -25,7 +25,7 @@ fused_perception_node:
     # - enable_status_log: 每 0.5s 打印一次当前 road_state/branch/GuideBoard/点数等状态
     # - enable_branch_event_log: 只在 GuideBoard、岔路、任务状态变化时打印
     enable_status_log: false
-    enable_branch_event_log: true
+    enable_branch_event_log: false
 
     # 目标检测模型
     det_model_path: "model/yolov8_n_det_split_int8_v2.rknn"
@@ -63,16 +63,17 @@ fused_perception_node:
 
     # Band 扫描
     enable_segment_branch_logic: true
-    band_count: 12
+    band_count: 20
     band_y_min_ratio: 0.60
     band_y_max_ratio: 1.0
-    band_height_ratio: 0.02
+    band_height_ratio: 0.015
     min_segment_width_px: 60
     min_segment_gap_px: 40
     min_pixels_per_band: 80
 
     # 岔路确认
     branch_detect_min_bands: 2
+    branch_confirm_frames: 2
     branch_detect_far_band_ratio: 0.7
     enable_continuity_branch_selection: false
     branch_continuity_max_dx_ratio: 0.35
@@ -82,16 +83,17 @@ fused_perception_node:
     locked_path_continuity_max_dx_ratio: 0.28
     branch_lock_time: 2.0
     min_branch_lock_time: 0.8
-    exit_single_path_confirm_frames: 5
+    exit_single_path_confirm_frames: 15
     exit_single_path_min_ratio: 0.8
 
     # 合流宽路
     enable_merge_wide_segment_logic: true
     merge_wide_segment_ratio: 1.35
-    merge_wide_min_bands: 2
+    merge_wide_min_bands: 4
     merge_wide_confirm_frames: 2
     merge_wide_release_frames: 4
     merge_wide_lane_width_alpha: 0.2
+    merge_wide_max_duration: 1.5
 
     # 中心线拟合
     fit_min_points: 4
@@ -163,6 +165,13 @@ fused_perception_node:
     branch_bottom_anchor_x_ratio: 0.5
     branch_bottom_anchor_y_ratio: 0.98
     branch_bottom_anchor_weight: 0.6
+    enable_branch_approach_bias: true
+    branch_approach_bias_gain: 0.75
+    branch_approach_bias_exponent: 2.5
+    enable_branch_racing_line: true
+    branch_racing_line_gain: 1.0
+    branch_racing_line_exponent: 2.5
+    branch_racing_line_inner_ratio: 0.25
 
     # 话题发布
     publish_lane_state: true

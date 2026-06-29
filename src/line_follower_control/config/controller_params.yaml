@@ -6,16 +6,35 @@
     # 50Hz控制循环下先以P/D为主，Ki只用于很小的稳态偏差修正。
     Kp: 1.16             # 比例增益：大了响应快但容易左右摆
     Ki: 0.0              # 积分增益：初调关闭，避免视觉噪声导致积分过冲
-    Kd: 0.024            # 微分增益：抑制快速摆动，过大会放大offset噪声
+    Kd: 0.032            # 微分增益：抑制快速摆动，过大会放大offset噪声
     
     # ==================== 车辆参数 ====================
-    linear_speed: 0.70     # Linear speed in m/s
+    linear_speed: 0.94     # Linear speed in m/s
+    enable_dynamic_speed: true  # 根据连续弯道强度动态调速；false时保持固定linear_speed
+    min_linear_speed: 0.46  # 弯道强度接近1时的最低线速度(m/s)
+    speed_offset_start: 0.05  # 关闭曲率自适应时，abs(offset)小于该值保持最高速度
+    speed_offset_full_slow: 0.65  # 关闭曲率自适应时，abs(offset)达到该值后降到min_linear_speed
+    speed_curve_exponent: 2.0  # >1时小弯/微偏差更保速，急弯时快速降速
+    speed_accel_rate: 0.38  # 目标速度升高时的最大加速度(m/s^2)，避免刚回正就猛加速
+    speed_decel_rate: 2.5  # 目标速度降低时的最大减速度(m/s^2)，快飞时快速降速
+    enable_curve_adaptive_control: true  # 用offset/heading/curvature连续估计弯道强度
+    curve_offset_limit: 0.70  # abs(offset)达到该值时弯道强度约为1
+    curve_heading_limit: 0.80  # abs(heading_error)达到该值时弯道强度约为1
+    curve_curvature_limit: 2.50  # curvature经常被感知夹到±1，放宽避免速度长期压到最低
+    curve_factor_smoothing_alpha: 0.35  # 兼容旧参数；新逻辑使用下面的上升/释放系数
+    curve_factor_attack_alpha: 0.65  # 弯道强度上升系数，越大越快进入低速/大舵状态
+    curve_factor_release_alpha: 0.06  # 弯道强度释放系数，越小越不容易刚回正就加速
+    offset_deadband: 0.035  # 小offset当作0，减少直道细碎左右修正
     wheel_radius: 0.032    # Wheel radius in meters
     
     # ==================== 积分限幅 ====================
     integral_max: 0.25  # 积分项最大值，防止积分饱和
-    max_steering: 1.0      # Maximum steering ratio (-1.0 to 1.0)
-    steering_slew_rate: 0.0  # 最大转向变化率(比例/秒)，0表示关闭
+    max_steering: 0.6      # 关闭曲率自适应时的最大转向比例
+    steering_slew_rate: 2.0  # 关闭曲率自适应时的最大转向变化率(比例/秒)
+    straight_max_steering: 0.25  # 直道/高速时限制舵角，避免微小噪声把车甩出去
+    curve_max_steering: 0.95  # 急弯/低速时放开舵角，允许更小转弯半径
+    straight_steering_slew_rate: 1.6  # 直道转向变化率限制
+    curve_steering_slew_rate: 4.0  # 弯道转向变化率限制
     
     # ==================== 超时设置 ====================
     invalid_timeout: 0.5   # Timeout for is_valid=False (seconds)
@@ -27,8 +46,8 @@
     enable_manual_override: true  # 键盘接管时释放/cmd_vel，避免和自动巡线冲突
     use_lane_state: true  # 订阅/perception/lane_state；旧center_offset仍保留为回退
     lane_state_timeout: 0.3  # lane_state超过该时间未更新时，仅使用旧center_offset
-    heading_gain: 0.0  # 额外航向角转向项；默认0保持原控制行为
-    curvature_gain: 0.0  # 额外曲率前馈项；默认0保持原控制行为
+    heading_gain: 0.12  # 航向角前馈，提前进弯；过大会左右摆
+    curvature_gain: 0.06  # 曲率前馈，帮助小半径弯；过大会放大拟合噪声
 
     # ==================== 弹射起步 ====================
     # 感知发布 task_state=START_BOOST 时触发一次开环冲刺；Go/Gate消失或超过时长后恢复PID。

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libyolov8-kaylordut.a CMakeFiles/yolov8-kaylordut.dir/camera.cpp.o CMakeFiles/yolov8-kaylordut.dir/image_process.cpp.o CMakeFiles/yolov8-kaylordut.dir/postprocess.cpp.o CMakeFiles/yolov8-kaylordut.dir/rknn_pool.cpp.o CMakeFiles/yolov8-kaylordut.dir/videofile.cpp.o CMakeFiles/yolov8-kaylordut.dir/yolov8.cpp.o
+/usr/bin/ranlib libyolov8-kaylordut.a
