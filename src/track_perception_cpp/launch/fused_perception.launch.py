@@ -36,6 +36,26 @@ def generate_launch_description():
         default_value='false',
         description='Print branch/GuideBoard decision event logs',
     )
+    enable_debug_screenshots_arg = DeclareLaunchArgument(
+        'enable_debug_screenshots',
+        default_value='false',
+        description='Save rendered debug screenshots',
+    )
+    debug_screenshot_interval_sec_arg = DeclareLaunchArgument(
+        'debug_screenshot_interval_sec',
+        default_value='0.0',
+        description='Screenshot interval in seconds; 0 disables automatic screenshots',
+    )
+    debug_screenshot_branch_only_arg = DeclareLaunchArgument(
+        'debug_screenshot_branch_only',
+        default_value='false',
+        description='Only save automatic screenshots while branch is locked',
+    )
+    debug_screenshot_dir_arg = DeclareLaunchArgument(
+        'debug_screenshot_dir',
+        default_value='/tmp/fused_perception_screenshots',
+        description='Directory for debug screenshots',
+    )
 
     fused_node = Node(
         package='track_perception_cpp',
@@ -50,6 +70,16 @@ def generate_launch_description():
                 'enable_branch_event_log': ParameterValue(
                     LaunchConfiguration('enable_branch_event_log'), value_type=bool
                 ),
+                'enable_debug_screenshots': ParameterValue(
+                    LaunchConfiguration('enable_debug_screenshots'), value_type=bool
+                ),
+                'debug_screenshot_interval_sec': ParameterValue(
+                    LaunchConfiguration('debug_screenshot_interval_sec'), value_type=float
+                ),
+                'debug_screenshot_branch_only': ParameterValue(
+                    LaunchConfiguration('debug_screenshot_branch_only'), value_type=bool
+                ),
+                'debug_screenshot_dir': LaunchConfiguration('debug_screenshot_dir'),
             },
         ],
     )
@@ -59,5 +89,9 @@ def generate_launch_description():
         show_window_arg,
         enable_status_log_arg,
         enable_branch_event_log_arg,
+        enable_debug_screenshots_arg,
+        debug_screenshot_interval_sec_arg,
+        debug_screenshot_branch_only_arg,
+        debug_screenshot_dir_arg,
         fused_node,
     ])

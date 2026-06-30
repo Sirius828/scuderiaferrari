@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <numeric>
 #include <sstream>
 
@@ -139,6 +140,10 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.fit_order = clampValue(cfg_.fit_order, 1, 2);
   cfg_.branch_fit_order = clampValue(cfg_.branch_fit_order, 1, 2);
   locked_branch_side_ = cfg_.outer_side;
+  branch_entry_anchor_valid_ = false;
+  branch_entry_anchor_lost_count_ = 0;
+  virtual_branch_target_valid_ = false;
+  virtual_branch_target_lost_count_ = 0;
   band_lane_widths_.assign(static_cast<size_t>(cfg_.band_count), std::nullopt);
 }
 
@@ -223,6 +228,10 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
         branch_locked_ = true;
         locked_branch_side_ = target_branch;
         lock_start_time_ = current_time;
+        branch_entry_anchor_valid_ = false;
+        branch_entry_anchor_lost_count_ = 0;
+        virtual_branch_target_valid_ = false;
+        virtual_branch_target_lost_count_ = 0;
         branch_confirm_count_ = 0;
         exit_confirm_count_ = 0;
         merge_wide_locked_ = false;
@@ -255,6 +264,10 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
           exit_confirm_count_ >= cfg_.exit_single_path_confirm_frames) {
         branch_locked_ = false;
         locked_branch_side_ = cfg_.outer_side;
+        branch_entry_anchor_valid_ = false;
+        branch_entry_anchor_lost_count_ = 0;
+        virtual_branch_target_valid_ = false;
+        virtual_branch_target_lost_count_ = 0;
         branch_confirm_count_ = 0;
         exit_confirm_count_ = 0;
       }
@@ -268,9 +281,14 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     road_state = currentRoadState();
     raw_points = collectCenterlinePoints(bands, branch_locked_, target_side, last_center_x, w, current_time);
     int fit_order = branch_locked_ ? cfg_.branch_fit_order : cfg_.fit_order;
-    fit_points = filterCenterlinePoints(raw_points, w, last_center_x);
+    if (branch_locked_ && (cfg_.enable_branch_anchor_fit || cfg_.enable_virtual_branch_racing_line)) {
+      fit_points = raw_points;
+    } else {
+      fit_points = filterCenterlinePoints(raw_points, w, last_center_x);
+    }
     appendDetectionFitPoints(fit_points, detections, h);
-    if (branch_locked_ && cfg_.enable_branch_bottom_anchor && fit_order >= 2) {
+    if (branch_locked_ && !cfg_.enable_branch_anchor_fit && !cfg_.enable_virtual_branch_racing_line &&
+        cfg_.enable_branch_bottom_anchor && fit_order >= 2) {
       fit_points.emplace_back(w * cfg_.branch_bottom_anchor_x_ratio,
                               h * cfg_.branch_bottom_anchor_y_ratio,
                               cfg_.branch_bottom_anchor_weight);
@@ -559,13 +577,18 @@ std::optional<LaneDecision::Segment> LaneDecision::chooseTargetSegment(
   }
   if (band.segments.size() == 1) {
     Segment seg = band.segments.front();
+    if (!cfg_.enable_single_wide_virtual_segment) {
+      return seg;
+    }
     auto lane_width = getBandLaneWidth(band.index);
     if (!lane_width || *lane_width <= 0.0 ||
         seg.width < *lane_width * std::max(1.05f, cfg_.merge_wide_segment_ratio)) {
       return seg;
     }
     double width = seg.x1 - seg.x0;
-    double target_x = side == "left" ? seg.x0 + width * 0.20 : seg.x0 + width * 0.80;
+    double ratio = side == "left" ? cfg_.single_wide_virtual_left_ratio : cfg_.single_wide_virtual_right_ratio;
+    ratio = clampValue(ratio, 0.0, 1.0);
+    double target_x = seg.x0 + width * ratio;
     Segment out = seg;
     out.center_x = target_x;
     out.width = std::max(1.0, width * 0.4);
@@ -792,10 +815,356 @@ std::optional<LaneDecision::Segment> LaneDecision::chooseMergeWideSegment(
   return out;
 }
 
+bool LaneDecision::captureBranchEntryAnchor(const std::vector<Band>& bands, const std::string& side) {
+  std::vector<cv::Point3f> entry_points;
+  if (bands.empty()) {
+    return false;
+  }
+  if (side != "left" && side != "right") {
+    return false;
+  }
+  int n = static_cast<int>(bands.size());
+  int near_count = std::max(2, static_cast<int>(std::ceil(n * clampValue(cfg_.branch_anchor_near_band_ratio,
+                                                                         0.0f, 1.0f))));
+  near_count = std::min(near_count, n);
+  double side_ratio = clampValue(cfg_.branch_racing_line_inner_ratio, 0.0f, 0.5f);
+  for (int i = std::max(0, n - near_count); i < n; ++i) {
+    if (bands[i].segments.empty()) {
+      continue;
+    }
+    std::optional<double> x;
+    if (bands[i].segments.size() >= 2) {
+      auto target = chooseTargetSegment(bands[i], side);
+      if (target) {
+        x = target->center_x;
+      }
+    } else {
+      const auto& seg = bands[i].segments.front();
+      double width = std::max(1.0, static_cast<double>(seg.x1 - seg.x0));
+      x = side == "left" ? seg.x0 + width * side_ratio : seg.x1 - width * side_ratio;
+    }
+    if (x) {
+      entry_points.emplace_back(static_cast<float>(*x), static_cast<float>(bands[i].y_center), 1.0f);
+    }
+  }
+  if (entry_points.size() < 2) {
+    return false;
+  }
+  double sx = 0.0;
+  double sy = 0.0;
+  for (const auto& p : entry_points) {
+    sx += p.x;
+    sy += p.y;
+  }
+  double inv = 1.0 / static_cast<double>(entry_points.size());
+  branch_entry_anchor_x_ = sx * inv;
+  branch_entry_anchor_y_ = sy * inv;
+  std::vector<double> coeffs;
+  branch_entry_anchor_slope_ = 0.0;
+  if (weightedPolyfit(entry_points, 1, &coeffs) && coeffs.size() >= 2) {
+    branch_entry_anchor_slope_ = coeffs[0];
+  }
+  branch_entry_anchor_valid_ = true;
+  branch_entry_anchor_lost_count_ = 0;
+  return true;
+}
+
+std::vector<cv::Point3f> LaneDecision::collectBranchAnchorFitPoints(std::vector<Band>& bands,
+                                                                    const std::string& side) const {
+  std::vector<cv::Point3f> points;
+  if (bands.empty()) {
+    return points;
+  }
+
+  int n = static_cast<int>(bands.size());
+  int near_count = std::max(1, static_cast<int>(std::ceil(n * clampValue(cfg_.branch_anchor_near_band_ratio,
+                                                                         0.0f, 1.0f))));
+  int far_count = std::max(1, static_cast<int>(std::ceil(n * clampValue(cfg_.branch_anchor_far_band_ratio,
+                                                                        0.0f, 1.0f))));
+  near_count = std::min(near_count, n);
+  far_count = std::min(far_count, n);
+
+  std::vector<cv::Point3f> left_branch_points;
+  std::vector<cv::Point3f> right_branch_points;
+  std::vector<int> left_branch_indices;
+  std::vector<int> right_branch_indices;
+  for (int i = 0; i < n; ++i) {
+    if (bands[i].segments.size() < 2) {
+      continue;
+    }
+    auto left = chooseTargetSegment(bands[i], "left");
+    auto right = chooseTargetSegment(bands[i], "right");
+    if (left) {
+      left_branch_points.emplace_back(static_cast<float>(left->center_x),
+                                      static_cast<float>(bands[i].y_center), 1.0f);
+      left_branch_indices.push_back(i);
+    }
+    if (right) {
+      right_branch_points.emplace_back(static_cast<float>(right->center_x),
+                                       static_cast<float>(bands[i].y_center), 1.0f);
+      right_branch_indices.push_back(i);
+    }
+  }
+
+  int full_branch_min_points = std::max(0, cfg_.branch_anchor_full_branch_min_points);
+  if (cfg_.enable_branch_full_branch_fit &&
+      static_cast<int>(left_branch_points.size()) > full_branch_min_points &&
+      static_cast<int>(right_branch_points.size()) > full_branch_min_points) {
+    const auto& branch_points = side == "right" ? right_branch_points : left_branch_points;
+    const auto& branch_indices = side == "right" ? right_branch_indices : left_branch_indices;
+    for (int index : branch_indices) {
+      auto target = chooseTargetSegment(bands[index], side);
+      if (target) {
+        bands[index].selected_segment = *target;
+      }
+    }
+    return branch_points;
+  }
+
+  auto make_band_center = [](const Band& band) -> std::optional<Segment> {
+    if (band.segments.empty()) {
+      return std::nullopt;
+    }
+    int x0 = std::numeric_limits<int>::max();
+    int x1 = std::numeric_limits<int>::min();
+    int pixels = 0;
+    for (const auto& seg : band.segments) {
+      x0 = std::min(x0, seg.x0);
+      x1 = std::max(x1, seg.x1);
+      pixels += seg.pixel_count;
+    }
+    if (x1 <= x0) {
+      return std::nullopt;
+    }
+    Segment out;
+    out.x0 = x0;
+    out.x1 = x1;
+    out.width = x1 - x0;
+    out.center_x = (x0 + x1) * 0.5;
+    out.pixel_count = std::max(1, pixels);
+    out.virtual_segment = band.segments.size() > 1;
+    return out;
+  };
+
+  for (int i = 0; i < far_count; ++i) {
+    auto target = chooseTargetSegment(bands[i], side);
+    if (!target) {
+      continue;
+    }
+    bands[i].selected_segment = *target;
+    points.emplace_back(static_cast<float>(target->center_x), static_cast<float>(bands[i].y_center), 1.0f);
+  }
+
+  int near_begin = std::max(far_count, n - near_count);
+  for (int i = near_begin; i < n; ++i) {
+    auto target = make_band_center(bands[i]);
+    if (!target) {
+      continue;
+    }
+    bands[i].selected_segment = *target;
+    points.emplace_back(static_cast<float>(target->center_x), static_cast<float>(bands[i].y_center), 1.0f);
+  }
+
+  return points;
+}
+
+std::vector<cv::Point3f> LaneDecision::collectVirtualBranchRacingLinePoints(std::vector<Band>& bands,
+                                                                           const std::string& side) {
+  std::vector<cv::Point3f> near_branch_points;
+  std::vector<cv::Point3f> target_branch_points;
+  std::vector<int> target_branch_indices;
+  std::vector<cv::Point3f> branch_points;
+  std::vector<int> branch_point_indices;
+  if (bands.empty()) {
+    return {};
+  }
+
+  int n = static_cast<int>(bands.size());
+  int near_count = std::max(2, static_cast<int>(std::ceil(n * clampValue(cfg_.branch_anchor_near_band_ratio,
+                                                                         0.0f, 1.0f))));
+  int far_count = std::max(2, static_cast<int>(std::ceil(n * clampValue(cfg_.branch_anchor_far_band_ratio,
+                                                                        0.0f, 1.0f))));
+  near_count = std::min(near_count, n);
+  far_count = std::min(far_count, n);
+
+  for (int i = 0; i < n; ++i) {
+    if (bands[i].segments.size() < 2) {
+      continue;
+    }
+    auto target = chooseTargetSegment(bands[i], side);
+    if (!target) {
+      continue;
+    }
+    target_branch_points.emplace_back(static_cast<float>(target->center_x),
+                                      static_cast<float>(bands[i].y_center), 1.0f);
+    target_branch_indices.push_back(i);
+    if (i >= std::max(0, n - near_count)) {
+      near_branch_points.emplace_back(static_cast<float>(target->center_x),
+                                      static_cast<float>(bands[i].y_center), 1.0f);
+    }
+    if (static_cast<int>(branch_points.size()) < far_count) {
+      branch_points.emplace_back(static_cast<float>(target->center_x),
+                                 static_cast<float>(bands[i].y_center), 1.0f);
+      branch_point_indices.push_back(i);
+    }
+  }
+
+  double near_visible_ratio = static_cast<double>(near_branch_points.size()) / static_cast<double>(near_count);
+  int handover_min_points = std::max(2, cfg_.virtual_branch_handover_min_points);
+  if (cfg_.enable_virtual_branch_handover &&
+      static_cast<int>(target_branch_points.size()) >= handover_min_points) {
+    for (int index : target_branch_indices) {
+      auto target = chooseTargetSegment(bands[index], side);
+      if (target) {
+        bands[index].selected_segment = *target;
+      }
+    }
+    return target_branch_points;
+  }
+
+  if (!captureBranchEntryAnchor(bands, side)) {
+    int max_lost = std::max(0, cfg_.virtual_branch_anchor_lost_frames);
+    if (!branch_entry_anchor_valid_ || branch_entry_anchor_lost_count_ >= max_lost) {
+      branch_entry_anchor_valid_ = false;
+      return {};
+    }
+    ++branch_entry_anchor_lost_count_;
+  }
+
+  for (int index : branch_point_indices) {
+    auto target = chooseTargetSegment(bands[index], side);
+    if (target) {
+      bands[index].selected_segment = *target;
+    }
+  }
+
+  auto fit_slope = [](const std::vector<cv::Point3f>& points, double fallback) {
+    std::vector<double> coeffs;
+    if (weightedPolyfit(points, 1, &coeffs) && coeffs.size() >= 2) {
+      return coeffs[0];
+    }
+    return fallback;
+  };
+
+  auto avg_point = [](const std::vector<cv::Point3f>& points) {
+    double sx = 0.0;
+    double sy = 0.0;
+    for (const auto& p : points) {
+      sx += p.x;
+      sy += p.y;
+    }
+    double inv = 1.0 / static_cast<double>(points.size());
+    return cv::Point2d(sx * inv, sy * inv);
+  };
+
+  cv::Point2d p0(branch_entry_anchor_x_, branch_entry_anchor_y_);
+  double main_slope = branch_entry_anchor_slope_;
+  if (branch_points.size() >= 2) {
+    cv::Point2d raw_target = avg_point(branch_points);
+    double raw_slope = fit_slope(branch_points, main_slope);
+    double alpha = clampValue(cfg_.virtual_branch_anchor_smoothing_alpha, 0.0f, 1.0f);
+    if (!virtual_branch_target_valid_) {
+      virtual_branch_target_x_ = raw_target.x;
+      virtual_branch_target_y_ = raw_target.y;
+      virtual_branch_target_slope_ = raw_slope;
+      virtual_branch_target_valid_ = true;
+    } else {
+      virtual_branch_target_x_ += (raw_target.x - virtual_branch_target_x_) * alpha;
+      virtual_branch_target_y_ += (raw_target.y - virtual_branch_target_y_) * alpha;
+      virtual_branch_target_slope_ += (raw_slope - virtual_branch_target_slope_) * alpha;
+    }
+    virtual_branch_target_lost_count_ = 0;
+  } else {
+    int max_lost = std::max(0, cfg_.virtual_branch_anchor_lost_frames);
+    if (!virtual_branch_target_valid_ || virtual_branch_target_lost_count_ >= max_lost) {
+      virtual_branch_target_valid_ = false;
+      return {};
+    }
+    ++virtual_branch_target_lost_count_;
+  }
+
+  cv::Point2d p1(virtual_branch_target_x_, virtual_branch_target_y_);
+  double branch_slope = virtual_branch_target_slope_;
+  if (near_branch_points.size() >= 2) {
+    double visible_ratio = static_cast<double>(near_branch_points.size()) / static_cast<double>(near_count);
+    double min_ratio = clampValue(cfg_.virtual_branch_near_branch_min_ratio, 0.0f, 1.0f);
+    if (visible_ratio > min_ratio) {
+      double denom = std::max(1e-6, 1.0 - min_ratio);
+      double blend = clampValue((visible_ratio - min_ratio) / denom *
+                                    static_cast<double>(cfg_.virtual_branch_near_branch_blend_gain),
+                                0.0, 1.0);
+      cv::Point2d branch_near = avg_point(near_branch_points);
+      double branch_near_slope = fit_slope(near_branch_points, main_slope);
+      p0.x = p0.x + (branch_near.x - p0.x) * blend;
+      main_slope = main_slope + (branch_near_slope - main_slope) * blend;
+    }
+  }
+  if (p0.y <= p1.y + 1.0) {
+    return {};
+  }
+
+  double dy = p1.y - p0.y;
+  double tangent_scale = clampValue(cfg_.virtual_branch_line_tangent_scale, 0.0f, 2.0f);
+  double m0 = main_slope * dy * tangent_scale;
+  double m1 = branch_slope * dy * tangent_scale;
+  int sample_count = std::max(4, cfg_.virtual_branch_line_samples);
+
+  std::vector<cv::Point3f> out;
+  out.reserve(static_cast<size_t>(sample_count));
+  for (int i = 0; i < sample_count; ++i) {
+    double t = sample_count == 1 ? 0.0 : static_cast<double>(i) / static_cast<double>(sample_count - 1);
+    double tt = t * t;
+    double ttt = tt * t;
+    double h00 = 2.0 * ttt - 3.0 * tt + 1.0;
+    double h10 = ttt - 2.0 * tt + t;
+    double h01 = -2.0 * ttt + 3.0 * tt;
+    double h11 = ttt - tt;
+    double y = p0.y + (p1.y - p0.y) * t;
+    double x = h00 * p0.x + h10 * m0 + h01 * p1.x + h11 * m1;
+    out.emplace_back(static_cast<float>(x), static_cast<float>(y), 1.0f);
+  }
+
+  for (auto& band : bands) {
+    if (band.segments.empty()) {
+      continue;
+    }
+    auto nearest = std::min_element(out.begin(), out.end(), [&](const cv::Point3f& a, const cv::Point3f& b) {
+      return std::abs(a.y - band.y_center) < std::abs(b.y - band.y_center);
+    });
+    if (nearest == out.end()) {
+      continue;
+    }
+    Segment seg;
+    seg.center_x = nearest->x;
+    seg.width = 1.0;
+    seg.x0 = static_cast<int>(std::round(nearest->x));
+    seg.x1 = seg.x0;
+    seg.pixel_count = 1;
+    seg.virtual_segment = true;
+    band.selected_segment = seg;
+  }
+
+  return out;
+}
+
 std::vector<cv::Point3f> LaneDecision::collectCenterlinePoints(
     std::vector<Band>& bands, bool branch_locked, const std::string& side,
     std::optional<double> last_center_x, int image_width, double now) {
   std::vector<cv::Point3f> points;
+  if (branch_locked && cfg_.enable_virtual_branch_racing_line) {
+    double virtual_duration = std::max(0.0f, cfg_.virtual_branch_max_duration);
+    int min_score = std::max(0, cfg_.virtual_branch_min_score);
+    if (debug_info_.branch_score >= min_score &&
+        (virtual_duration <= 0.0 || now - lock_start_time_ <= virtual_duration)) {
+      auto virtual_points = collectVirtualBranchRacingLinePoints(bands, side);
+      if (!virtual_points.empty()) {
+        return virtual_points;
+      }
+    }
+  }
+  if (branch_locked && cfg_.enable_branch_anchor_fit) {
+    return collectBranchAnchorFitPoints(bands, side);
+  }
   bool use_locked_continuity = branch_locked && last_center_x &&
                                shouldUseLockedPathContinuity(now);
   std::optional<double> branch_split_y;

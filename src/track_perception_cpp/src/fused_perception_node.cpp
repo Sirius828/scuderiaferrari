@@ -100,6 +100,10 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<bool>("show_window", false);
     declare_parameter<double>("blend_alpha", 1.0);
     declare_parameter<bool>("show_branch_debug", true);
+    declare_parameter<bool>("enable_debug_screenshots", false);
+    declare_parameter<double>("debug_screenshot_interval_sec", 0.0);
+    declare_parameter<bool>("debug_screenshot_branch_only", false);
+    declare_parameter<std::string>("debug_screenshot_dir", "/tmp/fused_perception_screenshots");
 
     declare_parameter<std::string>("det_model_path", "model/yolov8_n_det_split_int8_v2.rknn");
     declare_parameter<std::string>("label_list_path", "model/label_list.txt");
@@ -209,6 +213,26 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("branch_racing_line_gain", 1.0);
     declare_parameter<double>("branch_racing_line_exponent", 1.6);
     declare_parameter<double>("branch_racing_line_inner_ratio", 0.25);
+    declare_parameter<bool>("enable_single_wide_virtual_segment", true);
+    declare_parameter<double>("single_wide_virtual_left_ratio", 0.20);
+    declare_parameter<double>("single_wide_virtual_right_ratio", 0.80);
+    declare_parameter<bool>("enable_branch_anchor_fit", false);
+    declare_parameter<double>("branch_anchor_near_band_ratio", 0.20);
+    declare_parameter<double>("branch_anchor_far_band_ratio", 0.20);
+    declare_parameter<bool>("enable_branch_full_branch_fit", false);
+    declare_parameter<int>("branch_anchor_full_branch_min_points", 5);
+    declare_parameter<bool>("enable_virtual_branch_racing_line", false);
+    declare_parameter<int>("virtual_branch_line_samples", 13);
+    declare_parameter<double>("virtual_branch_line_tangent_scale", 0.8);
+    declare_parameter<double>("virtual_branch_near_branch_min_ratio", 0.25);
+    declare_parameter<double>("virtual_branch_near_branch_blend_gain", 1.0);
+    declare_parameter<double>("virtual_branch_anchor_smoothing_alpha", 0.35);
+    declare_parameter<int>("virtual_branch_anchor_lost_frames", 3);
+    declare_parameter<double>("virtual_branch_max_duration", 1.0);
+    declare_parameter<int>("virtual_branch_min_score", 3);
+    declare_parameter<bool>("enable_virtual_branch_handover", true);
+    declare_parameter<double>("virtual_branch_handover_near_ratio", 0.30);
+    declare_parameter<int>("virtual_branch_handover_min_points", 6);
     declare_parameter<double>("lookahead_y_ratio", 0.75);
     declare_parameter<bool>("use_heading_term", true);
     declare_parameter<double>("heading_weight", 0.10);
@@ -231,6 +255,10 @@ class FusedPerceptionNode : public rclcpp::Node {
     show_window_ = get_parameter("show_window").as_bool();
     blend_alpha_ = static_cast<float>(get_parameter("blend_alpha").as_double());
     show_branch_debug_ = get_parameter("show_branch_debug").as_bool();
+    enable_debug_screenshots_ = get_parameter("enable_debug_screenshots").as_bool();
+    debug_screenshot_interval_sec_ = get_parameter("debug_screenshot_interval_sec").as_double();
+    debug_screenshot_branch_only_ = get_parameter("debug_screenshot_branch_only").as_bool();
+    debug_screenshot_dir_ = get_parameter("debug_screenshot_dir").as_string();
     publish_detections_ = get_parameter("publish_detections").as_bool();
     publish_lane_state_ = get_parameter("publish_lane_state").as_bool();
     enable_status_log_ = get_parameter("enable_status_log").as_bool();
@@ -309,6 +337,26 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.branch_racing_line_gain = static_cast<float>(get_parameter("branch_racing_line_gain").as_double());
     lane_cfg.branch_racing_line_exponent = static_cast<float>(get_parameter("branch_racing_line_exponent").as_double());
     lane_cfg.branch_racing_line_inner_ratio = static_cast<float>(get_parameter("branch_racing_line_inner_ratio").as_double());
+    lane_cfg.enable_single_wide_virtual_segment = get_parameter("enable_single_wide_virtual_segment").as_bool();
+    lane_cfg.single_wide_virtual_left_ratio = static_cast<float>(get_parameter("single_wide_virtual_left_ratio").as_double());
+    lane_cfg.single_wide_virtual_right_ratio = static_cast<float>(get_parameter("single_wide_virtual_right_ratio").as_double());
+    lane_cfg.enable_branch_anchor_fit = get_parameter("enable_branch_anchor_fit").as_bool();
+    lane_cfg.branch_anchor_near_band_ratio = static_cast<float>(get_parameter("branch_anchor_near_band_ratio").as_double());
+    lane_cfg.branch_anchor_far_band_ratio = static_cast<float>(get_parameter("branch_anchor_far_band_ratio").as_double());
+    lane_cfg.enable_branch_full_branch_fit = get_parameter("enable_branch_full_branch_fit").as_bool();
+    lane_cfg.branch_anchor_full_branch_min_points = static_cast<int>(get_parameter("branch_anchor_full_branch_min_points").as_int());
+    lane_cfg.enable_virtual_branch_racing_line = get_parameter("enable_virtual_branch_racing_line").as_bool();
+    lane_cfg.virtual_branch_line_samples = static_cast<int>(get_parameter("virtual_branch_line_samples").as_int());
+    lane_cfg.virtual_branch_line_tangent_scale = static_cast<float>(get_parameter("virtual_branch_line_tangent_scale").as_double());
+    lane_cfg.virtual_branch_near_branch_min_ratio = static_cast<float>(get_parameter("virtual_branch_near_branch_min_ratio").as_double());
+    lane_cfg.virtual_branch_near_branch_blend_gain = static_cast<float>(get_parameter("virtual_branch_near_branch_blend_gain").as_double());
+    lane_cfg.virtual_branch_anchor_smoothing_alpha = static_cast<float>(get_parameter("virtual_branch_anchor_smoothing_alpha").as_double());
+    lane_cfg.virtual_branch_anchor_lost_frames = static_cast<int>(get_parameter("virtual_branch_anchor_lost_frames").as_int());
+    lane_cfg.virtual_branch_max_duration = static_cast<float>(get_parameter("virtual_branch_max_duration").as_double());
+    lane_cfg.virtual_branch_min_score = static_cast<int>(get_parameter("virtual_branch_min_score").as_int());
+    lane_cfg.enable_virtual_branch_handover = get_parameter("enable_virtual_branch_handover").as_bool();
+    lane_cfg.virtual_branch_handover_near_ratio = static_cast<float>(get_parameter("virtual_branch_handover_near_ratio").as_double());
+    lane_cfg.virtual_branch_handover_min_points = static_cast<int>(get_parameter("virtual_branch_handover_min_points").as_int());
     lane_cfg.lookahead_y_ratio = static_cast<float>(get_parameter("lookahead_y_ratio").as_double());
     lane_cfg.use_heading_term = get_parameter("use_heading_term").as_bool();
     lane_cfg.heading_weight = static_cast<float>(get_parameter("heading_weight").as_double());
@@ -460,7 +508,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     logDecisionStatus(lane_state, lane_debug);
 
     refreshDebugParameters();
-    if (show_window_) {
+    if (show_window_ || enable_debug_screenshots_) {
       showDebugWindow(frame_rgb, seg_map, detections, lane_state, lane_debug);
     }
 
@@ -570,8 +618,44 @@ class FusedPerceptionNode : public rclcpp::Node {
            << " alpha=" << std::clamp(blend_alpha_, 0.0f, 1.0f);
     cv::putText(vis, status.str(), cv::Point(12, 28), cv::FONT_HERSHEY_SIMPLEX, 0.65,
                 cv::Scalar(255, 255, 255), 2, cv::LINE_AA);
-    cv::imshow("fused_perception", vis);
-    cv::waitKey(1);
+    if (show_window_) {
+      cv::imshow("fused_perception", vis);
+      int key = cv::waitKey(1) & 0xff;
+      if (key == 's' || key == 'S') {
+        saveDebugScreenshot(vis, "key");
+      }
+    }
+    if (enable_debug_screenshots_) {
+      double now = nowSeconds();
+      bool branch_ok = !debug_screenshot_branch_only_ || debug_info.branch_locked;
+      double interval = std::max(0.0, debug_screenshot_interval_sec_);
+      if (branch_ok && interval > 0.0 && now - last_debug_screenshot_sec_ >= interval) {
+        saveDebugScreenshot(vis, debug_info.branch_locked ? "branch" : "auto");
+        last_debug_screenshot_sec_ = now;
+      }
+    }
+  }
+
+  void saveDebugScreenshot(const cv::Mat& vis, const std::string& reason) {
+    if (vis.empty()) {
+      return;
+    }
+    try {
+      fs::create_directories(debug_screenshot_dir_);
+      auto now = std::chrono::system_clock::now();
+      auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+      std::string filename = "fused_perception_" + reason + "_" + std::to_string(ms) + "_" +
+                             std::to_string(debug_screenshot_count_++) + ".jpg";
+      fs::path path = fs::path(debug_screenshot_dir_) / filename;
+      fs::path latest = fs::path(debug_screenshot_dir_) / "latest.jpg";
+      cv::imwrite(path.string(), vis);
+      cv::imwrite(latest.string(), vis);
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000,
+                           "saved debug screenshot: %s", path.string().c_str());
+    } catch (const std::exception& e) {
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000,
+                           "failed to save debug screenshot: %s", e.what());
+    }
   }
 
   static cv::Scalar detectionColor(const std::string& class_name) {
@@ -665,6 +749,10 @@ class FusedPerceptionNode : public rclcpp::Node {
     show_window_ = get_parameter("show_window").as_bool();
     blend_alpha_ = std::clamp(static_cast<float>(get_parameter("blend_alpha").as_double()), 0.0f, 1.0f);
     show_branch_debug_ = get_parameter("show_branch_debug").as_bool();
+    enable_debug_screenshots_ = get_parameter("enable_debug_screenshots").as_bool();
+    debug_screenshot_interval_sec_ = get_parameter("debug_screenshot_interval_sec").as_double();
+    debug_screenshot_branch_only_ = get_parameter("debug_screenshot_branch_only").as_bool();
+    debug_screenshot_dir_ = get_parameter("debug_screenshot_dir").as_string();
     enable_status_log_ = get_parameter("enable_status_log").as_bool();
     enable_branch_event_log_ = get_parameter("enable_branch_event_log").as_bool();
   }
@@ -777,6 +865,12 @@ class FusedPerceptionNode : public rclcpp::Node {
   bool show_window_{false};
   float blend_alpha_{1.0f};
   bool show_branch_debug_{true};
+  bool enable_debug_screenshots_{false};
+  double debug_screenshot_interval_sec_{0.0};
+  bool debug_screenshot_branch_only_{false};
+  std::string debug_screenshot_dir_{"/tmp/fused_perception_screenshots"};
+  double last_debug_screenshot_sec_{0.0};
+  uint64_t debug_screenshot_count_{0};
   bool publish_detections_{true};
   bool publish_lane_state_{true};
   bool enable_status_log_{false};

@@ -63,6 +63,26 @@ struct LaneDecisionConfig {
   float branch_racing_line_gain{1.0f};
   float branch_racing_line_exponent{1.6f};
   float branch_racing_line_inner_ratio{0.25f};
+  bool enable_single_wide_virtual_segment{true};
+  float single_wide_virtual_left_ratio{0.20f};
+  float single_wide_virtual_right_ratio{0.80f};
+  bool enable_branch_anchor_fit{false};
+  float branch_anchor_near_band_ratio{0.20f};
+  float branch_anchor_far_band_ratio{0.20f};
+  bool enable_branch_full_branch_fit{false};
+  int branch_anchor_full_branch_min_points{5};
+  bool enable_virtual_branch_racing_line{false};
+  int virtual_branch_line_samples{13};
+  float virtual_branch_line_tangent_scale{0.8f};
+  float virtual_branch_near_branch_min_ratio{0.25f};
+  float virtual_branch_near_branch_blend_gain{1.0f};
+  float virtual_branch_anchor_smoothing_alpha{0.35f};
+  int virtual_branch_anchor_lost_frames{3};
+  float virtual_branch_max_duration{1.0f};
+  int virtual_branch_min_score{3};
+  bool enable_virtual_branch_handover{true};
+  float virtual_branch_handover_near_ratio{0.30f};
+  int virtual_branch_handover_min_points{6};
   float lookahead_y_ratio{0.75f};
   bool use_heading_term{true};
   float heading_weight{0.10f};
@@ -202,6 +222,11 @@ class LaneDecision {
                                  const std::vector<Band>& bands) const;
   void updateMergeWideState(const std::vector<Band>& bands, double last_center_x);
   std::optional<Segment> chooseMergeWideSegment(const Band& band, std::optional<double> last_center_x);
+  bool captureBranchEntryAnchor(const std::vector<Band>& bands, const std::string& side);
+  std::vector<cv::Point3f> collectBranchAnchorFitPoints(std::vector<Band>& bands,
+                                                        const std::string& side) const;
+  std::vector<cv::Point3f> collectVirtualBranchRacingLinePoints(std::vector<Band>& bands,
+                                                               const std::string& side);
   std::vector<cv::Point3f> collectCenterlinePoints(std::vector<Band>& bands, bool branch_locked,
                                                    const std::string& side,
                                                    std::optional<double> last_center_x,
@@ -238,6 +263,16 @@ class LaneDecision {
   bool branch_locked_{false};
   std::string locked_branch_side_{"left"};
   double lock_start_time_{0.0};
+  bool branch_entry_anchor_valid_{false};
+  double branch_entry_anchor_x_{0.0};
+  double branch_entry_anchor_y_{0.0};
+  double branch_entry_anchor_slope_{0.0};
+  int branch_entry_anchor_lost_count_{0};
+  bool virtual_branch_target_valid_{false};
+  double virtual_branch_target_x_{0.0};
+  double virtual_branch_target_y_{0.0};
+  double virtual_branch_target_slope_{0.0};
+  int virtual_branch_target_lost_count_{0};
   int branch_confirm_count_{0};
   int exit_confirm_count_{0};
   bool merge_wide_locked_{false};

@@ -204,7 +204,7 @@ class ChassisController(Node):
                         steering_str = f"右转{steering_ratio*100:.0f}%"
                     
                     self.get_logger().info(
-                        f'📤 发送: {command_str} | '
+                        f'发送: {command_str} | '
                         f'状态:{enable_str} {direction_str} | '
                         f'转速:{speed_actual:.2f}rps({speed_set}) | '
                         f'舵机:{servo_pwm}({steering_str})'
@@ -252,12 +252,12 @@ class ChassisController(Node):
                                 self.yaw_pub.publish(msg)
                                 
                                 # 每秒打印一次日志
-                                if not hasattr(self, '_last_log') or time.time() - self._last_log >= 1.0:
-                                    yaw_rad = yaw_deg * 3.141592653589793 / 180.0
-                                    self.get_logger().info(f"📐 偏航角: {yaw_deg:.2f}° = {yaw_rad:.4f} rad")
-                                    self._last_log = time.time()
-                                else:
-                                    self.get_logger().debug(f"偏航角: {yaw_deg:.2f}°")
+                                # if not hasattr(self, '_last_log') or time.time() - self._last_log >= 1.0:
+                                #     yaw_rad = yaw_deg * 3.141592653589793 / 180.0
+                                #     self.get_logger().info(f"📐 偏航角: {yaw_deg:.2f}° = {yaw_rad:.4f} rad")
+                                #     self._last_log = time.time()
+                                # else:
+                                #     self.get_logger().debug(f"偏航角: {yaw_deg:.2f}°")
                             
                             except ValueError:
                                 self.get_logger().warn(f"无效的偏航角数据: {line}")
