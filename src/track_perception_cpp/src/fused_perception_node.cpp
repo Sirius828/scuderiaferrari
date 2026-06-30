@@ -218,6 +218,11 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("near_offset_weight", 0.90);
     declare_parameter<double>("max_offset_jump", 2.0);
     declare_parameter<double>("offset_smoothing_alpha", 0.35);
+    declare_parameter<bool>("enable_left_boundary_template_line", false);
+    declare_parameter<std::string>("left_boundary_template_side", "left");
+    declare_parameter<std::string>("left_boundary_template_offsets", "");
+    declare_parameter<int>("left_boundary_template_min_points", 6);
+    declare_parameter<double>("left_boundary_template_weight", 1.0);
     declare_parameter<std::string>("outer_side", "left");
     declare_parameter<bool>("enable_status_log", false);
     declare_parameter<bool>("enable_branch_event_log", false);
@@ -324,6 +329,14 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.near_offset_weight = static_cast<float>(get_parameter("near_offset_weight").as_double());
     lane_cfg.max_offset_jump = static_cast<float>(get_parameter("max_offset_jump").as_double());
     lane_cfg.offset_smoothing_alpha = static_cast<float>(get_parameter("offset_smoothing_alpha").as_double());
+    lane_cfg.enable_left_boundary_template_line =
+        get_parameter("enable_left_boundary_template_line").as_bool();
+    lane_cfg.left_boundary_template_side = get_parameter("left_boundary_template_side").as_string();
+    lane_cfg.left_boundary_template_offsets = get_parameter("left_boundary_template_offsets").as_string();
+    lane_cfg.left_boundary_template_min_points =
+        static_cast<int>(get_parameter("left_boundary_template_min_points").as_int());
+    lane_cfg.left_boundary_template_weight =
+        static_cast<float>(get_parameter("left_boundary_template_weight").as_double());
     lane_cfg.enable_obstacle_avoidance = get_parameter("enable_obstacle_avoidance").as_bool();
     lane_cfg.obstacle_labels = parseLabelSet(get_parameter("obstacle_labels").as_string());
     lane_cfg.obstacle_stop_labels = parseLabelSet(get_parameter("obstacle_stop_labels").as_string());
@@ -577,6 +590,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     status << lane_state.road_state << " offset=" << lane_state.control_offset
            << " valid=" << (lane_state.is_valid ? 1 : 0) << " task=" << lane_state.task_state
            << " trans=" << (debug_info.branch_entry_transition_active ? 1 : 0)
+           << " lb_tpl=" << (debug_info.left_boundary_template_active ? 1 : 0)
            << " alpha=" << std::clamp(blend_alpha_, 0.0f, 1.0f);
     cv::putText(vis, status.str(), cv::Point(12, 28), cv::FONT_HERSHEY_SIMPLEX, 0.65,
                 cv::Scalar(255, 255, 255), 2, cv::LINE_AA);
@@ -743,10 +757,13 @@ class FusedPerceptionNode : public rclcpp::Node {
           debug_info.branch_score != last_branch_score_) {
         RCLCPP_INFO(get_logger(),
                     "branch_detected=%d score=%d transition=%d near_single=%d branch_points=%d reason=%s "
-                    "asym_wide=%d wide_bands=%d residual=%.1f segments=%d raw_points=%d fit_points=%d",
+                    "lb_tpl=%d lb_pts=%d lb_reason=%s asym_wide=%d wide_bands=%d residual=%.1f "
+                    "segments=%d raw_points=%d fit_points=%d",
                     debug_info.branch_detected, debug_info.branch_score,
                     debug_info.branch_entry_transition_active, debug_info.branch_transition_near_single_bands,
                     debug_info.branch_transition_branch_points, debug_info.branch_transition_reason.c_str(),
+                    debug_info.left_boundary_template_active, debug_info.left_boundary_template_points,
+                    debug_info.left_boundary_template_reason.c_str(),
                     debug_info.asym_wide_detected, debug_info.asym_wide_band_count,
                     debug_info.center_residual_px, debug_info.segment_count,
                     debug_info.raw_point_count, debug_info.fit_point_count);
@@ -781,7 +798,7 @@ class FusedPerceptionNode : public rclcpp::Node {
                 "status road=%s branch=%s offset=%.3f lateral=%.3f heading=%.3f conf=%.2f valid=%d "
                 "branch_detected=%d score=%d guideboard_roi=%d/%d guideboard_best=%.2f@(%.0f,%.0f) "
                 "transition=%d near_single=%d branch_pts=%d reason=%s asym=%d wide_bands=%d residual=%.1f "
-                "obstacles=%zu segments=%d points=%d/%d task=%s",
+                "lb_tpl=%d lb_pts=%d lb_reason=%s obstacles=%zu segments=%d points=%d/%d task=%s",
                 lane_state.road_state.c_str(), lane_state.branch_side.c_str(),
                 lane_state.control_offset, lane_state.lateral_offset, lane_state.heading_error,
                 lane_state.confidence, lane_state.is_valid, debug_info.branch_detected,
@@ -792,6 +809,8 @@ class FusedPerceptionNode : public rclcpp::Node {
                 debug_info.branch_transition_branch_points, debug_info.branch_transition_reason.c_str(),
                 debug_info.asym_wide_detected,
                 debug_info.asym_wide_band_count, debug_info.center_residual_px,
+                debug_info.left_boundary_template_active, debug_info.left_boundary_template_points,
+                debug_info.left_boundary_template_reason.c_str(),
                 debug_info.obstacle_zones.size(), debug_info.segment_count,
                 debug_info.raw_point_count, debug_info.fit_point_count,
                 lane_state.task_state.c_str());

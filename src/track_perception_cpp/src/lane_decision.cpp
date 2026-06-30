@@ -108,6 +108,21 @@ bool weightedPolyfit(const std::vector<cv::Point3f>& points, int order,
   return solveLinearSystem(std::move(ata), std::move(atb), coeffs);
 }
 
+std::vector<double> parseDoubleList(const std::string& text) {
+  std::vector<double> values;
+  std::stringstream ss(text);
+  std::string item;
+  while (std::getline(ss, item, ',')) {
+    try {
+      size_t pos = 0;
+      double value = std::stod(item, &pos);
+      values.push_back(value);
+    } catch (const std::exception&) {
+    }
+  }
+  return values;
+}
+
 }  // namespace
 
 double nowSeconds() {
@@ -139,6 +154,9 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.branch_confirm_frames = std::max(1, cfg_.branch_confirm_frames);
   cfg_.fit_order = clampValue(cfg_.fit_order, 1, 2);
   cfg_.branch_fit_order = clampValue(cfg_.branch_fit_order, 1, 2);
+  cfg_.left_boundary_template_min_points = std::max(1, cfg_.left_boundary_template_min_points);
+  cfg_.left_boundary_template_weight = std::max(0.01f, cfg_.left_boundary_template_weight);
+  left_boundary_template_offsets_ = parseDoubleList(cfg_.left_boundary_template_offsets);
   locked_branch_side_ = cfg_.outer_side;
 }
 
@@ -208,7 +226,9 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
       if (branch_confirm_count_ >= cfg_.branch_confirm_frames) {
         double last_center_x = last_offset_ * w / 2.0 + w / 2.0;
         std::string target_branch = cfg_.outer_side;
-        if (guideboard_seen) {
+        if (isLeftBoundaryTemplateReady()) {
+          target_branch = cfg_.left_boundary_template_side;
+        } else if (guideboard_seen) {
           target_branch = cfg_.guideboard_branch;
         } else if (cfg_.enable_continuity_branch_selection) {
           auto continuity_branch = chooseBranchSideByContinuity(bands, w, last_center_x);
@@ -263,12 +283,34 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     debug_info_.asym_wide_detected = road_class == RoadClass::AsymWide;
     debug_info_.asym_wide_band_count = countAsymWideBands(bands);
     debug_info_.center_residual_px = static_cast<float>(calculateCenterResidual(raw_points, w));
-    int fit_order = branch_locked_ ? cfg_.branch_fit_order : cfg_.fit_order;
-    fit_points = filterCenterlinePoints(raw_points, w, last_center_x);
-    if (road_class == RoadClass::AsymWide) {
+    bool template_active = shouldUseLeftBoundaryTemplate(branch_detected);
+    if (template_active) {
+      auto template_points = collectLeftBoundaryTemplatePoints(bands, w);
+      if (static_cast<int>(template_points.size()) >= cfg_.left_boundary_template_min_points) {
+        raw_points = std::move(template_points);
+        road_state = "BRANCH";
+        debug_info_.left_boundary_template_active = true;
+        debug_info_.left_boundary_template_reason = "active";
+        debug_info_.branch_entry_transition_active = false;
+        debug_info_.branch_transition_reason = "left_boundary_template";
+      } else {
+        debug_info_.left_boundary_template_reason = "few_points";
+      }
+    } else if (cfg_.enable_left_boundary_template_line) {
+      (void)0;
+    }
+    int fit_order = (branch_locked_ || debug_info_.left_boundary_template_active) ? cfg_.branch_fit_order : cfg_.fit_order;
+    if (debug_info_.left_boundary_template_active) {
+      fit_points = raw_points;
+    } else {
+      fit_points = filterCenterlinePoints(raw_points, w, last_center_x);
+    }
+    if (!debug_info_.left_boundary_template_active && road_class == RoadClass::AsymWide) {
       fit_points = filterAsymWidePoints(fit_points, bands);
     }
-    appendDetectionFitPoints(fit_points, detections, h);
+    if (!debug_info_.left_boundary_template_active) {
+      appendDetectionFitPoints(fit_points, detections, h);
+    }
 
     double raw_offset = 0.0;
     if (fitCenterlineAndComputeOffset(fit_points, h, w, fit_order, &raw_offset, &fit_coeffs,
@@ -699,6 +741,72 @@ double LaneDecision::calculateLaneConfidence(const std::vector<cv::Point3f>& fit
     return 0.0;
   }
   return clampValue(static_cast<double>(fit_points.size()) / valid_band_count, 0.0, 1.0);
+}
+
+bool LaneDecision::isLeftBoundaryTemplateReady() const {
+  return cfg_.enable_left_boundary_template_line &&
+         !left_boundary_template_offsets_.empty() &&
+         cfg_.left_boundary_template_side == "left";
+}
+
+bool LaneDecision::shouldUseLeftBoundaryTemplate(bool branch_detected) {
+  if (!cfg_.enable_left_boundary_template_line) {
+    debug_info_.left_boundary_template_reason = "disabled";
+    return false;
+  }
+  if (left_boundary_template_offsets_.empty()) {
+    debug_info_.left_boundary_template_reason = "no_offsets";
+    return false;
+  }
+  if (cfg_.left_boundary_template_side != "left") {
+    debug_info_.left_boundary_template_reason = "side_not_left";
+    return false;
+  }
+  if (!branch_detected && !branch_locked_) {
+    debug_info_.left_boundary_template_reason = "no_branch_or_lock";
+    return false;
+  }
+  debug_info_.left_boundary_template_reason = "ready";
+  return true;
+}
+
+std::vector<cv::Point3f> LaneDecision::collectLeftBoundaryTemplatePoints(
+    std::vector<Band>& bands, int image_width) {
+  std::vector<cv::Point3f> points;
+  if (left_boundary_template_offsets_.empty()) {
+    debug_info_.left_boundary_template_reason = "no_offsets";
+    return points;
+  }
+  float weight = std::max(0.01f, cfg_.left_boundary_template_weight);
+  for (auto& band : bands) {
+    if (band.segments.empty() || band.index < 0 ||
+        band.index >= static_cast<int>(left_boundary_template_offsets_.size())) {
+      continue;
+    }
+    double offset = left_boundary_template_offsets_[band.index];
+    if (!std::isfinite(offset) || offset <= 0.0) {
+      continue;
+    }
+    const auto& left_segment = *std::min_element(
+        band.segments.begin(), band.segments.end(),
+        [](const Segment& a, const Segment& b) { return a.x0 < b.x0; });
+    double target_x = clampValue(static_cast<double>(left_segment.x0) + offset,
+                                 0.0, static_cast<double>(std::max(0, image_width - 1)));
+    Segment virtual_seg;
+    virtual_seg.x0 = static_cast<int>(std::round(target_x));
+    virtual_seg.x1 = virtual_seg.x0;
+    virtual_seg.center_x = target_x;
+    virtual_seg.width = 1.0;
+    virtual_seg.pixel_count = 1;
+    virtual_seg.virtual_segment = true;
+    band.selected_segment = virtual_seg;
+    points.emplace_back(static_cast<float>(target_x), static_cast<float>(band.y_center), weight);
+  }
+  debug_info_.left_boundary_template_points = static_cast<int>(points.size());
+  if (points.empty()) {
+    debug_info_.left_boundary_template_reason = "no_valid_left_boundary";
+  }
+  return points;
 }
 
 std::vector<cv::Point3f> LaneDecision::collectCenterlinePoints(

@@ -324,6 +324,9 @@ ament_cmake_symlink_install_directory("/home/orangepi/scuderiaferrari/src/track_
 # install(DIRECTORY "config" "DESTINATION" "share/track_perception_cpp")
 ament_cmake_symlink_install_directory("/home/orangepi/scuderiaferrari/src/track_perception_cpp" DIRECTORY "config" "DESTINATION" "share/track_perception_cpp")
 
+# install(DIRECTORY "scripts" "DESTINATION" "share/track_perception_cpp")
+ament_cmake_symlink_install_directory("/home/orangepi/scuderiaferrari/src/track_perception_cpp" DIRECTORY "scripts" "DESTINATION" "share/track_perception_cpp")
+
 # install(FILES "/home/orangepi/scuderiaferrari/build/track_perception_cpp/ament_cmake_index/share/ament_index/resource_index/package_run_dependencies/track_perception_cpp" "DESTINATION" "share/ament_index/resource_index/package_run_dependencies")
 ament_cmake_symlink_install_files("/home/orangepi/scuderiaferrari/src/track_perception_cpp" FILES "/home/orangepi/scuderiaferrari/build/track_perception_cpp/ament_cmake_index/share/ament_index/resource_index/package_run_dependencies/track_perception_cpp" "DESTINATION" "share/ament_index/resource_index/package_run_dependencies")
 

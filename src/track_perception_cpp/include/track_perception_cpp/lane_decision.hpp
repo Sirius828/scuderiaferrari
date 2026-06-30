@@ -69,6 +69,12 @@ struct LaneDecisionConfig {
   float max_offset_jump{2.0f};
   float offset_smoothing_alpha{0.35f};
 
+  bool enable_left_boundary_template_line{false};
+  std::string left_boundary_template_side{"left"};
+  std::string left_boundary_template_offsets;
+  int left_boundary_template_min_points{6};
+  float left_boundary_template_weight{1.0f};
+
   bool enable_obstacle_avoidance{false};
   std::unordered_set<std::string> obstacle_labels{"Human", "Car"};
   std::unordered_set<std::string> obstacle_stop_labels{"Human"};
@@ -153,6 +159,9 @@ struct LaneDebugInfo {
   int branch_transition_near_single_bands{0};
   int branch_transition_branch_points{0};
   std::string branch_transition_reason;
+  bool left_boundary_template_active{false};
+  int left_boundary_template_points{0};
+  std::string left_boundary_template_reason;
   int raw_point_count{0};
   int fit_point_count{0};
   int segment_count{0};
@@ -220,6 +229,10 @@ class LaneDecision {
                                  int image_width) const;
   double calculateLaneConfidence(const std::vector<cv::Point3f>& fit_points,
                                  const std::vector<Band>& bands) const;
+  bool isLeftBoundaryTemplateReady() const;
+  bool shouldUseLeftBoundaryTemplate(bool branch_detected);
+  std::vector<cv::Point3f> collectLeftBoundaryTemplatePoints(std::vector<Band>& bands,
+                                                             int image_width);
   std::vector<cv::Point3f> collectCenterlinePoints(std::vector<Band>& bands, bool branch_locked,
                                                    const std::string& side,
                                                    std::optional<double> last_center_x,
@@ -260,6 +273,7 @@ class LaneDecision {
   double lock_start_time_{0.0};
   int branch_confirm_count_{0};
   int exit_confirm_count_{0};
+  std::vector<double> left_boundary_template_offsets_;
   bool traffic_stop_active_{false};
   bool finish_stop_active_{false};
   bool obstacle_stop_active_{false};

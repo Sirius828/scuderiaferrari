@@ -314,6 +314,7 @@ public:
 - 状态机 NORMAL / FORK_STRAIGHT / RECOVER
 - RoadModel 平滑更新
 - 进入岔路时冻结 RoadModel
+
 - 用曲率外推生成 predicted_path
 - FORK_STRAIGHT 中不再使用整块 mask 中心线
 
@@ -329,3 +330,5 @@ public:
 
 最终效果：
 车辆在固定赛道的“主路 + 右侧分岔”处选择直行时，即使右侧岔路导致 mask 变宽、远处 band 闪烁，也能沿进入岔路前估计出的主路曲率继续平滑前进，不被右侧分支吸走。
+
+弯道上还是有一些延迟,比如右弯的时候一直偏画面太右,offset始终不能变小
