@@ -138,6 +138,12 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<int>("branch_detect_min_bands", 2);
     declare_parameter<int>("branch_confirm_frames", 2);
     declare_parameter<double>("branch_detect_far_band_ratio", 0.7);
+    declare_parameter<bool>("enable_branch_entry_transition", true);
+    declare_parameter<double>("branch_transition_near_main_ratio", 0.4);
+    declare_parameter<int>("branch_transition_min_branch_points", 2);
+    declare_parameter<int>("branch_transition_samples", 12);
+    declare_parameter<double>("branch_transition_weight", 1.0);
+    declare_parameter<bool>("branch_transition_use_when_near_single_path", true);
     declare_parameter<bool>("enable_guideboard_branch_selection", true);
     declare_parameter<std::string>("guideboard_branch", "right");
     declare_parameter<double>("guideboard_detect_y0_ratio", 0.2);
@@ -153,19 +159,23 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("min_branch_lock_time", 0.8);
     declare_parameter<int>("exit_single_path_confirm_frames", 5);
     declare_parameter<double>("exit_single_path_min_ratio", 0.8);
-    declare_parameter<bool>("enable_merge_wide_segment_logic", true);
-    declare_parameter<double>("merge_wide_segment_ratio", 1.35);
-    declare_parameter<int>("merge_wide_min_bands", 2);
-    declare_parameter<int>("merge_wide_confirm_frames", 2);
-    declare_parameter<int>("merge_wide_release_frames", 4);
-    declare_parameter<double>("merge_wide_lane_width_alpha", 0.2);
-    declare_parameter<double>("merge_wide_max_duration", 1.5);
+    declare_parameter<double>("asym_wide_segment_ratio", 1.45);
+    declare_parameter<int>("asym_wide_min_bands", 3);
+    declare_parameter<double>("asym_wide_center_residual_ratio", 0.16);
+    declare_parameter<double>("asym_wide_center_residual_px", 90.0);
+    declare_parameter<int>("asym_wide_min_normal_points", 5);
     declare_parameter<int>("fit_min_points", 5);
     declare_parameter<int>("fit_order", 2);
     declare_parameter<int>("branch_fit_order", 2);
     declare_parameter<bool>("enable_fit_point_jump_filter", true);
     declare_parameter<double>("max_fit_point_dx_ratio", 0.22);
     declare_parameter<double>("max_fit_point_dx_px", 140.0);
+    declare_parameter<bool>("enable_fit_point_trend_filter", true);
+    declare_parameter<double>("fit_point_trend_residual_ratio", 0.12);
+    declare_parameter<double>("fit_point_trend_residual_px", 80.0);
+    declare_parameter<double>("fit_point_trend_slope_delta", 0.65);
+    declare_parameter<int>("fit_point_trend_min_points", 6);
+    declare_parameter<double>("fit_point_trend_min_keep_ratio", 0.75);
     declare_parameter<bool>("enable_obstacle_avoidance", false);
     declare_parameter<std::string>("obstacle_labels", "Human,Car");
     declare_parameter<std::string>("obstacle_stop_labels", "Human");
@@ -202,37 +212,6 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("finish_stop_arm_y_ratio", 0.70);
     declare_parameter<int>("finish_stop_lost_frames", 3);
     declare_parameter<double>("finish_stop_max_age", 0.5);
-    declare_parameter<bool>("enable_branch_bottom_anchor", true);
-    declare_parameter<double>("branch_bottom_anchor_x_ratio", 0.5);
-    declare_parameter<double>("branch_bottom_anchor_y_ratio", 0.98);
-    declare_parameter<double>("branch_bottom_anchor_weight", 0.6);
-    declare_parameter<bool>("enable_branch_approach_bias", true);
-    declare_parameter<double>("branch_approach_bias_gain", 0.75);
-    declare_parameter<double>("branch_approach_bias_exponent", 1.4);
-    declare_parameter<bool>("enable_branch_racing_line", true);
-    declare_parameter<double>("branch_racing_line_gain", 1.0);
-    declare_parameter<double>("branch_racing_line_exponent", 1.6);
-    declare_parameter<double>("branch_racing_line_inner_ratio", 0.25);
-    declare_parameter<bool>("enable_single_wide_virtual_segment", true);
-    declare_parameter<double>("single_wide_virtual_left_ratio", 0.20);
-    declare_parameter<double>("single_wide_virtual_right_ratio", 0.80);
-    declare_parameter<bool>("enable_branch_anchor_fit", false);
-    declare_parameter<double>("branch_anchor_near_band_ratio", 0.20);
-    declare_parameter<double>("branch_anchor_far_band_ratio", 0.20);
-    declare_parameter<bool>("enable_branch_full_branch_fit", false);
-    declare_parameter<int>("branch_anchor_full_branch_min_points", 5);
-    declare_parameter<bool>("enable_virtual_branch_racing_line", false);
-    declare_parameter<int>("virtual_branch_line_samples", 13);
-    declare_parameter<double>("virtual_branch_line_tangent_scale", 0.8);
-    declare_parameter<double>("virtual_branch_near_branch_min_ratio", 0.25);
-    declare_parameter<double>("virtual_branch_near_branch_blend_gain", 1.0);
-    declare_parameter<double>("virtual_branch_anchor_smoothing_alpha", 0.35);
-    declare_parameter<int>("virtual_branch_anchor_lost_frames", 3);
-    declare_parameter<double>("virtual_branch_max_duration", 1.0);
-    declare_parameter<int>("virtual_branch_min_score", 3);
-    declare_parameter<bool>("enable_virtual_branch_handover", true);
-    declare_parameter<double>("virtual_branch_handover_near_ratio", 0.30);
-    declare_parameter<int>("virtual_branch_handover_min_points", 6);
     declare_parameter<double>("lookahead_y_ratio", 0.75);
     declare_parameter<bool>("use_heading_term", true);
     declare_parameter<double>("heading_weight", 0.10);
@@ -298,6 +277,15 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.branch_detect_min_bands = static_cast<int>(get_parameter("branch_detect_min_bands").as_int());
     lane_cfg.branch_confirm_frames = static_cast<int>(get_parameter("branch_confirm_frames").as_int());
     lane_cfg.branch_detect_far_band_ratio = static_cast<float>(get_parameter("branch_detect_far_band_ratio").as_double());
+    lane_cfg.enable_branch_entry_transition = get_parameter("enable_branch_entry_transition").as_bool();
+    lane_cfg.branch_transition_near_main_ratio =
+        static_cast<float>(get_parameter("branch_transition_near_main_ratio").as_double());
+    lane_cfg.branch_transition_min_branch_points =
+        static_cast<int>(get_parameter("branch_transition_min_branch_points").as_int());
+    lane_cfg.branch_transition_samples = static_cast<int>(get_parameter("branch_transition_samples").as_int());
+    lane_cfg.branch_transition_weight = static_cast<float>(get_parameter("branch_transition_weight").as_double());
+    lane_cfg.branch_transition_use_when_near_single_path =
+        get_parameter("branch_transition_use_when_near_single_path").as_bool();
     lane_cfg.outer_side = get_parameter("outer_side").as_string();
     lane_cfg.enable_guideboard_branch_selection = get_parameter("enable_guideboard_branch_selection").as_bool();
     lane_cfg.guideboard_branch = get_parameter("guideboard_branch").as_string();
@@ -313,50 +301,23 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.min_branch_lock_time = static_cast<float>(get_parameter("min_branch_lock_time").as_double());
     lane_cfg.exit_single_path_confirm_frames = static_cast<int>(get_parameter("exit_single_path_confirm_frames").as_int());
     lane_cfg.exit_single_path_min_ratio = static_cast<float>(get_parameter("exit_single_path_min_ratio").as_double());
-    lane_cfg.enable_merge_wide_segment_logic = get_parameter("enable_merge_wide_segment_logic").as_bool();
-    lane_cfg.merge_wide_segment_ratio = static_cast<float>(get_parameter("merge_wide_segment_ratio").as_double());
-    lane_cfg.merge_wide_min_bands = static_cast<int>(get_parameter("merge_wide_min_bands").as_int());
-    lane_cfg.merge_wide_confirm_frames = static_cast<int>(get_parameter("merge_wide_confirm_frames").as_int());
-    lane_cfg.merge_wide_release_frames = static_cast<int>(get_parameter("merge_wide_release_frames").as_int());
-    lane_cfg.merge_wide_lane_width_alpha = static_cast<float>(get_parameter("merge_wide_lane_width_alpha").as_double());
-    lane_cfg.merge_wide_max_duration = static_cast<float>(get_parameter("merge_wide_max_duration").as_double());
+    lane_cfg.asym_wide_segment_ratio = static_cast<float>(get_parameter("asym_wide_segment_ratio").as_double());
+    lane_cfg.asym_wide_min_bands = static_cast<int>(get_parameter("asym_wide_min_bands").as_int());
+    lane_cfg.asym_wide_center_residual_ratio = static_cast<float>(get_parameter("asym_wide_center_residual_ratio").as_double());
+    lane_cfg.asym_wide_center_residual_px = static_cast<float>(get_parameter("asym_wide_center_residual_px").as_double());
+    lane_cfg.asym_wide_min_normal_points = static_cast<int>(get_parameter("asym_wide_min_normal_points").as_int());
     lane_cfg.fit_min_points = static_cast<int>(get_parameter("fit_min_points").as_int());
     lane_cfg.fit_order = static_cast<int>(get_parameter("fit_order").as_int());
     lane_cfg.branch_fit_order = static_cast<int>(get_parameter("branch_fit_order").as_int());
     lane_cfg.enable_fit_point_jump_filter = get_parameter("enable_fit_point_jump_filter").as_bool();
     lane_cfg.max_fit_point_dx_ratio = static_cast<float>(get_parameter("max_fit_point_dx_ratio").as_double());
     lane_cfg.max_fit_point_dx_px = static_cast<float>(get_parameter("max_fit_point_dx_px").as_double());
-    lane_cfg.enable_branch_bottom_anchor = get_parameter("enable_branch_bottom_anchor").as_bool();
-    lane_cfg.branch_bottom_anchor_x_ratio = static_cast<float>(get_parameter("branch_bottom_anchor_x_ratio").as_double());
-    lane_cfg.branch_bottom_anchor_y_ratio = static_cast<float>(get_parameter("branch_bottom_anchor_y_ratio").as_double());
-    lane_cfg.branch_bottom_anchor_weight = static_cast<float>(get_parameter("branch_bottom_anchor_weight").as_double());
-    lane_cfg.enable_branch_approach_bias = get_parameter("enable_branch_approach_bias").as_bool();
-    lane_cfg.branch_approach_bias_gain = static_cast<float>(get_parameter("branch_approach_bias_gain").as_double());
-    lane_cfg.branch_approach_bias_exponent = static_cast<float>(get_parameter("branch_approach_bias_exponent").as_double());
-    lane_cfg.enable_branch_racing_line = get_parameter("enable_branch_racing_line").as_bool();
-    lane_cfg.branch_racing_line_gain = static_cast<float>(get_parameter("branch_racing_line_gain").as_double());
-    lane_cfg.branch_racing_line_exponent = static_cast<float>(get_parameter("branch_racing_line_exponent").as_double());
-    lane_cfg.branch_racing_line_inner_ratio = static_cast<float>(get_parameter("branch_racing_line_inner_ratio").as_double());
-    lane_cfg.enable_single_wide_virtual_segment = get_parameter("enable_single_wide_virtual_segment").as_bool();
-    lane_cfg.single_wide_virtual_left_ratio = static_cast<float>(get_parameter("single_wide_virtual_left_ratio").as_double());
-    lane_cfg.single_wide_virtual_right_ratio = static_cast<float>(get_parameter("single_wide_virtual_right_ratio").as_double());
-    lane_cfg.enable_branch_anchor_fit = get_parameter("enable_branch_anchor_fit").as_bool();
-    lane_cfg.branch_anchor_near_band_ratio = static_cast<float>(get_parameter("branch_anchor_near_band_ratio").as_double());
-    lane_cfg.branch_anchor_far_band_ratio = static_cast<float>(get_parameter("branch_anchor_far_band_ratio").as_double());
-    lane_cfg.enable_branch_full_branch_fit = get_parameter("enable_branch_full_branch_fit").as_bool();
-    lane_cfg.branch_anchor_full_branch_min_points = static_cast<int>(get_parameter("branch_anchor_full_branch_min_points").as_int());
-    lane_cfg.enable_virtual_branch_racing_line = get_parameter("enable_virtual_branch_racing_line").as_bool();
-    lane_cfg.virtual_branch_line_samples = static_cast<int>(get_parameter("virtual_branch_line_samples").as_int());
-    lane_cfg.virtual_branch_line_tangent_scale = static_cast<float>(get_parameter("virtual_branch_line_tangent_scale").as_double());
-    lane_cfg.virtual_branch_near_branch_min_ratio = static_cast<float>(get_parameter("virtual_branch_near_branch_min_ratio").as_double());
-    lane_cfg.virtual_branch_near_branch_blend_gain = static_cast<float>(get_parameter("virtual_branch_near_branch_blend_gain").as_double());
-    lane_cfg.virtual_branch_anchor_smoothing_alpha = static_cast<float>(get_parameter("virtual_branch_anchor_smoothing_alpha").as_double());
-    lane_cfg.virtual_branch_anchor_lost_frames = static_cast<int>(get_parameter("virtual_branch_anchor_lost_frames").as_int());
-    lane_cfg.virtual_branch_max_duration = static_cast<float>(get_parameter("virtual_branch_max_duration").as_double());
-    lane_cfg.virtual_branch_min_score = static_cast<int>(get_parameter("virtual_branch_min_score").as_int());
-    lane_cfg.enable_virtual_branch_handover = get_parameter("enable_virtual_branch_handover").as_bool();
-    lane_cfg.virtual_branch_handover_near_ratio = static_cast<float>(get_parameter("virtual_branch_handover_near_ratio").as_double());
-    lane_cfg.virtual_branch_handover_min_points = static_cast<int>(get_parameter("virtual_branch_handover_min_points").as_int());
+    lane_cfg.enable_fit_point_trend_filter = get_parameter("enable_fit_point_trend_filter").as_bool();
+    lane_cfg.fit_point_trend_residual_ratio = static_cast<float>(get_parameter("fit_point_trend_residual_ratio").as_double());
+    lane_cfg.fit_point_trend_residual_px = static_cast<float>(get_parameter("fit_point_trend_residual_px").as_double());
+    lane_cfg.fit_point_trend_slope_delta = static_cast<float>(get_parameter("fit_point_trend_slope_delta").as_double());
+    lane_cfg.fit_point_trend_min_points = static_cast<int>(get_parameter("fit_point_trend_min_points").as_int());
+    lane_cfg.fit_point_trend_min_keep_ratio = static_cast<float>(get_parameter("fit_point_trend_min_keep_ratio").as_double());
     lane_cfg.lookahead_y_ratio = static_cast<float>(get_parameter("lookahead_y_ratio").as_double());
     lane_cfg.use_heading_term = get_parameter("use_heading_term").as_bool();
     lane_cfg.heading_weight = static_cast<float>(get_parameter("heading_weight").as_double());
@@ -615,6 +576,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     std::ostringstream status;
     status << lane_state.road_state << " offset=" << lane_state.control_offset
            << " valid=" << (lane_state.is_valid ? 1 : 0) << " task=" << lane_state.task_state
+           << " trans=" << (debug_info.branch_entry_transition_active ? 1 : 0)
            << " alpha=" << std::clamp(blend_alpha_, 0.0f, 1.0f);
     cv::putText(vis, status.str(), cv::Point(12, 28), cv::FONT_HERSHEY_SIMPLEX, 0.65,
                 cv::Scalar(255, 255, 255), 2, cv::LINE_AA);
@@ -779,8 +741,14 @@ class FusedPerceptionNode : public rclcpp::Node {
       }
       if (debug_info.branch_detected != last_branch_detected_ ||
           debug_info.branch_score != last_branch_score_) {
-        RCLCPP_INFO(get_logger(), "branch_detected=%d score=%d segments=%d raw_points=%d fit_points=%d",
-                    debug_info.branch_detected, debug_info.branch_score, debug_info.segment_count,
+        RCLCPP_INFO(get_logger(),
+                    "branch_detected=%d score=%d transition=%d near_single=%d branch_points=%d reason=%s "
+                    "asym_wide=%d wide_bands=%d residual=%.1f segments=%d raw_points=%d fit_points=%d",
+                    debug_info.branch_detected, debug_info.branch_score,
+                    debug_info.branch_entry_transition_active, debug_info.branch_transition_near_single_bands,
+                    debug_info.branch_transition_branch_points, debug_info.branch_transition_reason.c_str(),
+                    debug_info.asym_wide_detected, debug_info.asym_wide_band_count,
+                    debug_info.center_residual_px, debug_info.segment_count,
                     debug_info.raw_point_count, debug_info.fit_point_count);
       }
       if (lane_state.road_state != last_road_state_ ||
@@ -812,13 +780,19 @@ class FusedPerceptionNode : public rclcpp::Node {
     RCLCPP_INFO(get_logger(),
                 "status road=%s branch=%s offset=%.3f lateral=%.3f heading=%.3f conf=%.2f valid=%d "
                 "branch_detected=%d score=%d guideboard_roi=%d/%d guideboard_best=%.2f@(%.0f,%.0f) "
+                "transition=%d near_single=%d branch_pts=%d reason=%s asym=%d wide_bands=%d residual=%.1f "
                 "obstacles=%zu segments=%d points=%d/%d task=%s",
                 lane_state.road_state.c_str(), lane_state.branch_side.c_str(),
                 lane_state.control_offset, lane_state.lateral_offset, lane_state.heading_error,
                 lane_state.confidence, lane_state.is_valid, debug_info.branch_detected,
                 debug_info.branch_score, debug_info.guideboard_roi_count, debug_info.guideboard_count,
                 debug_info.guideboard_best_confidence, debug_info.guideboard_best_center.x,
-                debug_info.guideboard_best_center.y, debug_info.obstacle_zones.size(), debug_info.segment_count,
+                debug_info.guideboard_best_center.y, debug_info.branch_entry_transition_active,
+                debug_info.branch_transition_near_single_bands,
+                debug_info.branch_transition_branch_points, debug_info.branch_transition_reason.c_str(),
+                debug_info.asym_wide_detected,
+                debug_info.asym_wide_band_count, debug_info.center_residual_px,
+                debug_info.obstacle_zones.size(), debug_info.segment_count,
                 debug_info.raw_point_count, debug_info.fit_point_count,
                 lane_state.task_state.c_str());
     last_status_log_sec_ = now;

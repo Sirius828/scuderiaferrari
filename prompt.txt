@@ -6,3 +6,326 @@
 
 1.这套方法形成的赛车线应该是紫色和橙色的中线,像直道一样.
 2.岔路/弯道的判定不够分开,大部分时候会把弯道判定成岔路.
+
+请帮我在现有视觉巡线系统中实现一个“岔路直行 Path Memory 模式”。
+
+背景：
+车辆使用实例分割得到赛道可行驶区域 mask，然后按图像或 BEV 的前向距离切分多个 band，每个 band 取 mask 中点，最后拟合中心线给控制器跟踪。普通直道和普通弯道效果可以。
+
+问题：
+赛道拓扑是固定的，只有两种特殊结构：
+1. 主路 + 右侧分岔；
+2. 主路 + 右侧合并。
+
+当车辆需要在“主路 + 右侧分岔”处继续走主路直行时，右侧岔路会让 mask 变宽，band 中心会被拉向右侧岔路，导致车辆偏向岔路口中心。
+
+另外，远处 mask 由于分辨率和置信度不够，会出现 band 数量少、闪烁、抖动的问题。如果每帧重新根据 mask 拟合中心线，控制路径会一起抽搐。
+
+目标：
+新增一个 Path Memory 模式。
+
+核心思想：
+普通路段继续使用原有 band 中点巡线，同时持续维护一个平滑的局部道路模型 RoadModel。
+检测到右侧分岔且导航决策为 straight 时，冻结进入岔路前的 RoadModel。
+岔路期间不再使用整块 mask 的中心线，而是根据冻结的 RoadModel 预测主路未来路径。
+当前 mask 只作为弱观测修正，不允许它主导路径。
+
+不要重构整个项目。
+尽量复用现有 mask、中心线、控制器接口。
+输出路径格式保持和原来一致。
+
+--------------------------------------------------
+
+一、新增状态机
+
+请新增以下状态：
+
+enum LaneState {
+    NORMAL,
+    FORK_STRAIGHT,
+    RECOVER
+};
+
+NORMAL：
+- 使用原有 mask band 中点算法。
+- 同时更新 RoadModel。
+- 当 fork_detected == true 且 nav_direction == "straight" 时，进入 FORK_STRAIGHT。
+
+FORK_STRAIGHT：
+- 冻结进入岔路前的 RoadModel。
+- 不再使用整块 mask band 中心线作为控制路径。
+- 使用冻结 RoadModel 生成 predicted_path。
+- mask 只允许提供弱修正，例如左侧主路边界。
+- 至少锁定 min_fork_lock_time，例如 0.8~1.2 秒，避免 fork_detected 闪烁导致频繁切换。
+
+RECOVER：
+- 当连续若干帧 fork_detected == false，且道路宽度恢复正常，进入 RECOVER。
+- RECOVER 中不要瞬间切回普通巡线。
+- 用历史路径和当前普通路径平滑融合 0.3~0.5 秒。
+- 融合完成后回到 NORMAL。
+
+--------------------------------------------------
+
+二、RoadModel 设计
+
+请新增 RoadModel，描述最近一段正常路段的主路几何：
+
+struct RoadModel {
+    float lateral_offset;   // 当前主路中心横向偏移
+    float heading;          // 主路切线方向，单位 rad
+    float curvature;        // 局部曲率，正负表示左右弯
+    float road_width;       // 正常道路宽度
+    float confidence;       // 模型置信度
+};
+
+RoadModel 不应该只来自最后一帧，而应该由最近多帧平滑得到。
+
+在 NORMAL 状态，每帧从原始中心线 obs_path 中估计：
+- lateral_offset
+- heading
+- curvature
+- road_width
+- confidence
+
+估计方法可以使用：
+- 二次曲线拟合；
+- 圆弧拟合；
+- 或者从路径点差分估计 heading 和 curvature。
+
+然后用 EMA 更新：
+
+model.heading =
+    0.9 * model.heading + 0.1 * heading_now
+
+model.curvature =
+    0.9 * model.curvature + 0.1 * curvature_now
+
+model.lateral_offset =
+    0.8 * model.lateral_offset + 0.2 * lateral_offset_now
+
+model.road_width =
+    0.95 * model.road_width + 0.05 * road_width_now
+
+注意：
+- road_width 只能在 NORMAL 且道路宽度可信时更新；
+- 岔路区域不要实时用 mask 宽度更新 road_width，因为右侧岔路会让宽度变大；
+- 如果当前帧中心线置信度低，不更新 RoadModel。
+
+--------------------------------------------------
+
+三、进入岔路时冻结模型
+
+当满足：
+
+fork_detected == true
+nav_direction == "straight"
+model.confidence > threshold
+
+执行：
+
+frozen_model = model;
+state = FORK_STRAIGHT;
+
+在 FORK_STRAIGHT 中，frozen_model 不允许被整块 mask 中心线更新。
+
+--------------------------------------------------
+
+四、主路预测策略
+
+请实现函数：
+
+vector<Point2f> predict_path_from_model(
+    const RoadModel& frozen_model,
+    float predict_distance,
+    float step
+);
+
+要求：
+- 不要简单直线延长。
+- 使用 frozen_model.heading 和 frozen_model.curvature 生成未来路径。
+- 预测距离建议 0.8~1.2 m，或者使用项目原有路径长度。
+- 输出格式保持与原控制器一致。
+
+可选实现方式 1：圆弧积分
+
+从当前车辆坐标系原点附近开始：
+x = 0
+y = frozen_model.lateral_offset
+theta = frozen_model.heading
+kappa = frozen_model.curvature
+
+每 step 前进一步：
+
+theta += kappa * step
+x += cos(theta) * step
+y += sin(theta) * step
+
+把每个点加入 predicted_path。
+
+可选实现方式 2：二次曲线
+
+如果原项目更习惯使用 y = ax^2 + bx + c：
+- c = lateral_offset
+- b = tan(heading)
+- a 由 curvature 近似得到
+然后在 x = 0 ~ predict_distance 范围内采样。
+
+优先使用更容易接入现有项目的实现方式。
+
+--------------------------------------------------
+
+五、mask 在岔路期间只作为弱修正
+
+请实现：
+
+vector<Point2f> correct_with_left_boundary(
+    const vector<Point2f>& predicted_path,
+    const Mask& mask,
+    float road_width,
+    float weak_weight
+);
+
+逻辑：
+- 在 FORK_STRAIGHT 中，不再使用整块 mask 的 band 中点。
+- 尝试提取左侧主路边界。
+- 左侧边界可信时，根据左边界 + road_width / 2 得到 left_offset_path。
+- 最终路径：
+  final_path = (1 - weak_weight) * predicted_path
+             + weak_weight * left_offset_path
+
+weak_weight 建议 0.05~0.15。
+
+如果左边界不可信：
+- final_path = predicted_path
+
+左侧边界可信度判断：
+- 有效点数量足够；
+- 点的连续性足够；
+- x 跳变不过大；
+- 拟合残差不过大；
+- 与 predicted_path 的偏差不过大。
+
+注意：
+左边界只是弱修正，不要让它导致路径剧烈抖动。
+
+--------------------------------------------------
+
+六、路径平滑
+
+最终输出给控制器之前，请增加路径平滑：
+
+final_path =
+    alpha * current_final_path
+    + (1 - alpha) * previous_final_path
+
+NORMAL 状态：
+- alpha 可稍大，例如 0.4~0.6。
+
+FORK_STRAIGHT 状态：
+- alpha 要小，例如 0.15~0.3，避免抖动。
+
+RECOVER 状态：
+- 从 predicted_path 平滑过渡到 normal_path。
+- 例如：
+  blend_ratio 从 0 慢慢增加到 1；
+  final_path = (1 - blend_ratio) * previous_or_predicted_path
+             + blend_ratio * normal_path
+
+--------------------------------------------------
+
+七、退出 FORK_STRAIGHT 的条件
+
+不要只依赖单帧 fork_detected。
+
+请使用计数器或时间判断。
+
+进入 RECOVER 的建议条件：
+
+- 已经在 FORK_STRAIGHT 中超过 min_fork_lock_time；
+- fork_detected 连续 N 帧为 false；
+- 当前 mask 估计的道路宽度接近 normal road_width；
+- 普通 band 中心线置信度恢复正常。
+
+例如：
+if fork_gone_count > 5 and width_ratio < 1.2:
+    state = RECOVER
+
+其中 width_ratio = current_width / frozen_model.road_width。
+
+--------------------------------------------------
+
+八、调试可视化
+
+请增加可视化输出，方便调参：
+
+- 原始 mask band 中点：灰色
+- RoadModel 预测路径 predicted_path：红色
+- 左侧边界点：蓝色
+- 左侧边界偏移得到的路径：黄色
+- 最终输出控制路径：绿色
+- 当前 LaneState 文本：
+  NORMAL / FORK_STRAIGHT / RECOVER
+- 显示 RoadModel 参数：
+  heading
+  curvature
+  lateral_offset
+  road_width
+  confidence
+
+--------------------------------------------------
+
+九、代码结构建议
+
+请尽量新增模块，不要大改已有代码。
+
+建议新增：
+
+class RoadModelEstimator {
+public:
+    void updateFromPath(const vector<Point2f>& obs_path, float road_width, float confidence);
+    RoadModel getModel() const;
+};
+
+class PathPredictor {
+public:
+    vector<Point2f> predictFromModel(const RoadModel& model, float distance, float step);
+};
+
+class ForkStraightPlanner {
+public:
+    vector<Point2f> update(
+        const Mask& mask,
+        const vector<Point2f>& normal_path,
+        bool fork_detected,
+        string nav_direction,
+        float dt
+    );
+};
+
+如果项目不是 C++，请用项目当前语言实现同等结构。
+
+--------------------------------------------------
+
+十、最小可用版本优先级
+
+请按以下优先级实现：
+
+第一优先级：
+- 状态机 NORMAL / FORK_STRAIGHT / RECOVER
+- RoadModel 平滑更新
+- 进入岔路时冻结 RoadModel
+- 用曲率外推生成 predicted_path
+- FORK_STRAIGHT 中不再使用整块 mask 中心线
+
+第二优先级：
+- 左侧边界弱修正
+- road_width 动态平滑维护
+- 退出恢复逻辑
+
+第三优先级：
+- 完整调试可视化
+- 参数配置化
+- 更高级的置信度判断
+
+最终效果：
+车辆在固定赛道的“主路 + 右侧分岔”处选择直行时，即使右侧岔路导致 mask 变宽、远处 band 闪烁，也能沿进入岔路前估计出的主路曲率继续平滑前进，不被右侧分支吸走。

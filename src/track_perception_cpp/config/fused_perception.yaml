@@ -13,7 +13,7 @@ fused_perception_node:
     model_input_format: "RGB"
 
     # 性能日志：只看 FPS、RKNN 推理耗时、后处理耗时、发布耗时
-    enable_perf_stats: true
+    enable_perf_stats: false
     perf_interval: 2.0
 
     # 画面显示：只影响 OpenCV 预览窗口，不影响终端日志
@@ -28,7 +28,7 @@ fused_perception_node:
     # 决策日志：
     # - enable_status_log: 每 0.5s 打印一次当前 road_state/branch/GuideBoard/点数等状态
     # - enable_branch_event_log: 只在 GuideBoard、岔路、任务状态变化时打印
-    enable_status_log: false
+    enable_status_log: true
     enable_branch_event_log: false
 
     # 目标检测模型
@@ -79,6 +79,12 @@ fused_perception_node:
     branch_detect_min_bands: 2
     branch_confirm_frames: 1
     branch_detect_far_band_ratio: 0.7
+    enable_branch_entry_transition: true
+    branch_transition_near_main_ratio: 0.4
+    branch_transition_min_branch_points: 2
+    branch_transition_samples: 12
+    branch_transition_weight: 1.0
+    branch_transition_use_when_near_single_path: true
     enable_continuity_branch_selection: false
     branch_continuity_max_dx_ratio: 0.35
     branch_continuity_near_band_ratio: 0.5
@@ -87,17 +93,15 @@ fused_perception_node:
     locked_path_continuity_max_dx_ratio: 0.28
     branch_lock_time: 2.0
     min_branch_lock_time: 0.8
-    exit_single_path_confirm_frames: 5
+    exit_single_path_confirm_frames: 10
     exit_single_path_min_ratio: 0.8
 
-    # 合流宽路
-    enable_merge_wide_segment_logic: true
-    merge_wide_segment_ratio: 1.35
-    merge_wide_min_bands: 4
-    merge_wide_confirm_frames: 2
-    merge_wide_release_frames: 4
-    merge_wide_lane_width_alpha: 0.2
-    merge_wide_max_duration: 1.5
+    # 非对称宽路/合流残留静态判定：当前帧判定，不依赖历史车道宽度
+    asym_wide_segment_ratio: 1.45
+    asym_wide_min_bands: 5
+    asym_wide_center_residual_ratio: 0.16
+    asym_wide_center_residual_px: 90.0
+    asym_wide_min_normal_points: 5
 
     # 中心线拟合
     fit_min_points: 4
@@ -106,6 +110,12 @@ fused_perception_node:
     enable_fit_point_jump_filter: true
     max_fit_point_dx_ratio: 0.22
     max_fit_point_dx_px: 140.0
+    enable_fit_point_trend_filter: true
+    fit_point_trend_residual_ratio: 0.12
+    fit_point_trend_residual_px: 80.0
+    fit_point_trend_slope_delta: 0.65
+    fit_point_trend_min_points: 6
+    fit_point_trend_min_keep_ratio: 0.75
     lookahead_y_ratio: 0.75
     use_heading_term: true
     heading_weight: 0.10
@@ -163,39 +173,6 @@ fused_perception_node:
     finish_stop_arm_y_ratio: 0.70
     finish_stop_lost_frames: 3
     finish_stop_max_age: 0.5
-
-    # LOCK 底部软锚点
-    enable_branch_bottom_anchor: true
-    branch_bottom_anchor_x_ratio: 0.5
-    branch_bottom_anchor_y_ratio: 0.98
-    branch_bottom_anchor_weight: 0.6
-    enable_branch_approach_bias: false
-    branch_approach_bias_gain: 0.75
-    branch_approach_bias_exponent: 2.5
-    enable_branch_racing_line: false
-    branch_racing_line_gain: 1.0
-    branch_racing_line_exponent: 2.5
-    branch_racing_line_inner_ratio: 0.25
-    enable_single_wide_virtual_segment: false
-    single_wide_virtual_left_ratio: 0.20
-    single_wide_virtual_right_ratio: 0.80
-    enable_branch_anchor_fit: false
-    branch_anchor_near_band_ratio: 0.40
-    branch_anchor_far_band_ratio: 0.20
-    enable_branch_full_branch_fit: false
-    branch_anchor_full_branch_min_points: 5
-    enable_virtual_branch_racing_line: true
-    virtual_branch_line_samples: 13
-    virtual_branch_line_tangent_scale: 0.8
-    virtual_branch_near_branch_min_ratio: 0.25
-    virtual_branch_near_branch_blend_gain: 1.0
-    virtual_branch_anchor_smoothing_alpha: 0.35
-    virtual_branch_anchor_lost_frames: 3
-    virtual_branch_max_duration: 1.0
-    virtual_branch_min_score: 3
-    enable_virtual_branch_handover: true
-    virtual_branch_handover_near_ratio: 0.30
-    virtual_branch_handover_min_points: 6
 
     # 话题发布
     publish_lane_state: true

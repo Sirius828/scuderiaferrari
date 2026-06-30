@@ -22,6 +22,12 @@ struct LaneDecisionConfig {
   int branch_detect_min_bands{2};
   int branch_confirm_frames{2};
   float branch_detect_far_band_ratio{0.7f};
+  bool enable_branch_entry_transition{true};
+  float branch_transition_near_main_ratio{0.4f};
+  int branch_transition_min_branch_points{2};
+  int branch_transition_samples{12};
+  float branch_transition_weight{1.0f};
+  bool branch_transition_use_when_near_single_path{true};
   std::string outer_side{"left"};
   bool enable_guideboard_branch_selection{true};
   std::string guideboard_branch{"right"};
@@ -38,13 +44,11 @@ struct LaneDecisionConfig {
   int exit_single_path_confirm_frames{5};
   float exit_single_path_min_ratio{0.8f};
 
-  bool enable_merge_wide_segment_logic{true};
-  float merge_wide_segment_ratio{1.35f};
-  int merge_wide_min_bands{2};
-  int merge_wide_confirm_frames{2};
-  int merge_wide_release_frames{4};
-  float merge_wide_lane_width_alpha{0.2f};
-  float merge_wide_max_duration{1.5f};
+  float asym_wide_segment_ratio{1.45f};
+  int asym_wide_min_bands{3};
+  float asym_wide_center_residual_ratio{0.16f};
+  float asym_wide_center_residual_px{90.0f};
+  int asym_wide_min_normal_points{5};
 
   int fit_min_points{5};
   int fit_order{2};
@@ -52,37 +56,12 @@ struct LaneDecisionConfig {
   bool enable_fit_point_jump_filter{true};
   float max_fit_point_dx_ratio{0.22f};
   float max_fit_point_dx_px{140.0f};
-  bool enable_branch_bottom_anchor{true};
-  float branch_bottom_anchor_x_ratio{0.5f};
-  float branch_bottom_anchor_y_ratio{0.98f};
-  float branch_bottom_anchor_weight{0.6f};
-  bool enable_branch_approach_bias{true};
-  float branch_approach_bias_gain{0.75f};
-  float branch_approach_bias_exponent{1.4f};
-  bool enable_branch_racing_line{true};
-  float branch_racing_line_gain{1.0f};
-  float branch_racing_line_exponent{1.6f};
-  float branch_racing_line_inner_ratio{0.25f};
-  bool enable_single_wide_virtual_segment{true};
-  float single_wide_virtual_left_ratio{0.20f};
-  float single_wide_virtual_right_ratio{0.80f};
-  bool enable_branch_anchor_fit{false};
-  float branch_anchor_near_band_ratio{0.20f};
-  float branch_anchor_far_band_ratio{0.20f};
-  bool enable_branch_full_branch_fit{false};
-  int branch_anchor_full_branch_min_points{5};
-  bool enable_virtual_branch_racing_line{false};
-  int virtual_branch_line_samples{13};
-  float virtual_branch_line_tangent_scale{0.8f};
-  float virtual_branch_near_branch_min_ratio{0.25f};
-  float virtual_branch_near_branch_blend_gain{1.0f};
-  float virtual_branch_anchor_smoothing_alpha{0.35f};
-  int virtual_branch_anchor_lost_frames{3};
-  float virtual_branch_max_duration{1.0f};
-  int virtual_branch_min_score{3};
-  bool enable_virtual_branch_handover{true};
-  float virtual_branch_handover_near_ratio{0.30f};
-  int virtual_branch_handover_min_points{6};
+  bool enable_fit_point_trend_filter{true};
+  float fit_point_trend_residual_ratio{0.12f};
+  float fit_point_trend_residual_px{80.0f};
+  float fit_point_trend_slope_delta{0.65f};
+  int fit_point_trend_min_points{6};
+  float fit_point_trend_min_keep_ratio{0.75f};
   float lookahead_y_ratio{0.75f};
   bool use_heading_term{true};
   float heading_weight{0.10f};
@@ -167,6 +146,13 @@ struct LaneDebugInfo {
   cv::Point2f guideboard_best_center;
   bool branch_locked{false};
   std::string locked_branch_side;
+  bool asym_wide_detected{false};
+  int asym_wide_band_count{0};
+  float center_residual_px{0.0f};
+  bool branch_entry_transition_active{false};
+  int branch_transition_near_single_bands{0};
+  int branch_transition_branch_points{0};
+  std::string branch_transition_reason;
   int raw_point_count{0};
   int fit_point_count{0};
   int segment_count{0};
@@ -203,6 +189,13 @@ class LaneDecision {
     std::string label;
   };
 
+  enum class RoadClass {
+    Normal,
+    Branch,
+    AsymWide,
+    LowConfidence,
+  };
+
   std::vector<Band> buildBands(const cv::Mat& road_mask, const std::vector<Detection>& detections);
   std::vector<ObstacleZone> getActiveObstacleZones(const std::vector<Detection>& detections,
                                                    int image_width, int image_height) const;
@@ -217,23 +210,28 @@ class LaneDecision {
   std::optional<Segment> chooseLockedSegmentByContinuity(const Band& band, int image_width,
                                                          double last_center_x) const;
   bool shouldUseLockedPathContinuity(double now) const;
-  std::string currentRoadState() const;
+  RoadClass classifyRoadGeometry(const std::vector<Band>& bands,
+                                 const std::vector<cv::Point3f>& raw_points,
+                                 bool branch_detected, int branch_score,
+                                 int image_width) const;
+  std::string roadClassName(RoadClass road_class) const;
+  int countAsymWideBands(const std::vector<Band>& bands) const;
+  double calculateCenterResidual(const std::vector<cv::Point3f>& points,
+                                 int image_width) const;
   double calculateLaneConfidence(const std::vector<cv::Point3f>& fit_points,
                                  const std::vector<Band>& bands) const;
-  void updateMergeWideState(const std::vector<Band>& bands, double last_center_x);
-  std::optional<Segment> chooseMergeWideSegment(const Band& band, std::optional<double> last_center_x);
-  bool captureBranchEntryAnchor(const std::vector<Band>& bands, const std::string& side);
-  std::vector<cv::Point3f> collectBranchAnchorFitPoints(std::vector<Band>& bands,
-                                                        const std::string& side) const;
-  std::vector<cv::Point3f> collectVirtualBranchRacingLinePoints(std::vector<Band>& bands,
-                                                               const std::string& side);
   std::vector<cv::Point3f> collectCenterlinePoints(std::vector<Band>& bands, bool branch_locked,
                                                    const std::string& side,
                                                    std::optional<double> last_center_x,
                                                    int image_width, double now);
+  std::vector<cv::Point3f> collectBranchGeometryLinePoints(std::vector<Band>& bands,
+                                                           const std::string& side,
+                                                           int image_width);
   std::vector<cv::Point3f> filterCenterlinePoints(const std::vector<cv::Point3f>& points,
                                                   int image_width,
                                                   std::optional<double> last_center_x) const;
+  std::vector<cv::Point3f> filterAsymWidePoints(const std::vector<cv::Point3f>& points,
+                                                const std::vector<Band>& bands) const;
   void appendDetectionFitPoints(std::vector<cv::Point3f>& points,
                                 const std::vector<Detection>& detections,
                                 int image_height) const;
@@ -252,9 +250,6 @@ class LaneDecision {
   void populateDebugInfo(const std::vector<Band>& bands, const std::vector<ObstacleZone>& zones,
                          const std::vector<cv::Point3f>& fit_points,
                          const std::vector<double>& fit_coeffs);
-  std::optional<double> getBandLaneWidth(int band_index) const;
-  void updateBandLaneWidth(int band_index, double width);
-  bool isMergeWideSegment(const Band& band) const;
 
   LaneDecisionConfig cfg_;
   LaneDebugInfo debug_info_;
@@ -263,24 +258,8 @@ class LaneDecision {
   bool branch_locked_{false};
   std::string locked_branch_side_{"left"};
   double lock_start_time_{0.0};
-  bool branch_entry_anchor_valid_{false};
-  double branch_entry_anchor_x_{0.0};
-  double branch_entry_anchor_y_{0.0};
-  double branch_entry_anchor_slope_{0.0};
-  int branch_entry_anchor_lost_count_{0};
-  bool virtual_branch_target_valid_{false};
-  double virtual_branch_target_x_{0.0};
-  double virtual_branch_target_y_{0.0};
-  double virtual_branch_target_slope_{0.0};
-  int virtual_branch_target_lost_count_{0};
   int branch_confirm_count_{0};
   int exit_confirm_count_{0};
-  bool merge_wide_locked_{false};
-  std::string merge_wide_side_;
-  double merge_wide_lock_start_time_{0.0};
-  int merge_wide_confirm_count_{0};
-  int merge_wide_release_count_{0};
-  std::vector<std::optional<double>> band_lane_widths_;
   bool traffic_stop_active_{false};
   bool finish_stop_active_{false};
   bool obstacle_stop_active_{false};

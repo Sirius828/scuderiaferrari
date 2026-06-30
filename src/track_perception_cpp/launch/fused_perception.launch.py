@@ -26,16 +26,6 @@ def generate_launch_description():
         default_value='true',
         description='Show OpenCV fused perception preview window',
     )
-    enable_status_log_arg = DeclareLaunchArgument(
-        'enable_status_log',
-        default_value='false',
-        description='Print periodic lane decision status logs',
-    )
-    enable_branch_event_log_arg = DeclareLaunchArgument(
-        'enable_branch_event_log',
-        default_value='false',
-        description='Print branch/GuideBoard decision event logs',
-    )
     enable_debug_screenshots_arg = DeclareLaunchArgument(
         'enable_debug_screenshots',
         default_value='false',
@@ -66,10 +56,6 @@ def generate_launch_description():
             LaunchConfiguration('config_file'),
             {
                 'show_window': ParameterValue(LaunchConfiguration('show_window'), value_type=bool),
-                'enable_status_log': ParameterValue(LaunchConfiguration('enable_status_log'), value_type=bool),
-                'enable_branch_event_log': ParameterValue(
-                    LaunchConfiguration('enable_branch_event_log'), value_type=bool
-                ),
                 'enable_debug_screenshots': ParameterValue(
                     LaunchConfiguration('enable_debug_screenshots'), value_type=bool
                 ),
@@ -87,8 +73,6 @@ def generate_launch_description():
     return LaunchDescription([
         config_file_arg,
         show_window_arg,
-        enable_status_log_arg,
-        enable_branch_event_log_arg,
         enable_debug_screenshots_arg,
         debug_screenshot_interval_sec_arg,
         debug_screenshot_branch_only_arg,
