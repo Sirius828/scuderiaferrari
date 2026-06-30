@@ -39,6 +39,9 @@ class LineFollowerController(Node):
         self.declare_parameter('speed_curve_exponent', 1.0)
         self.declare_parameter('speed_accel_rate', 0.35)
         self.declare_parameter('speed_decel_rate', 2.0)
+        self.declare_parameter('speed_curve_offset_limit', 0.55)
+        self.declare_parameter('speed_curve_heading_weight', 0.25)
+        self.declare_parameter('speed_curve_curvature_weight', 0.15)
         self.declare_parameter('enable_curve_adaptive_control', False)
         self.declare_parameter('curve_offset_limit', 0.45)
         self.declare_parameter('curve_heading_limit', 0.35)
@@ -54,6 +57,7 @@ class LineFollowerController(Node):
         self.declare_parameter('wheel_radius', 0.035)    # 轮子半径 (m)，默认3.5cm
         self.declare_parameter('max_steering', 1.0)      # 最大转向比例
         self.declare_parameter('steering_slew_rate', 0.0)  # 最大转向变化率，0表示关闭
+        self.declare_parameter('steering_sign', 1.0)     # 舵机方向：1保持原方向，-1反向
         self.declare_parameter('invalid_timeout', 0.5)   # is_valid=False超时时间(秒)
         self.declare_parameter('enable_perception_stop', True)
         self.declare_parameter('ignore_stop_requests', False)
@@ -100,6 +104,7 @@ class LineFollowerController(Node):
         self.current_speed_mps = self.linear_speed_mps
         self.current_wheel_speed_rps = self.wheel_speed_rps
         self.current_curve_factor = 0.0
+        self.current_speed_curve_factor = 0.0
         self.current_max_steering = self.max_steering
         self.current_steering_slew_rate = self.steering_slew_rate
         self.last_tuning_log_time = 0.0
@@ -262,6 +267,9 @@ class LineFollowerController(Node):
         self.speed_curve_exponent = self.get_parameter('speed_curve_exponent').value
         self.speed_accel_rate = self.get_parameter('speed_accel_rate').value
         self.speed_decel_rate = self.get_parameter('speed_decel_rate').value
+        self.speed_curve_offset_limit = self.get_parameter('speed_curve_offset_limit').value
+        self.speed_curve_heading_weight = self.get_parameter('speed_curve_heading_weight').value
+        self.speed_curve_curvature_weight = self.get_parameter('speed_curve_curvature_weight').value
         self.enable_curve_adaptive_control = self.get_parameter('enable_curve_adaptive_control').value
         self.curve_offset_limit = self.get_parameter('curve_offset_limit').value
         self.curve_heading_limit = self.get_parameter('curve_heading_limit').value
@@ -277,6 +285,7 @@ class LineFollowerController(Node):
         self.wheel_radius = self.get_parameter('wheel_radius').value
         self.max_steering = self.get_parameter('max_steering').value
         self.steering_slew_rate = self.get_parameter('steering_slew_rate').value
+        self.steering_sign = self.get_parameter('steering_sign').value
         self.invalid_timeout = self.get_parameter('invalid_timeout').value
         self.enable_perception_stop = self.get_parameter('enable_perception_stop').value
         self.ignore_stop_requests = self.get_parameter('ignore_stop_requests').value
@@ -317,6 +326,9 @@ class LineFollowerController(Node):
             'speed_curve_exponent': self.speed_curve_exponent,
             'speed_accel_rate': self.speed_accel_rate,
             'speed_decel_rate': self.speed_decel_rate,
+            'speed_curve_offset_limit': self.speed_curve_offset_limit,
+            'speed_curve_heading_weight': self.speed_curve_heading_weight,
+            'speed_curve_curvature_weight': self.speed_curve_curvature_weight,
             'enable_curve_adaptive_control': self.enable_curve_adaptive_control,
             'curve_offset_limit': self.curve_offset_limit,
             'curve_heading_limit': self.curve_heading_limit,
@@ -332,6 +344,7 @@ class LineFollowerController(Node):
             'wheel_radius': self.wheel_radius,
             'max_steering': self.max_steering,
             'steering_slew_rate': self.steering_slew_rate,
+            'steering_sign': self.steering_sign,
             'invalid_timeout': self.invalid_timeout,
             'enable_perception_stop': self.enable_perception_stop,
             'ignore_stop_requests': self.ignore_stop_requests,
@@ -371,6 +384,9 @@ class LineFollowerController(Node):
             pending['speed_curve_exponent'] = float(pending['speed_curve_exponent'])
             pending['speed_accel_rate'] = float(pending['speed_accel_rate'])
             pending['speed_decel_rate'] = float(pending['speed_decel_rate'])
+            pending['speed_curve_offset_limit'] = float(pending['speed_curve_offset_limit'])
+            pending['speed_curve_heading_weight'] = float(pending['speed_curve_heading_weight'])
+            pending['speed_curve_curvature_weight'] = float(pending['speed_curve_curvature_weight'])
             pending['enable_curve_adaptive_control'] = bool(pending['enable_curve_adaptive_control'])
             pending['curve_offset_limit'] = float(pending['curve_offset_limit'])
             pending['curve_heading_limit'] = float(pending['curve_heading_limit'])
@@ -386,6 +402,7 @@ class LineFollowerController(Node):
             pending['wheel_radius'] = float(pending['wheel_radius'])
             pending['max_steering'] = float(pending['max_steering'])
             pending['steering_slew_rate'] = float(pending['steering_slew_rate'])
+            pending['steering_sign'] = float(pending['steering_sign'])
             pending['invalid_timeout'] = float(pending['invalid_timeout'])
             pending['enable_perception_stop'] = bool(pending['enable_perception_stop'])
             pending['ignore_stop_requests'] = bool(pending['ignore_stop_requests'])
@@ -434,6 +451,12 @@ class LineFollowerController(Node):
             return SetParametersResult(successful=False, reason='speed_accel_rate must be >= 0')
         if pending['speed_decel_rate'] < 0.0:
             return SetParametersResult(successful=False, reason='speed_decel_rate must be >= 0')
+        if pending['speed_curve_offset_limit'] <= 0.0:
+            return SetParametersResult(successful=False, reason='speed_curve_offset_limit must be > 0')
+        if pending['speed_curve_heading_weight'] < 0.0:
+            return SetParametersResult(successful=False, reason='speed_curve_heading_weight must be >= 0')
+        if pending['speed_curve_curvature_weight'] < 0.0:
+            return SetParametersResult(successful=False, reason='speed_curve_curvature_weight must be >= 0')
         if pending['curve_offset_limit'] <= 0.0:
             return SetParametersResult(successful=False, reason='curve_offset_limit must be > 0')
         if pending['curve_heading_limit'] <= 0.0:
@@ -460,6 +483,8 @@ class LineFollowerController(Node):
             return SetParametersResult(successful=False, reason='max_steering must be >= 0')
         if pending['steering_slew_rate'] < 0.0:
             return SetParametersResult(successful=False, reason='steering_slew_rate must be >= 0')
+        if pending['steering_sign'] not in (-1.0, 1.0):
+            return SetParametersResult(successful=False, reason='steering_sign must be -1.0 or 1.0')
         if pending['invalid_timeout'] < 0.0:
             return SetParametersResult(successful=False, reason='invalid_timeout must be >= 0')
         if pending['perception_stop_timeout'] < 0.0:
@@ -495,6 +520,9 @@ class LineFollowerController(Node):
         self.speed_curve_exponent = pending['speed_curve_exponent']
         self.speed_accel_rate = pending['speed_accel_rate']
         self.speed_decel_rate = pending['speed_decel_rate']
+        self.speed_curve_offset_limit = pending['speed_curve_offset_limit']
+        self.speed_curve_heading_weight = pending['speed_curve_heading_weight']
+        self.speed_curve_curvature_weight = pending['speed_curve_curvature_weight']
         self.enable_curve_adaptive_control = pending['enable_curve_adaptive_control']
         self.curve_offset_limit = pending['curve_offset_limit']
         self.curve_heading_limit = pending['curve_heading_limit']
@@ -510,6 +538,7 @@ class LineFollowerController(Node):
         self.wheel_radius = pending['wheel_radius']
         self.max_steering = pending['max_steering']
         self.steering_slew_rate = pending['steering_slew_rate']
+        self.steering_sign = pending['steering_sign']
         self.invalid_timeout = pending['invalid_timeout']
         self.enable_perception_stop = pending['enable_perception_stop']
         self.ignore_stop_requests = pending['ignore_stop_requests']
@@ -536,8 +565,10 @@ class LineFollowerController(Node):
             f'Kp={self.Kp}, Ki={self.Ki}, Kd={self.Kd}, '
             f'linear_speed={self.linear_speed_mps}, dynamic_speed={self.enable_dynamic_speed}, '
             f'min_linear_speed={self.min_linear_speed_mps}, wheel_radius={self.wheel_radius}, '
+            f'speed_curve_offset_limit={self.speed_curve_offset_limit}, '
             f'curve_adaptive={self.enable_curve_adaptive_control}, '
             f'max_steering={self.max_steering}, steering_slew_rate={self.steering_slew_rate}, '
+            f'steering_sign={self.steering_sign}, '
             f'heading_gain={self.heading_gain}, curvature_gain={self.curvature_gain}, '
             f'log_mode={self.controller_log_mode}'
         )
@@ -552,8 +583,18 @@ class LineFollowerController(Node):
     def update_wheel_speed(self):
         """将线速度(m/s)转换为底盘控制器期望的轮速(rps)。"""
         self.wheel_speed_rps = self.speed_to_wheel_rps(self.linear_speed_mps)
-        self.current_speed_mps = self.linear_speed_mps
-        self.current_wheel_speed_rps = self.wheel_speed_rps
+        if not hasattr(self, 'current_speed_mps'):
+            self.current_speed_mps = (
+                self.min_linear_speed_mps
+                if self.enable_dynamic_speed
+                else self.linear_speed_mps
+            )
+        else:
+            self.current_speed_mps = max(
+                self.min_linear_speed_mps,
+                min(self.current_speed_mps, self.linear_speed_mps)
+            )
+        self.current_wheel_speed_rps = self.speed_to_wheel_rps(self.current_speed_mps)
         if self.wheel_radius <= 0:
             self.get_logger().warn('⚠️ wheel_radius=0, using linear_speed directly as wheel speed')
 
@@ -658,8 +699,14 @@ class LineFollowerController(Node):
             response.message = 'Autonomous line following enabled'
             self.get_logger().info('▶️ Autonomous line following enabled')
         else:
+            self.last_control_mode = 'disabled'
+            self.last_steering = 0.0
+            self.current_speed_mps = 0.0
+            self.current_wheel_speed_rps = 0.0
+            for _ in range(3):
+                self.publish_stop(log=False)
             response.message = 'Autonomous line following disabled'
-            self.get_logger().warn('⏸️ Autonomous line following disabled')
+            self.get_logger().warn('⏸️ Autonomous line following disabled; stop commands sent')
         return response
 
     def should_stop_for_perception(self, current_time: float) -> bool:
@@ -843,16 +890,18 @@ class LineFollowerController(Node):
             steering += heading_term + curvature_term
 
         self.last_lane_terms = (heading_term, curvature_term)
-        return steering
+        return self.steering_sign * steering
 
     def update_curve_adaptive_state(self, current_time: float):
         if not self.enable_curve_adaptive_control:
             self.current_curve_factor = 0.0
+            self.current_speed_curve_factor = 0.0
             self.current_max_steering = self.max_steering
             self.current_steering_slew_rate = self.steering_slew_rate
             return
 
         raw_factor = self.compute_curve_factor(current_time)
+        raw_speed_factor = self.compute_speed_curve_factor(current_time)
         if raw_factor >= self.current_curve_factor:
             alpha = self.curve_factor_attack_alpha
         else:
@@ -860,6 +909,15 @@ class LineFollowerController(Node):
         alpha = max(0.0, min(1.0, alpha))
         self.current_curve_factor = (
             alpha * raw_factor + (1.0 - alpha) * self.current_curve_factor
+        )
+        if raw_speed_factor >= self.current_speed_curve_factor:
+            speed_alpha = self.curve_factor_attack_alpha
+        else:
+            speed_alpha = self.curve_factor_release_alpha
+        speed_alpha = max(0.0, min(1.0, speed_alpha))
+        self.current_speed_curve_factor = (
+            speed_alpha * raw_speed_factor
+            + (1.0 - speed_alpha) * self.current_speed_curve_factor
         )
         self.current_max_steering = self.lerp(
             self.straight_max_steering,
@@ -884,6 +942,26 @@ class LineFollowerController(Node):
 
         return max(0.0, min(1.0, max(offset_factor, heading_factor, curvature_factor)))
 
+    def compute_speed_curve_factor(self, current_time: float) -> float:
+        effective_offset = self.apply_offset_deadband(self.current_offset)
+        offset_factor = abs(effective_offset) / self.speed_curve_offset_limit
+        heading_factor = 0.0
+        curvature_factor = 0.0
+
+        if self.has_fresh_lane_state(current_time):
+            heading_factor = (
+                self.speed_curve_heading_weight
+                * abs(self.current_heading_error)
+                / self.curve_heading_limit
+            )
+            curvature_factor = (
+                self.speed_curve_curvature_weight
+                * abs(self.current_curvature)
+                / self.curve_curvature_limit
+            )
+
+        return max(0.0, min(1.0, max(offset_factor, heading_factor, curvature_factor)))
+
     def lerp(self, start: float, end: float, factor: float) -> float:
         factor = max(0.0, min(1.0, factor))
         return start + (end - start) * factor
@@ -894,7 +972,7 @@ class LineFollowerController(Node):
             return self.linear_speed_mps
 
         if self.enable_curve_adaptive_control:
-            slowdown = math.pow(self.current_curve_factor, self.speed_curve_exponent)
+            slowdown = math.pow(self.current_speed_curve_factor, self.speed_curve_exponent)
             speed_range = self.linear_speed_mps - self.min_linear_speed_mps
             return self.linear_speed_mps - speed_range * slowdown
 
@@ -1080,8 +1158,10 @@ class LineFollowerController(Node):
             f'offset={self.current_offset:+.3f} '
             f'speed_mps={self.current_speed_mps:.3f} '
             f'curve_factor={self.current_curve_factor:.3f} '
+            f'speed_factor={self.current_speed_curve_factor:.3f} '
             f'max_steer={self.current_max_steering:.3f} '
             f'slew_rate={self.current_steering_slew_rate:.3f} '
+            f'steer_sign={self.steering_sign:+.0f} '
             f'heading={self.current_heading_error:+.3f} '
             f'curvature={self.current_curvature:+.3f} '
             f'conf={self.lane_confidence:.2f} '

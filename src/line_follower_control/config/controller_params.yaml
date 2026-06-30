@@ -4,19 +4,22 @@
   ros__parameters:
     # ==================== 标准PID参数 ====================
     # 50Hz控制循环下先以P/D为主，Ki只用于很小的稳态偏差修正。
-    Kp: 1.16             # 比例增益：大了响应快但容易左右摆
+    Kp: 1.05             # 比例增益：当前用于压弯中平均offset，继续加会开始出弯过冲
     Ki: 0.0              # 积分增益：初调关闭，避免视觉噪声导致积分过冲
-    Kd: 0.032            # 微分增益：抑制快速摆动，过大会放大offset噪声
+    Kd: 0.055            # 微分增益：帮助入弯爬升段补舵，过大会放大offset噪声
     
     # ==================== 车辆参数 ====================
-    linear_speed: 0.94     # Linear speed in m/s
+    linear_speed: 0.75     # 动态速度上限(m/s)；直道极速按0.05m/s小步试探
     enable_dynamic_speed: true  # 根据连续弯道强度动态调速；false时保持固定linear_speed
-    min_linear_speed: 0.46  # 弯道强度接近1时的最低线速度(m/s)
+    min_linear_speed: 0.53  # 弯道强度接近1时的最低线速度(m/s)
     speed_offset_start: 0.05  # 关闭曲率自适应时，abs(offset)小于该值保持最高速度
     speed_offset_full_slow: 0.65  # 关闭曲率自适应时，abs(offset)达到该值后降到min_linear_speed
     speed_curve_exponent: 2.0  # >1时小弯/微偏差更保速，急弯时快速降速
-    speed_accel_rate: 0.38  # 目标速度升高时的最大加速度(m/s^2)，避免刚回正就猛加速
+    speed_accel_rate: 0.35  # 目标速度升高时的最大加速度(m/s^2)，让直道更快恢复极速
     speed_decel_rate: 2.5  # 目标速度降低时的最大减速度(m/s^2)，快飞时快速降速
+    speed_curve_offset_limit: 0.60  # 速度降速主要看offset，abs(offset)到该值后接近最低速度
+    speed_curve_heading_weight: 0.12  # heading只轻度参与速度降速，避免长期压速
+    speed_curve_curvature_weight: 0.08  # curvature只轻度参与速度降速，避免拟合饱和时长期压速
     enable_curve_adaptive_control: true  # 用offset/heading/curvature连续估计弯道强度
     curve_offset_limit: 0.70  # abs(offset)达到该值时弯道强度约为1
     curve_heading_limit: 0.80  # abs(heading_error)达到该值时弯道强度约为1
@@ -29,39 +32,40 @@
     
     # ==================== 积分限幅 ====================
     integral_max: 0.25  # 积分项最大值，防止积分饱和
-    max_steering: 0.6      # 关闭曲率自适应时的最大转向比例
-    steering_slew_rate: 2.0  # 关闭曲率自适应时的最大转向变化率(比例/秒)
+    max_steering: 0.75      # 关闭曲率自适应时的最大转向比例
+    steering_slew_rate: 3.0  # 关闭曲率自适应时的最大转向变化率(比例/秒)
+    steering_sign: 1.0  # 舵机方向；1保持底盘当前约定，-1用于硬件方向反装时诊断
     straight_max_steering: 0.25  # 直道/高速时限制舵角，避免微小噪声把车甩出去
     curve_max_steering: 0.95  # 急弯/低速时放开舵角，允许更小转弯半径
-    straight_steering_slew_rate: 1.6  # 直道转向变化率限制
-    curve_steering_slew_rate: 4.0  # 弯道转向变化率限制
+    straight_steering_slew_rate: 1.8  # 直道转向变化率限制
+    curve_steering_slew_rate: 4.5  # 弯道转向变化率限制
     
     # ==================== 超时设置 ====================
     invalid_timeout: 0.5   # Timeout for is_valid=False (seconds)
     enable_perception_stop: true  # 是否响应/perception/stop_request停车请求
     ignore_stop_requests: false  # 是否忽略所有感知停车请求；false时响应Stop/红灯/障碍停车请求
     perception_stop_timeout: 0.5  # 停车请求超过该时间未更新则自动解除，避免perception掉线永久停车
-    autonomous_enabled_on_start: true  # 启动后默认待命，等待UI发车服务
-    publish_stop_when_disabled: false  # 待命/禁用巡线时不持续刷0；急停/感知停车仍会发布0
+    autonomous_enabled_on_start: false  # 启动后默认待命，等待UI发车服务
+    publish_stop_when_disabled: true  # 待命/禁用巡线时持续刷0；避免底盘保持最后一次速度/舵角
     enable_manual_override: true  # 键盘接管时释放/cmd_vel，避免和自动巡线冲突
     use_lane_state: true  # 订阅/perception/lane_state；旧center_offset仍保留为回退
     lane_state_timeout: 0.3  # lane_state超过该时间未更新时，仅使用旧center_offset
-    heading_gain: 0.12  # 航向角前馈，提前进弯；过大会左右摆
-    curvature_gain: 0.06  # 曲率前馈，帮助小半径弯；过大会放大拟合噪声
+    heading_gain: -0.03  # 航向角前馈；当前感知符号下小负值能在主弯提前补舵
+    curvature_gain: 0.0  # 曲率前馈；当前先关闭，避免曲率跳变导致直道扭动
 
     # ==================== 弹射起步 ====================
     # 感知发布 task_state=START_BOOST 时触发一次开环冲刺；Go/Gate消失或超过时长后恢复PID。
-    enable_start_boost: true
+    enable_start_boost: false
     start_boost_task_state: "START_BOOST"
     start_boost_duration: 0.7
-    start_boost_speed: 1.5
+    start_boost_speed: 0.8
     start_boost_steering: 0.0
     
     # ==================== 日志设置 ====================
     # normal: 原有低频控制日志
     # pid_tuning: 高频PID调参日志，带误差条
     # off: 关闭控制循环日志
-    controller_log_mode: "off"
+    controller_log_mode: "pid_tuning"
     pid_tuning_log_hz: 30.0
     pid_tuning_bar_width: 41
     controller_debug_hz: 1.0
