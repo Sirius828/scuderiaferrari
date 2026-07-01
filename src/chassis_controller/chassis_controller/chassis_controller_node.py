@@ -2,15 +2,15 @@
 """
 阿克曼底盘控制节点
 - 通过串口发送控制指令到底盘（速度、转向）
-- 从串口读取偏航角数据并发布到ROS2话题
+- 从串口读取底盘反馈数据并发布到ROS2话题
 通信格式: 
   - 发送: #Flag,DIR,speed_set,servo_pwm
-  - 接收: angle: 56.16 (角度，单位：度)
+  - 接收: enc:12,set:300
 """
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int8, Float32
+from std_msgs.msg import Int8, Int32
 from geometry_msgs.msg import Twist
 import serial
 import re
@@ -45,14 +45,17 @@ class ChassisController(Node):
         self.direction = 1    # DIR: 前进1后退0
         self.speed = 0.0      # 速度 rad/s
         self.steering_ratio = 0.0  # 转向比例 -1.0(右满) 到 1.0(左满)
+        self.latest_encoder_delta = 0
+        self.latest_speed_set_feedback = 0
         
         # 订阅话题 - 控制指令
         self.create_subscription(Twist, '/cmd_vel', self.cmd_vel_callback, 10)
         self.create_subscription(Int8, '/chassis/enable', self.enable_callback, 10)
         self.create_subscription(Int8, '/chassis/direction', self.direction_callback, 10)
         
-        # 发布话题 - 偏航角
-        self.yaw_pub = self.create_publisher(Float32, '/yaw_angle', 10)
+        # 发布话题 - 底盘反馈
+        self.encoder_delta_pub = self.create_publisher(Int32, '/chassis/encoder_delta', 10)
+        self.speed_set_feedback_pub = self.create_publisher(Int32, '/chassis/speed_set_feedback', 10)
         
         # 初始化串口
         self.init_serial()
@@ -150,7 +153,8 @@ class ChassisController(Node):
         servo_pwm = max(self.servo_left_max, min(servo_pwm, self.servo_right_max))
         
         # 组装命令字符串（末尾添加分号）
-        command = f"#{flag},{dir_val},{speed_set},{servo_pwm};"
+        speed_set_str = f"{speed_set:04d}"
+        command = f"#{flag},{dir_val},{speed_set_str},{servo_pwm};"
         
         return command.encode('utf-8')
     
@@ -219,7 +223,7 @@ class ChassisController(Node):
             self.ser = None
     
     def read_serial_data(self):
-        """读取串口数据（偏航角）- 优化版本"""
+        """读取串口数据（底盘反馈）- 优化版本"""
         if not self.ser or not self.ser.is_open:
             return
         
@@ -240,16 +244,22 @@ class ChassisController(Node):
                     line = line_bytes.decode('utf-8', errors='ignore').strip()
                     
                     if line:
-                        # 解析 "angle: 0.98" 格式（角度，单位：度）
-                        match = re.match(r'angle:\s*([+-]?\d+\.?\d*)', line)
+                        match = re.match(r'enc:\s*([+-]?\d+)\s*,\s*set:\s*([+-]?\d+)', line)
                         if match:
                             try:
-                                yaw_deg = float(match.group(1))
-                                
-                                # 发布消息（保持为角度值）
-                                msg = Float32()
-                                msg.data = yaw_deg
-                                self.yaw_pub.publish(msg)
+                                encoder_delta = int(match.group(1))
+                                speed_set_feedback = int(match.group(2))
+
+                                self.latest_encoder_delta = encoder_delta
+                                self.latest_speed_set_feedback = speed_set_feedback
+
+                                encoder_msg = Int32()
+                                encoder_msg.data = encoder_delta
+                                self.encoder_delta_pub.publish(encoder_msg)
+
+                                speed_set_msg = Int32()
+                                speed_set_msg.data = speed_set_feedback
+                                self.speed_set_feedback_pub.publish(speed_set_msg)
                                 
                                 # 每秒打印一次日志
                                 # if not hasattr(self, '_last_log') or time.time() - self._last_log >= 1.0:
@@ -269,7 +279,7 @@ class ChassisController(Node):
         """清理资源"""
         if self.ser and self.ser.is_open:
             # ⭐ 发送停止命令：禁用底盘 + 速度0 + 舵机回正
-            stop_command = f"#0,1,0,{self.servo_center};".encode('utf-8')
+            stop_command = f"#0,1,0000,{self.servo_center};".encode('utf-8')
             try:
                 # 多次发送确保下位机收到
                 for i in range(3):
