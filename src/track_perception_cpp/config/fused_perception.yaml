@@ -116,12 +116,12 @@ fused_perception_node:
     fit_point_trend_slope_delta: 0.65
     fit_point_trend_min_points: 6
     fit_point_trend_min_keep_ratio: 0.75
-    lookahead_y_ratio: 0.75
+    lookahead_y_ratio: 0.68
     use_heading_term: true
-    heading_weight: 0.10
-    near_offset_weight: 0.90
+    heading_weight: 0.0
+    near_offset_weight: 1.0
     max_offset_jump: 2.0
-    offset_smoothing_alpha: 0.35
+    offset_smoothing_alpha: 0.45
 
     # 左边界模板线：检测到岔路且目标为 left 时，使用 current_left_boundary + template_offset 作为全部拟合点
     enable_left_boundary_template_line: true

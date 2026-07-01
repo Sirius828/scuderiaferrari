@@ -1054,6 +1054,7 @@ class LineFollowerController(Node):
             heading_term, curvature_term = self.last_lane_terms
             self.get_logger().info(
                 f'[PID_TUNE] err={self.current_offset:+.3f} '
+                f'lat={self.current_lateral_offset:+.3f} '
                 f'{self.format_offset_bar(self.current_offset)} '
                 f'steer={steering:+.3f} '
                 f'speed={self.current_speed_mps:.2f}m/s '

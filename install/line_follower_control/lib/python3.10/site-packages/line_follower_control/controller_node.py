@@ -699,8 +699,14 @@ class LineFollowerController(Node):
             response.message = 'Autonomous line following enabled'
             self.get_logger().info('▶️ Autonomous line following enabled')
         else:
+            self.last_control_mode = 'disabled'
+            self.last_steering = 0.0
+            self.current_speed_mps = 0.0
+            self.current_wheel_speed_rps = 0.0
+            for _ in range(3):
+                self.publish_stop(log=False)
             response.message = 'Autonomous line following disabled'
-            self.get_logger().warn('⏸️ Autonomous line following disabled')
+            self.get_logger().warn('⏸️ Autonomous line following disabled; stop commands sent')
         return response
 
     def should_stop_for_perception(self, current_time: float) -> bool:
@@ -1048,6 +1054,7 @@ class LineFollowerController(Node):
             heading_term, curvature_term = self.last_lane_terms
             self.get_logger().info(
                 f'[PID_TUNE] err={self.current_offset:+.3f} '
+                f'lat={self.current_lateral_offset:+.3f} '
                 f'{self.format_offset_bar(self.current_offset)} '
                 f'steer={steering:+.3f} '
                 f'speed={self.current_speed_mps:.2f}m/s '

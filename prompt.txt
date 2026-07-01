@@ -339,3 +339,6 @@ https://beeapi.ai/api-keys
 
 请不要一次就想着完成目标,而且你最后根据反馈调了pid还是转向的方向,现在直接无法巡线,请你调回来,而且一开始别上这么大速度,我们可以从0.6开始往上边改参数边提速.最后,停止line follower control的时候没有发布停车或者0速度导致不关闭chassis controller的情况下车会保持速度和转向跑下去.
 请继续提速,减速的主要原因还是入弯的大offset,弯中的offset也有几乎0.6,不算舒服.
+stream disconnected before completion: Upstream temporarily unavailable, please retry shortly.
+
+把最低速调到0.7然后对齐
