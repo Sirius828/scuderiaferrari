@@ -140,6 +140,30 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: /home/oran
   /usr/include/c++/11/bits/parse_numbers.h \
   /usr/include/c++/11/cctype \
   /usr/include/ctype.h \
+  /usr/include/c++/11/cmath \
+  /usr/include/math.h \
+  /usr/include/aarch64-linux-gnu/bits/math-vector.h \
+  /usr/include/aarch64-linux-gnu/bits/libm-simd-decl-stubs.h \
+  /usr/include/aarch64-linux-gnu/bits/flt-eval-method.h \
+  /usr/include/aarch64-linux-gnu/bits/fp-logb.h \
+  /usr/include/aarch64-linux-gnu/bits/fp-fast.h \
+  /usr/include/aarch64-linux-gnu/bits/mathcalls-helper-functions.h \
+  /usr/include/aarch64-linux-gnu/bits/mathcalls.h \
+  /usr/include/aarch64-linux-gnu/bits/mathcalls-narrow.h \
+  /usr/include/aarch64-linux-gnu/bits/iscanonical.h \
+  /usr/include/c++/11/bits/specfun.h \
+  /usr/include/c++/11/tr1/gamma.tcc \
+  /usr/include/c++/11/tr1/special_function_util.h \
+  /usr/include/c++/11/tr1/bessel_function.tcc \
+  /usr/include/c++/11/tr1/beta_function.tcc \
+  /usr/include/c++/11/tr1/ell_integral.tcc \
+  /usr/include/c++/11/tr1/exp_integral.tcc \
+  /usr/include/c++/11/tr1/hypergeometric.tcc \
+  /usr/include/c++/11/tr1/legendre_function.tcc \
+  /usr/include/c++/11/tr1/modified_bessel_func.tcc \
+  /usr/include/c++/11/tr1/poly_hermite.tcc \
+  /usr/include/c++/11/tr1/poly_laguerre.tcc \
+  /usr/include/c++/11/tr1/riemann_zeta.tcc \
   /usr/include/c++/11/filesystem \
   /usr/include/c++/11/bits/fs_fwd.h \
   /usr/include/c++/11/system_error \
@@ -551,30 +575,6 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: /home/oran
   /opt/ros/humble/include/statistics_msgs/statistics_msgs/msg/rosidl_generator_cpp__visibility_control.hpp \
   /opt/ros/humble/include/libstatistics_collector/libstatistics_collector/visibility_control.hpp \
   /opt/ros/humble/include/libstatistics_collector/libstatistics_collector/moving_average_statistics/types.hpp \
-  /usr/include/c++/11/cmath \
-  /usr/include/math.h \
-  /usr/include/aarch64-linux-gnu/bits/math-vector.h \
-  /usr/include/aarch64-linux-gnu/bits/libm-simd-decl-stubs.h \
-  /usr/include/aarch64-linux-gnu/bits/flt-eval-method.h \
-  /usr/include/aarch64-linux-gnu/bits/fp-logb.h \
-  /usr/include/aarch64-linux-gnu/bits/fp-fast.h \
-  /usr/include/aarch64-linux-gnu/bits/mathcalls-helper-functions.h \
-  /usr/include/aarch64-linux-gnu/bits/mathcalls.h \
-  /usr/include/aarch64-linux-gnu/bits/mathcalls-narrow.h \
-  /usr/include/aarch64-linux-gnu/bits/iscanonical.h \
-  /usr/include/c++/11/bits/specfun.h \
-  /usr/include/c++/11/tr1/gamma.tcc \
-  /usr/include/c++/11/tr1/special_function_util.h \
-  /usr/include/c++/11/tr1/bessel_function.tcc \
-  /usr/include/c++/11/tr1/beta_function.tcc \
-  /usr/include/c++/11/tr1/ell_integral.tcc \
-  /usr/include/c++/11/tr1/exp_integral.tcc \
-  /usr/include/c++/11/tr1/hypergeometric.tcc \
-  /usr/include/c++/11/tr1/legendre_function.tcc \
-  /usr/include/c++/11/tr1/modified_bessel_func.tcc \
-  /usr/include/c++/11/tr1/poly_hermite.tcc \
-  /usr/include/c++/11/tr1/poly_laguerre.tcc \
-  /usr/include/c++/11/tr1/riemann_zeta.tcc \
   /opt/ros/humble/include/libstatistics_collector/libstatistics_collector/topic_statistics_collector/constants.hpp \
   /opt/ros/humble/include/libstatistics_collector/libstatistics_collector/topic_statistics_collector/received_message_age.hpp \
   /opt/ros/humble/include/libstatistics_collector/libstatistics_collector/topic_statistics_collector/constants.hpp \
@@ -3459,38 +3459,6 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /opt/ros/humble/include/libstatistics_collector/libstatistics_collector/topic_statistics_collector/constants.hpp:
 
-/opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/get_node_parameters_interface.hpp:
-
-/usr/include/c++/11/tr1/poly_laguerre.tcc:
-
-/opt/ros/humble/include/rclcpp/rclcpp/typesupport_helpers.hpp:
-
-/usr/include/c++/11/tr1/poly_hermite.tcc:
-
-/usr/include/c++/11/tr1/modified_bessel_func.tcc:
-
-/usr/include/c++/11/tr1/legendre_function.tcc:
-
-/usr/include/c++/11/tr1/hypergeometric.tcc:
-
-/usr/include/c++/11/tr1/ell_integral.tcc:
-
-/usr/include/c++/11/tr1/bessel_function.tcc:
-
-/usr/include/c++/11/tr1/special_function_util.h:
-
-/usr/include/c++/11/tr1/gamma.tcc:
-
-/usr/include/aarch64-linux-gnu/bits/iscanonical.h:
-
-/usr/include/aarch64-linux-gnu/bits/fp-logb.h:
-
-/usr/include/aarch64-linux-gnu/bits/libm-simd-decl-stubs.h:
-
-/opt/ros/humble/include/rclcpp/rclcpp/detail/qos_parameters.hpp:
-
-/usr/include/c++/11/cmath:
-
 /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32_multi_array__type_support.hpp:
 
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/describe_parameters__struct.hpp:
@@ -3509,41 +3477,39 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /opt/ros/humble/include/statistics_msgs/statistics_msgs/msg/detail/statistic_data_point__struct.hpp:
 
-/usr/include/c++/11/memory:
+/opt/ros/humble/include/std_msgs/std_msgs/msg/detail/string__builder.hpp:
 
-/opt/ros/humble/include/rmw/rmw/serialized_message.h:
+/opt/ros/humble/include/statistics_msgs/statistics_msgs/msg/metrics_message.hpp:
 
-/opt/ros/humble/include/rclcpp/rclcpp/qos_event.hpp:
+/opt/ros/humble/include/rclcpp/rclcpp/subscription_traits.hpp:
 
-/usr/include/opencv4/opencv2/flann/kdtree_index.h:
+/opt/ros/humble/include/rclcpp/rclcpp/topic_statistics_state.hpp:
 
-/usr/include/c++/11/ext/string_conversions.h:
+/usr/include/opencv4/opencv2/flann/dist.h:
 
-/usr/include/c++/11/bits/unique_lock.h:
+/usr/include/opencv4/opencv2/core/persistence.hpp:
 
-/usr/include/c++/11/bits/uses_allocator.h:
+/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/set_parameters_result__type_support.hpp:
 
-/usr/include/c++/11/ratio:
+/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/set_parameters_result__traits.hpp:
 
-/usr/include/c++/11/mutex:
+/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/set_parameters_result__builder.hpp:
 
-/usr/include/c++/11/bits/fs_ops.h:
+/opt/ros/humble/include/rclcpp/rclcpp/qos_overriding_options.hpp:
 
-/usr/include/aarch64-linux-gnu/bits/types/__FILE.h:
+/opt/ros/humble/include/rclcpp/rclcpp/detail/rmw_implementation_specific_payload.hpp:
 
-/usr/include/aarch64-linux-gnu/bits/signal_ext.h:
+/opt/ros/humble/include/rclcpp/rclcpp/detail/resolve_intra_process_buffer_type.hpp:
 
-/usr/include/c++/11/ext/concurrence.h:
+/usr/include/aarch64-linux-gnu/bits/posix2_lim.h:
 
-/usr/include/c++/11/new:
+/opt/ros/humble/include/rclcpp/rclcpp/parameter.hpp:
 
-/usr/include/c++/11/bits/istream.tcc:
+/opt/ros/humble/include/rclcpp/rclcpp/detail/resolve_use_intra_process.hpp:
 
-/usr/include/opencv4/opencv2/flann/composite_index.h:
+/opt/ros/humble/include/rclcpp/rclcpp/rate.hpp:
 
-/usr/include/c++/11/bits/basic_ios.h:
-
-/usr/include/c++/11/bits/uniform_int_dist.h:
+/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__type_support.hpp:
 
 /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__traits.hpp:
 
@@ -3555,14 +3521,6 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/c++/11/sstream:
 
-/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/describe_parameters__traits.hpp:
-
-/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter_type__struct.hpp:
-
-/usr/include/c++/11/bits/quoted_string.h:
-
-/usr/include/c++/11/ostream:
-
 /usr/include/c++/11/bits/unique_ptr.h:
 
 /usr/include/c++/11/bits/locale_conv.h:
@@ -3572,10 +3530,6 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 /opt/ros/humble/include/rcl/rcl/timer.h:
 
 /usr/include/aarch64-linux-gnu/c++/11/bits/ctype_inline.h:
-
-/usr/include/c++/11/bits/specfun.h:
-
-/usr/lib/gcc/aarch64-linux-gnu/11/include/stdarg.h:
 
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/set_parameters__builder.hpp:
 
@@ -3591,13 +3545,13 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/c++/11/functional:
 
+/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/set_parameters_result.hpp:
+
+/usr/include/sched.h:
+
 /usr/include/c++/11/cwctype:
 
 /usr/include/aarch64-linux-gnu/c++/11/bits/atomic_word.h:
-
-/usr/include/c++/11/bits/exception.h:
-
-/opt/ros/humble/include/rmw/rmw/get_topic_names_and_types.h:
 
 /usr/include/opencv4/opencv2/flann/nn_index.h:
 
@@ -3625,27 +3579,9 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/aarch64-linux-gnu/sys/single_threaded.h:
 
-/usr/include/sched.h:
-
-/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/set_parameters_result.hpp:
-
 /opt/ros/humble/include/rclcpp/rclcpp/node_impl.hpp:
 
 /usr/include/aarch64-linux-gnu/bits/types/struct___jmp_buf_tag.h:
-
-/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/set_parameters_result__builder.hpp:
-
-/usr/include/c++/11/bits/basic_ios.tcc:
-
-/usr/include/aarch64-linux-gnu/bits/mathcalls-narrow.h:
-
-/usr/include/c++/11/bits/enable_special_members.h:
-
-/opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32__builder.hpp:
-
-/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/parameter_value.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/qos.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/experimental/executable_list.hpp:
 
@@ -3656,6 +3592,8 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 /usr/include/linux/falloc.h:
 
 /opt/ros/humble/include/rclcpp/rclcpp/any_service_callback.hpp:
+
+/usr/include/c++/11/bits/istream.tcc:
 
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter__traits.hpp:
 
@@ -3681,17 +3619,17 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/aarch64-linux-gnu/bits/types/wint_t.h:
 
-/usr/include/c++/11/bits/localefwd.h:
-
-/usr/include/c++/11/bits/std_thread.h:
-
-/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/rosidl_generator_cpp__visibility_control.hpp:
-
 /usr/include/c++/11/bits/nested_exception.h:
 
 /opt/ros/humble/include/rclcpp/rclcpp/wait_set_policies/detail/storage_policy_common.hpp:
 
 /opt/ros/humble/include/rmw/rmw/topic_endpoint_info_array.h:
+
+/usr/include/opencv4/opencv2/flann/kdtree_index.h:
+
+/usr/include/c++/11/ext/string_conversions.h:
+
+/usr/include/aarch64-linux-gnu/bits/libm-simd-decl-stubs.h:
 
 /opt/ros/humble/include/rcl/rcl/graph.h:
 
@@ -3701,19 +3639,15 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/c++/11/bits/stl_pair.h:
 
-/usr/include/opencv4/opencv2/flann/flann_base.hpp:
-
-/usr/include/math.h:
-
-/usr/include/c++/11/bits/exception_ptr.h:
-
-/usr/include/c++/11/bits/charconv.h:
-
 /usr/include/c++/11/bits/fs_path.h:
 
 /opt/ros/humble/include/ament_index_cpp/ament_index_cpp/get_package_share_directory.hpp:
 
-/usr/include/c++/11/bits/postypes.h:
+/usr/include/aarch64-linux-gnu/bits/types/__FILE.h:
+
+/usr/include/c++/11/bits/fs_ops.h:
+
+/usr/include/aarch64-linux-gnu/bits/signal_ext.h:
 
 /usr/include/opencv4/opencv2/stitching/detail/util_inl.hpp:
 
@@ -3721,25 +3655,13 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/c++/11/initializer_list:
 
-/usr/include/asm-generic/errno.h:
-
 /usr/include/c++/11/locale:
 
 /usr/include/ctype.h:
 
 /usr/include/aarch64-linux-gnu/bits/types/error_t.h:
 
-/opt/ros/humble/include/rclcpp/rclcpp/generic_subscription.hpp:
-
-/usr/include/c++/11/bits/fs_dir.h:
-
 /usr/include/aarch64-linux-gnu/bits/stdio.h:
-
-/opt/ros/humble/include/statistics_msgs/statistics_msgs/msg/detail/metrics_message__struct.hpp:
-
-/usr/include/aarch64-linux-gnu/bits/types/clock_t.h:
-
-/usr/include/aarch64-linux-gnu/c++/11/bits/c++locale.h:
 
 /usr/include/c++/11/cerrno:
 
@@ -3755,11 +3677,69 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/c++/11/bits/stl_bvector.h:
 
+/usr/include/c++/11/bits/exception.h:
+
+/opt/ros/humble/include/rmw/rmw/get_topic_names_and_types.h:
+
+/opt/ros/humble/include/rclcpp/rclcpp/typesupport_helpers.hpp:
+
+/usr/include/c++/11/tr1/poly_hermite.tcc:
+
+/usr/include/c++/11/tr1/legendre_function.tcc:
+
+/usr/include/c++/11/bits/localefwd.h:
+
+/usr/include/c++/11/tr1/hypergeometric.tcc:
+
+/opt/ros/humble/include/rclcpp/rclcpp/expand_topic_or_service_name.hpp:
+
+/usr/include/asm-generic/errno.h:
+
+/usr/include/c++/11/tr1/ell_integral.tcc:
+
+/usr/include/c++/11/bits/postypes.h:
+
+/usr/include/c++/11/tr1/special_function_util.h:
+
+/usr/include/c++/11/tr1/gamma.tcc:
+
 /usr/include/c++/11/limits:
 
-/opt/ros/humble/include/rclcpp/rclcpp/detail/resolve_intra_process_buffer_type.hpp:
-
 /usr/include/c++/11/filesystem:
+
+/usr/lib/gcc/aarch64-linux-gnu/11/include/stdarg.h:
+
+/usr/include/c++/11/bits/specfun.h:
+
+/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/describe_parameters__traits.hpp:
+
+/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter_type__struct.hpp:
+
+/usr/include/c++/11/bits/quoted_string.h:
+
+/opt/ros/humble/include/statistics_msgs/statistics_msgs/msg/detail/metrics_message__struct.hpp:
+
+/usr/include/aarch64-linux-gnu/c++/11/bits/c++locale.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/clock_t.h:
+
+/usr/include/opencv4/opencv2/flann/flann_base.hpp:
+
+/usr/include/c++/11/bits/exception_ptr.h:
+
+/usr/include/c++/11/bits/charconv.h:
+
+/usr/include/math.h:
+
+/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter_descriptor__struct.hpp:
+
+/usr/include/c++/11/bits/atomic_futex.h:
+
+/usr/include/c++/11/cstring:
+
+/opt/ros/humble/include/rclcpp/rclcpp/detail/qos_parameters.hpp:
+
+/usr/include/c++/11/cmath:
 
 /usr/include/opencv4/opencv2/calib3d.hpp:
 
@@ -3767,9 +3747,31 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/aarch64-linux-gnu/bits/types/struct_itimerspec.h:
 
+/usr/include/aarch64-linux-gnu/bits/iscanonical.h:
+
+/usr/include/c++/11/exception:
+
+/opt/ros/humble/include/rclcpp/rclcpp/init_options.hpp:
+
 /usr/include/aarch64-linux-gnu/bits/types/struct_tm.h:
 
+/opt/ros/humble/include/rclcpp/rclcpp/intra_process_setting.hpp:
+
+/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__builder.hpp:
+
 /usr/include/aarch64-linux-gnu/bits/timex.h:
+
+/usr/include/aarch64-linux-gnu/bits/mathcalls-narrow.h:
+
+/usr/include/c++/11/bits/enable_special_members.h:
+
+/usr/include/c++/11/bits/basic_ios.tcc:
+
+/opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32__builder.hpp:
+
+/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/parameter_value.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/qos.hpp:
 
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/lane_decision.hpp:
 
@@ -3780,12 +3782,6 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 /usr/include/stdc-predef.h:
 
 /opt/ros/humble/include/rclcpp/rclcpp/rclcpp.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/topic_statistics_state.hpp:
-
-/usr/include/c++/11/bits/cpp_type_traits.h:
-
-/usr/include/endian.h:
 
 /usr/include/stdint.h:
 
@@ -3799,15 +3795,21 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/c++/11/future:
 
-/usr/include/c++/11/bits/stl_iterator_base_funcs.h:
-
-/usr/include/c++/11/bits/streambuf.tcc:
-
 /usr/include/string.h:
 
 /opt/ros/humble/include/rcpputils/rcpputils/thread_safety_annotations.hpp:
 
 /usr/include/aarch64-linux-gnu/bits/types/__fpos_t.h:
+
+/usr/include/c++/11/tr1/bessel_function.tcc:
+
+/usr/include/aarch64-linux-gnu/bits/byteswap.h:
+
+/usr/include/c++/11/bits/codecvt.h:
+
+/opt/ros/humble/include/rmw/rmw/events_statuses/liveliness_lost.h:
+
+/usr/include/aarch64-linux-gnu/c++/11/bits/cxxabi_tweaks.h:
 
 /usr/include/c++/11/bits/atomic_lockfree_defines.h:
 
@@ -3841,10 +3843,6 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/aarch64-linux-gnu/bits/types/__locale_t.h:
 
-/usr/include/aarch64-linux-gnu/asm/bitsperlong.h:
-
-/opt/ros/humble/include/rmw/rmw/incompatible_qos_events_statuses.h:
-
 /usr/include/aarch64-linux-gnu/bits/wchar2.h:
 
 /usr/include/aarch64-linux-gnu/bits/floatn-common.h:
@@ -3857,11 +3855,15 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/c++/11/bits/stl_algo.h:
 
+/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/time.hpp:
+
+/usr/include/c++/11/tr1/riemann_zeta.tcc:
+
 /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/bool__builder.hpp:
 
-/usr/include/c++/11/tr1/beta_function.tcc:
-
 /usr/include/aarch64-linux-gnu/bits/types/FILE.h:
+
+/usr/include/c++/11/tr1/beta_function.tcc:
 
 /usr/include/aarch64-linux-gnu/bits/waitstatus.h:
 
@@ -3875,13 +3877,11 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/wchar.h:
 
-/usr/include/aarch64-linux-gnu/bits/byteswap.h:
+/usr/include/c++/11/bits/uniform_int_dist.h:
 
-/usr/include/c++/11/bits/codecvt.h:
+/usr/include/opencv4/opencv2/flann/composite_index.h:
 
-/opt/ros/humble/include/rmw/rmw/events_statuses/liveliness_lost.h:
-
-/usr/include/aarch64-linux-gnu/c++/11/bits/cxxabi_tweaks.h:
+/usr/include/c++/11/bits/basic_ios.h:
 
 /usr/include/c++/11/bits/concept_check.h:
 
@@ -3909,13 +3909,17 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /opt/ros/humble/include/rclcpp/rclcpp/detail/subscription_callback_type_helper.hpp:
 
-/usr/include/c++/11/bits/std_mutex.h:
+/usr/include/c++/11/ratio:
 
-/usr/include/aarch64-linux-gnu/bits/libc-header-start.h:
+/opt/ros/humble/include/rclcpp/rclcpp/generic_publisher.hpp:
 
-/usr/include/c++/11/exception:
+/opt/ros/humble/include/rclcpp/rclcpp/message_memory_strategy.hpp:
 
-/opt/ros/humble/include/rclcpp/rclcpp/init_options.hpp:
+/usr/include/c++/11/thread:
+
+/opt/ros/humble/include/rclcpp/rclcpp/generic_subscription.hpp:
+
+/usr/include/c++/11/bits/fs_dir.h:
 
 /usr/include/opencv4/opencv2/ml/ml.inl.hpp:
 
@@ -3933,6 +3937,16 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/aarch64-linux-gnu/bits/stdint-intn.h:
 
+/usr/include/aarch64-linux-gnu/bits/fp-logb.h:
+
+/usr/include/opencv4/opencv2/flann/autotuned_index.h:
+
+/usr/include/opencv4/opencv2/flann/random.h:
+
+/usr/include/c++/11/array:
+
+/usr/include/aarch64-linux-gnu/bits/types/struct_sched_param.h:
+
 /usr/include/c++/11/condition_variable:
 
 /usr/include/c++/11/optional:
@@ -3945,15 +3959,13 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/unistd.h:
 
-/usr/include/opencv4/opencv2/core/cvdef.h:
-
-/usr/include/c++/11/bits/sstream.tcc:
-
-/usr/include/aarch64-linux-gnu/bits/thread-shared-types.h:
-
-/usr/include/aarch64-linux-gnu/bits/endianness.h:
-
 /opt/ros/humble/include/rmw/rmw/types.h:
+
+/opt/ros/humble/include/rclcpp/rclcpp/wait_set_policies/static_storage.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/detail/node_interfaces_helpers.hpp:
+
+/usr/include/aarch64-linux-gnu/bits/stdio2.h:
 
 /usr/include/aarch64-linux-gnu/bits/errno.h:
 
@@ -3965,6 +3977,10 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /opt/ros/humble/include/rcl/rcl/network_flow_endpoints.h:
 
+/opt/ros/humble/include/rclcpp/rclcpp/topic_statistics/subscription_topic_statistics.hpp:
+
+/usr/include/features.h:
+
 /usr/include/opencv4/opencv2/imgproc.hpp:
 
 /usr/include/c++/11/bits/unordered_map.h:
@@ -3972,14 +3988,6 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 /usr/include/opencv4/opencv2/flann/config.h:
 
 /usr/include/aarch64-linux-gnu/bits/stdlib-bsearch.h:
-
-/usr/include/c++/11/bits/shared_ptr.h:
-
-/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/floating_point_range__traits.hpp:
-
-/opt/ros/humble/include/libstatistics_collector/libstatistics_collector/topic_statistics_collector/received_message_period.hpp:
-
-/usr/include/c++/11/bits/stl_construct.h:
 
 /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/duration.hpp:
 
@@ -4011,11 +4019,19 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/aarch64-linux-gnu/bits/procfs-extra.h:
 
+/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/floating_point_range__traits.hpp:
+
+/opt/ros/humble/include/libstatistics_collector/libstatistics_collector/topic_statistics_collector/received_message_period.hpp:
+
+/usr/include/c++/11/bits/stl_construct.h:
+
+/usr/include/c++/11/bits/shared_ptr.h:
+
 /usr/include/c++/11/bits/locale_facets_nonio.tcc:
 
 /opt/ros/humble/include/rcl/rcl/types.h:
 
-/opt/ros/humble/include/rclcpp/rclcpp/subscription_traits.hpp:
+/usr/include/c++/11/tr1/modified_bessel_func.tcc:
 
 /usr/include/aarch64-linux-gnu/sys/select.h:
 
@@ -4032,6 +4048,14 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 /opt/ros/humble/include/rmw/rmw/publisher_options.h:
 
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/fused_perception_node.cpp:
+
+/usr/include/aarch64-linux-gnu/asm/bitsperlong.h:
+
+/opt/ros/humble/include/rmw/rmw/incompatible_qos_events_statuses.h:
+
+/usr/include/c++/11/bits/uses_allocator.h:
+
+/usr/include/c++/11/bits/unique_lock.h:
 
 /usr/lib/gcc/aarch64-linux-gnu/11/include/float.h:
 
@@ -4067,6 +4091,14 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/c++/11/cassert:
 
+/opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/get_node_parameters_interface.hpp:
+
+/usr/include/c++/11/tr1/poly_laguerre.tcc:
+
+/usr/include/aarch64-linux-gnu/bits/libc-header-start.h:
+
+/usr/include/c++/11/bits/std_mutex.h:
+
 /usr/include/c++/11/cstdlib:
 
 /usr/include/opencv4/opencv2/flann/result_set.h:
@@ -4076,6 +4108,20 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 /opt/ros/humble/include/rcutils/rcutils/types/string_map.h:
 
 /usr/include/pthread.h:
+
+/usr/include/endian.h:
+
+/usr/include/c++/11/bits/cpp_type_traits.h:
+
+/usr/include/c++/11/bits/streambuf.tcc:
+
+/usr/include/c++/11/bits/stl_iterator_base_funcs.h:
+
+/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/rosidl_generator_cpp__visibility_control.hpp:
+
+/usr/include/c++/11/bits/std_thread.h:
+
+/opt/ros/humble/include/rclcpp/rclcpp/qos_event.hpp:
 
 /usr/include/c++/11/ext/type_traits.h:
 
@@ -4092,20 +4138,6 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 /usr/include/aarch64-linux-gnu/bits/pthread_stack_min-dynamic.h:
 
 /usr/include/c++/11/pstl/pstl_config.h:
-
-/usr/include/c++/11/bits/stl_raw_storage_iter.h:
-
-/opt/ros/humble/include/rclcpp/rclcpp/expand_topic_or_service_name.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/wait_set_policies/static_storage.hpp:
-
-/usr/include/aarch64-linux-gnu/bits/stdio2.h:
-
-/opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/detail/node_interfaces_helpers.hpp:
-
-/usr/include/c++/11/tr1/riemann_zeta.tcc:
-
-/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/time.hpp:
 
 /usr/include/aarch64-linux-gnu/bits/pthreadtypes-arch.h:
 
@@ -4161,13 +4193,15 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/c++/11/bits/stl_iterator.h:
 
-/usr/include/opencv4/opencv2/flann/autotuned_index.h:
+/usr/include/c++/11/new:
 
-/usr/include/opencv4/opencv2/flann/random.h:
+/usr/include/opencv4/opencv2/core/cvdef.h:
 
-/usr/include/aarch64-linux-gnu/bits/types/struct_sched_param.h:
+/usr/include/aarch64-linux-gnu/bits/thread-shared-types.h:
 
-/usr/include/c++/11/array:
+/usr/include/aarch64-linux-gnu/bits/endianness.h:
+
+/usr/include/c++/11/bits/sstream.tcc:
 
 /usr/include/c++/11/bits/range_access.h:
 
@@ -4186,10 +4220,6 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 /usr/include/c++/11/backward/binders.h:
 
 /usr/include/c++/11/bits/functional_hash.h:
-
-/usr/include/features.h:
-
-/opt/ros/humble/include/rclcpp/rclcpp/topic_statistics/subscription_topic_statistics.hpp:
 
 /usr/include/c++/11/bits/refwrap.h:
 
@@ -4251,12 +4281,6 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /usr/include/aarch64-linux-gnu/bits/types/__sigset_t.h:
 
-/opt/ros/humble/include/rclcpp/rclcpp/parameter_value.hpp:
-
-/usr/include/aarch64-linux-gnu/sys/time.h:
-
-/usr/include/c++/11/bits/align.h:
-
 /usr/include/c++/11/vector:
 
 /usr/include/aarch64-linux-gnu/bits/types/__mbstate_t.h:
@@ -4290,6 +4314,24 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 /usr/include/opencv4/opencv2/flann/lsh_index.h:
 
 /usr/include/aarch64-linux-gnu/asm/types.h:
+
+/usr/include/c++/11/ostream:
+
+/usr/include/c++/11/ext/concurrence.h:
+
+/usr/include/c++/11/mutex:
+
+/usr/include/c++/11/memory:
+
+/opt/ros/humble/include/rmw/rmw/serialized_message.h:
+
+/usr/include/c++/11/bits/stl_raw_storage_iter.h:
+
+/opt/ros/humble/include/rclcpp/rclcpp/parameter_value.hpp:
+
+/usr/include/aarch64-linux-gnu/sys/time.h:
+
+/usr/include/c++/11/bits/align.h:
 
 /usr/include/c++/11/bits/shared_ptr_atomic.h:
 
@@ -4611,8 +4653,6 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /opt/ros/humble/include/rcl/rcl/time.h:
 
-/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/set_parameters_result__traits.hpp:
-
 /usr/include/aarch64-linux-gnu/bits/waitflags.h:
 
 /opt/ros/humble/include/rosidl_runtime_c/rosidl_runtime_c/sequence_bound.h:
@@ -4624,6 +4664,14 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 /opt/ros/humble/include/rosidl_runtime_cpp/rosidl_runtime_cpp/service_type_support_decl.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/allocator/allocator_common.hpp:
+
+/usr/include/opencv4/opencv2/core/bufferpool.hpp:
+
+/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter_value__struct.hpp:
+
+/opt/ros/humble/include/libstatistics_collector/libstatistics_collector/collector/generate_statistics_message.hpp:
+
+/opt/ros/humble/include/rmw/rmw/qos_profiles.h:
 
 /usr/include/c++/11/clocale:
 
@@ -4693,8 +4741,6 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /opt/ros/humble/include/rclcpp/rclcpp/logger.hpp:
 
-/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__type_support.hpp:
-
 /opt/ros/humble/include/rclcpp/rclcpp/utilities.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_graph_interface.hpp:
@@ -4757,12 +4803,6 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /opt/ros/humble/include/rclcpp/rclcpp/waitable.hpp:
 
-/usr/include/opencv4/opencv2/flann/dist.h:
-
-/usr/include/opencv4/opencv2/core/persistence.hpp:
-
-/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/set_parameters_result__type_support.hpp:
-
 /usr/include/aarch64-linux-gnu/bits/types/locale_t.h:
 
 /opt/ros/humble/include/rcpputils/rcpputils/time.hpp:
@@ -4783,12 +4823,6 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /opt/ros/humble/include/rclcpp/rclcpp/any_subscription_callback.hpp:
 
-/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter_descriptor__struct.hpp:
-
-/usr/include/c++/11/bits/atomic_futex.h:
-
-/usr/include/c++/11/cstring:
-
 /opt/ros/humble/include/rclcpp/rclcpp/message_info.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/serialized_message.hpp:
@@ -4805,8 +4839,6 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 
 /opt/ros/humble/include/rclcpp/rclcpp/experimental/buffers/buffer_implementation_base.hpp:
 
-/opt/ros/humble/include/rclcpp/rclcpp/rate.hpp:
-
 /usr/include/opencv4/opencv2/video.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/experimental/create_intra_process_buffer.hpp:
@@ -4820,35 +4852,3 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderia
 /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/multi_array_dimension__traits.hpp:
 
 /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__struct.hpp:
-
-/usr/include/aarch64-linux-gnu/bits/posix2_lim.h:
-
-/opt/ros/humble/include/rclcpp/rclcpp/parameter.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/detail/resolve_use_intra_process.hpp:
-
-/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__builder.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/intra_process_setting.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/generic_publisher.hpp:
-
-/usr/include/c++/11/thread:
-
-/opt/ros/humble/include/rclcpp/rclcpp/message_memory_strategy.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/detail/rmw_implementation_specific_payload.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/qos_overriding_options.hpp:
-
-/usr/include/opencv4/opencv2/core/bufferpool.hpp:
-
-/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter_value__struct.hpp:
-
-/opt/ros/humble/include/rmw/rmw/qos_profiles.h:
-
-/opt/ros/humble/include/libstatistics_collector/libstatistics_collector/collector/generate_statistics_message.hpp:
-
-/opt/ros/humble/include/std_msgs/std_msgs/msg/detail/string__builder.hpp:
-
-/opt/ros/humble/include/statistics_msgs/statistics_msgs/msg/metrics_message.hpp:

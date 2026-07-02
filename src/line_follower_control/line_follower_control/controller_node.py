@@ -93,6 +93,22 @@ class LineFollowerController(Node):
         self.road_state = 'UNKNOWN'
         self.task_state = 'CLEAR'
         self.last_lane_state_time = None
+        self.lane_debug_top_norm = 0.0
+        self.lane_debug_mid_norm = 0.0
+        self.lane_debug_bottom_norm = 0.0
+        self.lane_debug_center_slope_norm = 0.0
+        self.lane_debug_near_slope_norm = 0.0
+        self.lane_debug_bottom_rate = 0.0
+        self.lane_debug_center_residual_px = 0.0
+        self.lane_debug_raw_points = 0
+        self.lane_debug_fit_points = 0
+        self.lane_debug_segments = 0
+        self.lane_debug_branch_detected = False
+        self.lane_debug_branch_score = 0
+        self.lane_debug_transition = False
+        self.lane_debug_transition_reason = ''
+        self.lane_debug_asym_wide = False
+        self.last_lane_debug_time = None
         self.prev_offset = 0.0             # 上一帧偏移量（用于计算微分）
         self.integral = 0.0                # 积分项累积
         self.prev_time = time.time()       # 上一帧时间
@@ -157,6 +173,12 @@ class LineFollowerController(Node):
             String,
             '/perception/lane_state',
             self.lane_state_callback,
+            10
+        )
+        self.lane_debug_subscription = self.create_subscription(
+            String,
+            '/perception/lane_debug',
+            self.lane_debug_callback,
             10
         )
         self.perception_stop_subscription = self.create_subscription(
@@ -639,6 +661,46 @@ class LineFollowerController(Node):
         self.task_state = str(data.get('task_state', 'CLEAR'))
         self.last_lane_state_time = time.time()
 
+    def lane_debug_callback(self, msg: String):
+        """接收感知层赛道几何诊断，用于区分控制摆动和拟合线漂移。"""
+        try:
+            data = json.loads(msg.data)
+        except (TypeError, json.JSONDecodeError) as exc:
+            self.get_logger().warn(f'Invalid /perception/lane_debug JSON: {exc}')
+            return
+
+        now = time.time()
+        previous_bottom = self.lane_debug_bottom_norm
+        previous_time = self.last_lane_debug_time
+
+        self.lane_debug_top_norm = float(data.get('top_norm', self.lane_debug_top_norm))
+        self.lane_debug_mid_norm = float(data.get('mid_norm', self.lane_debug_mid_norm))
+        self.lane_debug_bottom_norm = float(data.get('bottom_norm', self.lane_debug_bottom_norm))
+        self.lane_debug_center_slope_norm = float(
+            data.get('center_slope_norm', self.lane_debug_center_slope_norm)
+        )
+        self.lane_debug_near_slope_norm = float(
+            data.get('near_slope_norm', self.lane_debug_near_slope_norm)
+        )
+        self.lane_debug_center_residual_px = float(
+            data.get('center_residual_px', self.lane_debug_center_residual_px)
+        )
+        self.lane_debug_raw_points = int(data.get('raw_points', self.lane_debug_raw_points))
+        self.lane_debug_fit_points = int(data.get('fit_points', self.lane_debug_fit_points))
+        self.lane_debug_segments = int(data.get('segments', self.lane_debug_segments))
+        self.lane_debug_branch_detected = bool(data.get('branch_detected', self.lane_debug_branch_detected))
+        self.lane_debug_branch_score = int(data.get('branch_score', self.lane_debug_branch_score))
+        self.lane_debug_transition = bool(data.get('transition', self.lane_debug_transition))
+        self.lane_debug_transition_reason = str(
+            data.get('transition_reason', self.lane_debug_transition_reason)
+        )
+        self.lane_debug_asym_wide = bool(data.get('asym_wide', self.lane_debug_asym_wide))
+
+        if previous_time is not None:
+            dt = max(1e-3, now - previous_time)
+            self.lane_debug_bottom_rate = (self.lane_debug_bottom_norm - previous_bottom) / dt
+        self.last_lane_debug_time = now
+
     def has_fresh_lane_state(self, current_time: float) -> bool:
         if not self.use_lane_state or self.last_lane_state_time is None:
             return False
@@ -1063,6 +1125,13 @@ class LineFollowerController(Node):
                 f'slew={self.current_steering_slew_rate:.2f} '
                 f'P={p_term:+.3f} I={i_term:+.3f} D={d_term:+.3f} '
                 f'H={heading_term:+.3f} C={curvature_term:+.3f} '
+                f'geo={self.lane_debug_top_norm:+.2f}/{self.lane_debug_mid_norm:+.2f}/{self.lane_debug_bottom_norm:+.2f} '
+                f'slope={self.lane_debug_center_slope_norm:+.2f} near={self.lane_debug_near_slope_norm:+.2f} '
+                f'bRate={self.lane_debug_bottom_rate:+.2f}/s '
+                f'pts={self.lane_debug_fit_points}/{self.lane_debug_raw_points} '
+                f'res={self.lane_debug_center_residual_px:.0f}px '
+                f'br={int(self.lane_debug_branch_detected)}:{self.lane_debug_branch_score} '
+                f'trans={int(self.lane_debug_transition)} '
                 f'road={self.road_state} conf={self.lane_confidence:.2f} '
                 f'dt={dt*1000:.1f}ms'
             )
@@ -1091,6 +1160,11 @@ class LineFollowerController(Node):
                 f'Integral: {self.integral:.3f}, '
                 f'HeadingTerm: {heading_term:.3f}, '
                 f'CurvTerm: {curvature_term:.3f}, '
+                f'Geo: {self.lane_debug_top_norm:.2f}/{self.lane_debug_mid_norm:.2f}/{self.lane_debug_bottom_norm:.2f}, '
+                f'Slope: {self.lane_debug_center_slope_norm:.2f}, '
+                f'BottomRate: {self.lane_debug_bottom_rate:.2f}/s, '
+                f'FitPts: {self.lane_debug_fit_points}/{self.lane_debug_raw_points}, '
+                f'Residual: {self.lane_debug_center_residual_px:.0f}px, '
                 f'Road: {self.road_state}, '
                 f'dt: {dt*1000:.1f}ms'
             )
@@ -1165,6 +1239,19 @@ class LineFollowerController(Node):
             f'steer_sign={self.steering_sign:+.0f} '
             f'heading={self.current_heading_error:+.3f} '
             f'curvature={self.current_curvature:+.3f} '
+            f'geo_top={self.lane_debug_top_norm:+.3f} '
+            f'geo_mid={self.lane_debug_mid_norm:+.3f} '
+            f'geo_bottom={self.lane_debug_bottom_norm:+.3f} '
+            f'geo_slope={self.lane_debug_center_slope_norm:+.3f} '
+            f'geo_near={self.lane_debug_near_slope_norm:+.3f} '
+            f'geo_bottom_rate={self.lane_debug_bottom_rate:+.3f} '
+            f'fit_points={self.lane_debug_fit_points} '
+            f'raw_points={self.lane_debug_raw_points} '
+            f'center_residual_px={self.lane_debug_center_residual_px:.1f} '
+            f'branch_detected={self.lane_debug_branch_detected} '
+            f'branch_score={self.lane_debug_branch_score} '
+            f'transition={self.lane_debug_transition} '
+            f'asym_wide={self.lane_debug_asym_wide} '
             f'conf={self.lane_confidence:.2f} '
             f'road={self.road_state} '
             f'task={self.task_state} '

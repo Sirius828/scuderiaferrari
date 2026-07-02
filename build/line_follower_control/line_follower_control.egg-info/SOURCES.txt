@@ -12,4 +12,11 @@ config/controller_params.yaml
 launch/controller.launch.py
 line_follower_control/__init__.py
 line_follower_control/controller_node.py
+line_follower_control.egg-info/PKG-INFO
+line_follower_control.egg-info/SOURCES.txt
+line_follower_control.egg-info/dependency_links.txt
+line_follower_control.egg-info/entry_points.txt
+line_follower_control.egg-info/requires.txt
+line_follower_control.egg-info/top_level.txt
+line_follower_control.egg-info/zip-safe
 resource/line_follower_control

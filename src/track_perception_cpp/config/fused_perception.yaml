@@ -77,7 +77,7 @@ fused_perception_node:
 
     # 岔路确认
     branch_detect_min_bands: 2
-    branch_confirm_frames: 1
+    branch_confirm_frames: 2
     branch_detect_far_band_ratio: 0.7
     enable_branch_entry_transition: true
     branch_transition_near_main_ratio: 0.4

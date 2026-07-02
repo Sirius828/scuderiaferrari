@@ -6,18 +6,18 @@
     # 50Hz控制循环下先以P/D为主，Ki只用于很小的稳态偏差修正。
     Kp: 0.92             # 比例增益：当前用于压弯中平均offset，继续加会开始出弯过冲
     Ki: 0.0              # 积分增益：初调关闭，避免视觉噪声导致积分过冲
-    Kd: 0.05             # 微分增益：配合感知前瞻后降低，减少入弯D项尖峰和舵面碎动
+    Kd: 0.035            # 微分增益：降低入弯/分叉D项尖峰，减少高速追赶摆动
     
     # ==================== 车辆参数 ====================
-    linear_speed: 1.18     # 动态速度上限(m/s)；当前收敛后用于更高直道/轻弯速度
+    linear_speed: 1.22     # 动态速度上限(m/s)；配合0.89弯中地板速度，60s均速约0.99
     enable_dynamic_speed: true  # 根据连续弯道强度动态调速；false时保持固定linear_speed
-    min_linear_speed: 0.78  # 弯道强度接近1时的最低线速度(m/s)；当前稳定收敛版本
+    min_linear_speed: 0.89  # 弯道强度接近1时的最低线速度(m/s)；当前用于达成0.95+均速
     speed_offset_start: 0.05  # 关闭曲率自适应时，abs(offset)小于该值保持最高速度
     speed_offset_full_slow: 0.65  # 关闭曲率自适应时，abs(offset)达到该值后降到min_linear_speed
     speed_curve_exponent: 2.0  # >1时小弯/微偏差更保速，急弯时快速降速
     speed_accel_rate: 0.35  # 目标速度升高时的最大加速度(m/s^2)，让直道更快恢复极速
     speed_decel_rate: 8.0  # 目标速度降低时的最大减速度(m/s^2)，允许快速压住入弯外抛
-    speed_curve_offset_limit: 0.36  # 速度降速主要看offset，当前更宽松，避免offset 0.5过早怂
+    speed_curve_offset_limit: 0.40  # 速度降速主要看offset，放开弯中速度但保留高offset保护
     speed_curve_heading_weight: 0.30  # heading参与入弯预判降速，避免offset变大后才减速
     speed_curve_curvature_weight: 0.15  # curvature轻度参与入弯预判降速，避免长期压速
     enable_curve_adaptive_control: true  # 用offset/heading/curvature连续估计弯道强度
@@ -43,7 +43,7 @@
     # ==================== 超时设置 ====================
     invalid_timeout: 0.5   # Timeout for is_valid=False (seconds)
     enable_perception_stop: true  # 是否响应/perception/stop_request停车请求
-    ignore_stop_requests: false  # 是否忽略所有感知停车请求；false时响应Stop/红灯/障碍停车请求
+    ignore_stop_requests: true  # 调车/跑圈时忽略感知stop_request；急停和手动接管仍有效
     perception_stop_timeout: 0.5  # 停车请求超过该时间未更新则自动解除，避免perception掉线永久停车
     autonomous_enabled_on_start: false  # 启动后默认待命，等待UI发车服务
     publish_stop_when_disabled: true  # 待命/禁用巡线时持续刷0；避免底盘保持最后一次速度/舵角
@@ -51,7 +51,7 @@
     use_lane_state: true  # 订阅/perception/lane_state；旧center_offset仍保留为回退
     lane_state_timeout: 0.3  # lane_state超过该时间未更新时，仅使用旧center_offset
     heading_gain: -0.01  # 航向角前馈；当前感知符号下保持很小的负值
-    curvature_gain: 0.05  # 曲率前馈；0.07会带来明显出弯负向过冲
+    curvature_gain: 0.03  # 曲率前馈；降低固定正向偏置，减少分叉/出弯不对称
 
     # ==================== 弹射起步 ====================
     # 感知发布 task_state=START_BOOST 时触发一次开环冲刺；Go/Gate消失或超过时长后恢复PID。

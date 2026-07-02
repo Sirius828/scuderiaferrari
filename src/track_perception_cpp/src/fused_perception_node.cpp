@@ -2,6 +2,7 @@
 #include <atomic>
 #include <chrono>
 #include <cctype>
+#include <cmath>
 #include <filesystem>
 #include <future>
 #include <memory>
@@ -73,6 +74,92 @@ std::string joinLabels(const std::vector<std::string>& labels) {
     }
     ss << labels[i];
   }
+  return ss.str();
+}
+
+std::string jsonEscape(const std::string& text) {
+  std::ostringstream ss;
+  for (char ch : text) {
+    if (ch == '"' || ch == '\\') {
+      ss << '\\' << ch;
+    } else if (ch == '\n') {
+      ss << "\\n";
+    } else {
+      ss << ch;
+    }
+  }
+  return ss.str();
+}
+
+double normalizeCenterX(int center_x, int image_width) {
+  if (center_x < 0 || image_width <= 1) {
+    return 0.0;
+  }
+  return (static_cast<double>(center_x) - 0.5 * static_cast<double>(image_width)) /
+         (0.5 * static_cast<double>(image_width));
+}
+
+int selectedCenterAtRatio(const LaneDebugInfo& debug_info, double ratio) {
+  std::vector<const LaneBandDebug*> selected;
+  selected.reserve(debug_info.bands.size());
+  for (const auto& band : debug_info.bands) {
+    if (band.selected_center_x >= 0) {
+      selected.push_back(&band);
+    }
+  }
+  if (selected.empty()) {
+    return -1;
+  }
+  ratio = std::clamp(ratio, 0.0, 1.0);
+  size_t index = static_cast<size_t>(std::round(ratio * static_cast<double>(selected.size() - 1)));
+  return selected[index]->selected_center_x;
+}
+
+int inferDebugImageWidth(const LaneDebugInfo& debug_info, int fallback_width) {
+  int max_x = 0;
+  for (const auto& band : debug_info.bands) {
+    for (const auto& seg : band.segments) {
+      max_x = std::max(max_x, seg.x1);
+    }
+  }
+  return max_x > 1 ? max_x : fallback_width;
+}
+
+std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width) {
+  const int image_width = inferDebugImageWidth(debug_info, fallback_width);
+  const int top_x = selectedCenterAtRatio(debug_info, 0.0);
+  const int mid_x = selectedCenterAtRatio(debug_info, 0.5);
+  const int bottom_x = selectedCenterAtRatio(debug_info, 1.0);
+  const double top_n = normalizeCenterX(top_x, image_width);
+  const double mid_n = normalizeCenterX(mid_x, image_width);
+  const double bottom_n = normalizeCenterX(bottom_x, image_width);
+
+  std::ostringstream ss;
+  ss << "{"
+     << "\"top_x\":" << top_x << ","
+     << "\"mid_x\":" << mid_x << ","
+     << "\"bottom_x\":" << bottom_x << ","
+     << "\"top_norm\":" << top_n << ","
+     << "\"mid_norm\":" << mid_n << ","
+     << "\"bottom_norm\":" << bottom_n << ","
+     << "\"center_slope_norm\":" << (top_n - bottom_n) << ","
+     << "\"near_slope_norm\":" << (mid_n - bottom_n) << ","
+     << "\"center_residual_px\":" << debug_info.center_residual_px << ","
+     << "\"raw_points\":" << debug_info.raw_point_count << ","
+     << "\"fit_points\":" << debug_info.fit_point_count << ","
+     << "\"segments\":" << debug_info.segment_count << ","
+     << "\"branch_detected\":" << (debug_info.branch_detected ? "true" : "false") << ","
+     << "\"branch_score\":" << debug_info.branch_score << ","
+     << "\"branch_locked\":" << (debug_info.branch_locked ? "true" : "false") << ","
+     << "\"locked_branch_side\":\"" << jsonEscape(debug_info.locked_branch_side) << "\","
+     << "\"transition\":" << (debug_info.branch_entry_transition_active ? "true" : "false") << ","
+     << "\"transition_reason\":\"" << jsonEscape(debug_info.branch_transition_reason) << "\","
+     << "\"asym_wide\":" << (debug_info.asym_wide_detected ? "true" : "false") << ","
+     << "\"wide_bands\":" << debug_info.asym_wide_band_count << ","
+     << "\"lb_template\":" << (debug_info.left_boundary_template_active ? "true" : "false") << ","
+     << "\"lb_points\":" << debug_info.left_boundary_template_points << ","
+     << "\"lb_reason\":\"" << jsonEscape(debug_info.left_boundary_template_reason) << "\""
+     << "}";
   return ss.str();
 }
 
@@ -391,6 +478,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     is_valid_pub_ = create_publisher<std_msgs::msg::Bool>("/segmentation/is_valid", sensor_qos);
     stop_request_pub_ = create_publisher<std_msgs::msg::Bool>("/perception/stop_request", 10);
     lane_state_pub_ = create_publisher<std_msgs::msg::String>("/perception/lane_state", 10);
+    lane_debug_pub_ = create_publisher<std_msgs::msg::String>("/perception/lane_debug", 10);
 
     shm_reader_ = std::make_unique<ShmReader>(shm_name_);
     if (!shm_reader_->connect()) {
@@ -487,7 +575,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     }
 
     auto t_pub0 = std::chrono::steady_clock::now();
-    publishAll(detections, lane_state);
+    publishAll(detections, lane_state, lane_debug);
     auto t_pub1 = std::chrono::steady_clock::now();
     stats.publish_ms = std::chrono::duration<double, std::milli>(t_pub1 - t_pub0).count();
 
@@ -508,7 +596,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     logPerfIfNeeded();
   }
 
-  void publishAll(const std::vector<Detection>& detections, const LaneState& lane_state) {
+  void publishAll(const std::vector<Detection>& detections, const LaneState& lane_state,
+                  const LaneDebugInfo& lane_debug) {
     std_msgs::msg::Float32MultiArray det_msg;
     det_msg.data.reserve(detections.size() * 8);
     for (const auto& det : detections) {
@@ -551,6 +640,10 @@ class FusedPerceptionNode : public rclcpp::Node {
     if (publish_lane_state_) {
       lane_state_pub_->publish(lane_msg);
     }
+
+    std_msgs::msg::String lane_debug_msg;
+    lane_debug_msg.data = laneDebugToJson(lane_debug, seg_input_width_);
+    lane_debug_pub_->publish(lane_debug_msg);
   }
 
   void showDebugWindow(const cv::Mat& frame_rgb, const cv::Mat& seg_map,
@@ -901,6 +994,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr is_valid_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr stop_request_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr lane_state_pub_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr lane_debug_pub_;
 
   uint64_t last_fid_{0};
   uint64_t upstream_frames_{0};
