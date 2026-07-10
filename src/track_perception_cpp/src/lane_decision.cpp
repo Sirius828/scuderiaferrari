@@ -162,6 +162,9 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
     cfg_.near_split_template_side = cfg_.outer_side;
   }
   cfg_.near_split_unlock_min_lock_time = std::max(0.0f, cfg_.near_split_unlock_min_lock_time);
+  cfg_.near_split_exit_recent_frames = std::max(0, cfg_.near_split_exit_recent_frames);
+  cfg_.near_split_exit_bottom_shift_norm = std::max(0.0f, cfg_.near_split_exit_bottom_shift_norm);
+  cfg_.near_split_exit_residual_px = std::max(0.0f, cfg_.near_split_exit_residual_px);
   left_boundary_template_offsets_ = parseDoubleList(cfg_.left_boundary_template_offsets);
   right_boundary_template_offsets_ = parseDoubleList(cfg_.right_boundary_template_offsets);
   locked_branch_side_ = cfg_.outer_side;
@@ -199,8 +202,12 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     auto [near_split_detected, near_split_score] = detectNearSplitFromBands(bands);
     if (near_split_detected) {
       near_split_hold_count_ = std::max(0, cfg_.near_split_hold_frames);
+      near_split_recent_count_ = std::max(near_split_recent_count_, cfg_.near_split_exit_recent_frames);
     } else if (near_split_hold_count_ > 0) {
       --near_split_hold_count_;
+    }
+    if (!near_split_detected && near_split_recent_count_ > 0) {
+      --near_split_recent_count_;
     }
     bool near_split_active = near_split_detected || near_split_hold_count_ > 0;
     int guideboard_count = 0;
@@ -312,11 +319,20 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     raw_points = collectCenterlinePoints(bands, branch_locked_, target_side, last_center_x, w, current_time);
     bool near_split_residual = !branch_detected && !branch_locked_ &&
                                detectNearSplitResidual(raw_points, w);
+    bool near_split_exit_continuation = !branch_detected && !branch_locked_ &&
+                                        !near_split_active && near_split_recent_count_ > 0 &&
+                                        detectNearSplitExitContinuation(raw_points, w);
     if (near_split_residual) {
       near_split_active = true;
       target_side = cfg_.near_split_template_side;
       near_split_hold_count_ = std::max(near_split_hold_count_, std::max(0, cfg_.near_split_hold_frames / 2));
+      near_split_recent_count_ = std::max(near_split_recent_count_, cfg_.near_split_exit_recent_frames / 2);
       debug_info_.near_split_detected = true;
+    } else if (near_split_exit_continuation) {
+      near_split_active = true;
+      target_side = cfg_.near_split_template_side;
+      debug_info_.near_split_detected = true;
+      debug_info_.branch_transition_reason = "near_split_exit";
     }
     RoadClass road_class = classifyRoadGeometry(bands, raw_points, branch_detected, branch_score,
                                                 near_split_active, w);
@@ -739,6 +755,27 @@ bool LaneDecision::detectNearSplitResidual(const std::vector<cv::Point3f>& raw_p
                      bottom_norm >= -cfg_.near_split_residual_bottom_norm;
   bool bottom_near_center = std::abs(bottom_norm) <= cfg_.near_split_residual_bottom_norm;
   return right_sweep && bottom_near_center;
+}
+
+bool LaneDecision::detectNearSplitExitContinuation(const std::vector<cv::Point3f>& raw_points,
+                                                   int image_width) const {
+  if (raw_points.size() < 6 || image_width <= 1) {
+    return false;
+  }
+  auto ordered = raw_points;
+  std::sort(ordered.begin(), ordered.end(), [](const cv::Point3f& a, const cv::Point3f& b) {
+    return a.y < b.y;
+  });
+  double top_x = ordered.front().x;
+  double bottom_x = ordered.back().x;
+  double half_w = image_width / 2.0;
+  double slope_norm = (top_x - bottom_x) / half_w;
+  double bottom_norm = (bottom_x - half_w) / half_w;
+  double residual = calculateCenterResidual(raw_points, image_width);
+  bool shifted_near = std::abs(bottom_norm) >= cfg_.near_split_exit_bottom_shift_norm;
+  bool still_morphing = std::abs(slope_norm) >= cfg_.near_split_residual_slope_norm ||
+                        residual >= cfg_.near_split_exit_residual_px;
+  return shifted_near && still_morphing;
 }
 
 LaneDecision::RoadClass LaneDecision::classifyRoadGeometry(

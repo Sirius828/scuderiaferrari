@@ -1,0 +1,13 @@
+# Minimal C++ PD line follower controller parameters.
+
+/**:
+  ros__parameters:
+    Kp: 0.80
+    Kd: 0.035
+    linear_speed: 0.50
+    wheel_radius: 0.032
+    max_steering: 0.85
+    steering_sign: 1.0
+    control_frequency: 50.0
+    offset_topic: "/segmentation/center_offset"
+    cmd_vel_topic: "/cmd_vel"

@@ -30,6 +30,9 @@ struct LaneDecisionConfig {
   int near_split_template_skip_bands{4};
   std::string near_split_template_side{"right"};
   float near_split_unlock_min_lock_time{0.8f};
+  int near_split_exit_recent_frames{18};
+  float near_split_exit_bottom_shift_norm{0.18f};
+  float near_split_exit_residual_px{20.0f};
   bool enable_branch_entry_transition{true};
   float branch_transition_near_main_ratio{0.4f};
   int branch_transition_min_branch_points{2};
@@ -237,6 +240,8 @@ class LaneDecision {
   bool shouldUseLockedPathContinuity(double now) const;
   bool detectNearSplitResidual(const std::vector<cv::Point3f>& raw_points,
                                int image_width) const;
+  bool detectNearSplitExitContinuation(const std::vector<cv::Point3f>& raw_points,
+                                       int image_width) const;
   RoadClass classifyRoadGeometry(const std::vector<Band>& bands,
                                  const std::vector<cv::Point3f>& raw_points,
                                  bool branch_detected, int branch_score,
@@ -296,6 +301,7 @@ class LaneDecision {
   int branch_confirm_count_{0};
   int exit_confirm_count_{0};
   int near_split_hold_count_{0};
+  int near_split_recent_count_{0};
   std::vector<double> left_boundary_template_offsets_;
   std::vector<double> right_boundary_template_offsets_;
   bool traffic_stop_active_{false};

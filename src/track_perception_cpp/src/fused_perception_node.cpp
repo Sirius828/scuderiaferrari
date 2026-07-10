@@ -240,6 +240,9 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<int>("near_split_template_skip_bands", 4);
     declare_parameter<std::string>("near_split_template_side", "right");
     declare_parameter<double>("near_split_unlock_min_lock_time", 0.8);
+    declare_parameter<int>("near_split_exit_recent_frames", 18);
+    declare_parameter<double>("near_split_exit_bottom_shift_norm", 0.18);
+    declare_parameter<double>("near_split_exit_residual_px", 20.0);
     declare_parameter<bool>("enable_branch_entry_transition", true);
     declare_parameter<double>("branch_transition_near_main_ratio", 0.4);
     declare_parameter<int>("branch_transition_min_branch_points", 2);
@@ -407,6 +410,12 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.near_split_template_side = get_parameter("near_split_template_side").as_string();
     lane_cfg.near_split_unlock_min_lock_time =
         static_cast<float>(get_parameter("near_split_unlock_min_lock_time").as_double());
+    lane_cfg.near_split_exit_recent_frames =
+        static_cast<int>(get_parameter("near_split_exit_recent_frames").as_int());
+    lane_cfg.near_split_exit_bottom_shift_norm =
+        static_cast<float>(get_parameter("near_split_exit_bottom_shift_norm").as_double());
+    lane_cfg.near_split_exit_residual_px =
+        static_cast<float>(get_parameter("near_split_exit_residual_px").as_double());
     lane_cfg.enable_branch_entry_transition = get_parameter("enable_branch_entry_transition").as_bool();
     lane_cfg.branch_transition_near_main_ratio =
         static_cast<float>(get_parameter("branch_transition_near_main_ratio").as_double());

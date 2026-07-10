@@ -1,0 +1,4 @@
+source;share/line_follower_control_cpp/local_setup.bash
+source;share/line_follower_control_cpp/local_setup.dsv
+source;share/line_follower_control_cpp/local_setup.sh
+source;share/line_follower_control_cpp/local_setup.zsh
