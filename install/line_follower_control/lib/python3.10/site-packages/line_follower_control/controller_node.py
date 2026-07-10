@@ -26,6 +26,10 @@ class LineFollowerController(Node):
         self.declare_parameter('Kp', 0.78)          # 比例增益
         self.declare_parameter('Ki', 0.05)          # 积分增益
         self.declare_parameter('Kd', 0.6)           # 微分增益
+        self.declare_parameter('enable_error_gain_schedule', False)
+        self.declare_parameter('small_error_gain_scale', 1.0)
+        self.declare_parameter('large_error_gain_scale', 1.0)
+        self.declare_parameter('gain_schedule_full_error', 0.65)
         
         # 积分限幅
         self.declare_parameter('integral_max', 1.0)  # 积分项最大值
@@ -57,6 +61,7 @@ class LineFollowerController(Node):
         self.declare_parameter('wheel_radius', 0.035)    # 轮子半径 (m)，默认3.5cm
         self.declare_parameter('max_steering', 1.0)      # 最大转向比例
         self.declare_parameter('steering_slew_rate', 0.0)  # 最大转向变化率，0表示关闭
+        self.declare_parameter('steering_return_slew_rate', 0.0)  # 回正变化率，0表示使用steering_slew_rate
         self.declare_parameter('steering_sign', 1.0)     # 舵机方向：1保持原方向，-1反向
         self.declare_parameter('invalid_timeout', 0.5)   # is_valid=False超时时间(秒)
         self.declare_parameter('enable_perception_stop', True)
@@ -67,8 +72,17 @@ class LineFollowerController(Node):
         self.declare_parameter('enable_manual_override', True)
         self.declare_parameter('use_lane_state', True)
         self.declare_parameter('lane_state_timeout', 0.3)
+        self.declare_parameter('low_confidence_threshold', 0.35)
+        self.declare_parameter('low_confidence_hold_timeout', 0.25)
+        self.declare_parameter('low_confidence_hold_speed', 0.30)
         self.declare_parameter('heading_gain', 0.0)
+        self.declare_parameter('heading_term_limit', 0.0)
+        self.declare_parameter('lookahead_heading_gain', 0.0)
+        self.declare_parameter('lookahead_error_limit', 0.0)
         self.declare_parameter('curvature_gain', 0.0)
+        self.declare_parameter('curvature_term_limit', 0.0)
+        self.declare_parameter('lane_term_offset_fade_start', 0.45)
+        self.declare_parameter('lane_term_offset_fade_full', 0.80)
         self.declare_parameter('enable_start_boost', True)
         self.declare_parameter('start_boost_task_state', 'START_BOOST')
         self.declare_parameter('start_boost_duration', 0.8)
@@ -116,6 +130,7 @@ class LineFollowerController(Node):
         self.invalid_start_time = None     # is_valid=False的开始时间
         self.last_pid_terms = (0.0, 0.0, 0.0)
         self.last_lane_terms = (0.0, 0.0)
+        self.last_scheduled_kp = self.Kp
         self.last_steering = 0.0
         self.current_speed_mps = self.linear_speed_mps
         self.current_wheel_speed_rps = self.wheel_speed_rps
@@ -128,6 +143,8 @@ class LineFollowerController(Node):
         self.perception_stop_active = False
         self.last_perception_stop_time = None
         self.perception_stop_logged = False
+        self.low_confidence_start_time = None
+        self.low_confidence_logged = False
         self.autonomous_enabled = bool(self.autonomous_enabled_on_start)
         self.emergency_stop_active = False
         self.manual_override_active = False
@@ -261,6 +278,8 @@ class LineFollowerController(Node):
         )
         self.get_logger().info(
             f'   Lane State: use={self.use_lane_state}, timeout={self.lane_state_timeout:.2f}s, '
+            f'low_conf_threshold={self.low_confidence_threshold:.2f}, '
+            f'low_conf_hold={self.low_confidence_hold_timeout:.2f}s @ {self.low_confidence_hold_speed_mps:.2f}m/s, '
             f'heading_gain={self.heading_gain}, curvature_gain={self.curvature_gain}'
         )
         self.get_logger().info(
@@ -279,6 +298,10 @@ class LineFollowerController(Node):
         self.Kp = self.get_parameter('Kp').value
         self.Ki = self.get_parameter('Ki').value
         self.Kd = self.get_parameter('Kd').value
+        self.enable_error_gain_schedule = self.get_parameter('enable_error_gain_schedule').value
+        self.small_error_gain_scale = self.get_parameter('small_error_gain_scale').value
+        self.large_error_gain_scale = self.get_parameter('large_error_gain_scale').value
+        self.gain_schedule_full_error = self.get_parameter('gain_schedule_full_error').value
         self.integral_max = self.get_parameter('integral_max').value
 
         self.linear_speed_mps = self.get_parameter('linear_speed').value
@@ -307,6 +330,7 @@ class LineFollowerController(Node):
         self.wheel_radius = self.get_parameter('wheel_radius').value
         self.max_steering = self.get_parameter('max_steering').value
         self.steering_slew_rate = self.get_parameter('steering_slew_rate').value
+        self.steering_return_slew_rate = self.get_parameter('steering_return_slew_rate').value
         self.steering_sign = self.get_parameter('steering_sign').value
         self.invalid_timeout = self.get_parameter('invalid_timeout').value
         self.enable_perception_stop = self.get_parameter('enable_perception_stop').value
@@ -317,8 +341,17 @@ class LineFollowerController(Node):
         self.enable_manual_override = self.get_parameter('enable_manual_override').value
         self.use_lane_state = self.get_parameter('use_lane_state').value
         self.lane_state_timeout = self.get_parameter('lane_state_timeout').value
+        self.low_confidence_threshold = self.get_parameter('low_confidence_threshold').value
+        self.low_confidence_hold_timeout = self.get_parameter('low_confidence_hold_timeout').value
+        self.low_confidence_hold_speed_mps = self.get_parameter('low_confidence_hold_speed').value
         self.heading_gain = self.get_parameter('heading_gain').value
+        self.heading_term_limit = self.get_parameter('heading_term_limit').value
+        self.lookahead_heading_gain = self.get_parameter('lookahead_heading_gain').value
+        self.lookahead_error_limit = self.get_parameter('lookahead_error_limit').value
         self.curvature_gain = self.get_parameter('curvature_gain').value
+        self.curvature_term_limit = self.get_parameter('curvature_term_limit').value
+        self.lane_term_offset_fade_start = self.get_parameter('lane_term_offset_fade_start').value
+        self.lane_term_offset_fade_full = self.get_parameter('lane_term_offset_fade_full').value
         self.enable_start_boost = self.get_parameter('enable_start_boost').value
         self.start_boost_task_state = self.get_parameter('start_boost_task_state').value
         self.start_boost_duration = self.get_parameter('start_boost_duration').value
@@ -339,6 +372,10 @@ class LineFollowerController(Node):
             'Kp': self.Kp,
             'Ki': self.Ki,
             'Kd': self.Kd,
+            'enable_error_gain_schedule': self.enable_error_gain_schedule,
+            'small_error_gain_scale': self.small_error_gain_scale,
+            'large_error_gain_scale': self.large_error_gain_scale,
+            'gain_schedule_full_error': self.gain_schedule_full_error,
             'integral_max': self.integral_max,
             'linear_speed': self.linear_speed_mps,
             'enable_dynamic_speed': self.enable_dynamic_speed,
@@ -366,6 +403,7 @@ class LineFollowerController(Node):
             'wheel_radius': self.wheel_radius,
             'max_steering': self.max_steering,
             'steering_slew_rate': self.steering_slew_rate,
+            'steering_return_slew_rate': self.steering_return_slew_rate,
             'steering_sign': self.steering_sign,
             'invalid_timeout': self.invalid_timeout,
             'enable_perception_stop': self.enable_perception_stop,
@@ -376,7 +414,13 @@ class LineFollowerController(Node):
             'use_lane_state': self.use_lane_state,
             'lane_state_timeout': self.lane_state_timeout,
             'heading_gain': self.heading_gain,
+            'heading_term_limit': self.heading_term_limit,
+            'lookahead_heading_gain': self.lookahead_heading_gain,
+            'lookahead_error_limit': self.lookahead_error_limit,
             'curvature_gain': self.curvature_gain,
+            'curvature_term_limit': self.curvature_term_limit,
+            'lane_term_offset_fade_start': self.lane_term_offset_fade_start,
+            'lane_term_offset_fade_full': self.lane_term_offset_fade_full,
             'enable_start_boost': self.enable_start_boost,
             'start_boost_task_state': self.start_boost_task_state,
             'start_boost_duration': self.start_boost_duration,
@@ -397,6 +441,10 @@ class LineFollowerController(Node):
             pending['Kp'] = float(pending['Kp'])
             pending['Ki'] = float(pending['Ki'])
             pending['Kd'] = float(pending['Kd'])
+            pending['enable_error_gain_schedule'] = bool(pending['enable_error_gain_schedule'])
+            pending['small_error_gain_scale'] = float(pending['small_error_gain_scale'])
+            pending['large_error_gain_scale'] = float(pending['large_error_gain_scale'])
+            pending['gain_schedule_full_error'] = float(pending['gain_schedule_full_error'])
             pending['integral_max'] = float(pending['integral_max'])
             pending['linear_speed'] = float(pending['linear_speed'])
             pending['enable_dynamic_speed'] = bool(pending['enable_dynamic_speed'])
@@ -424,6 +472,7 @@ class LineFollowerController(Node):
             pending['wheel_radius'] = float(pending['wheel_radius'])
             pending['max_steering'] = float(pending['max_steering'])
             pending['steering_slew_rate'] = float(pending['steering_slew_rate'])
+            pending['steering_return_slew_rate'] = float(pending['steering_return_slew_rate'])
             pending['steering_sign'] = float(pending['steering_sign'])
             pending['invalid_timeout'] = float(pending['invalid_timeout'])
             pending['enable_perception_stop'] = bool(pending['enable_perception_stop'])
@@ -434,7 +483,13 @@ class LineFollowerController(Node):
             pending['use_lane_state'] = bool(pending['use_lane_state'])
             pending['lane_state_timeout'] = float(pending['lane_state_timeout'])
             pending['heading_gain'] = float(pending['heading_gain'])
+            pending['heading_term_limit'] = float(pending['heading_term_limit'])
+            pending['lookahead_heading_gain'] = float(pending['lookahead_heading_gain'])
+            pending['lookahead_error_limit'] = float(pending['lookahead_error_limit'])
             pending['curvature_gain'] = float(pending['curvature_gain'])
+            pending['curvature_term_limit'] = float(pending['curvature_term_limit'])
+            pending['lane_term_offset_fade_start'] = float(pending['lane_term_offset_fade_start'])
+            pending['lane_term_offset_fade_full'] = float(pending['lane_term_offset_fade_full'])
             pending['enable_start_boost'] = bool(pending['enable_start_boost'])
             pending['start_boost_task_state'] = str(pending['start_boost_task_state'])
             pending['start_boost_duration'] = float(pending['start_boost_duration'])
@@ -452,6 +507,12 @@ class LineFollowerController(Node):
 
         if pending['integral_max'] < 0.0:
             return SetParametersResult(successful=False, reason='integral_max must be >= 0')
+        if pending['small_error_gain_scale'] < 0.0:
+            return SetParametersResult(successful=False, reason='small_error_gain_scale must be >= 0')
+        if pending['large_error_gain_scale'] < 0.0:
+            return SetParametersResult(successful=False, reason='large_error_gain_scale must be >= 0')
+        if pending['gain_schedule_full_error'] <= 0.0:
+            return SetParametersResult(successful=False, reason='gain_schedule_full_error must be > 0')
         if pending['wheel_radius'] < 0.0:
             return SetParametersResult(successful=False, reason='wheel_radius must be >= 0')
         if pending['linear_speed'] < 0.0:
@@ -505,6 +566,8 @@ class LineFollowerController(Node):
             return SetParametersResult(successful=False, reason='max_steering must be >= 0')
         if pending['steering_slew_rate'] < 0.0:
             return SetParametersResult(successful=False, reason='steering_slew_rate must be >= 0')
+        if pending['steering_return_slew_rate'] < 0.0:
+            return SetParametersResult(successful=False, reason='steering_return_slew_rate must be >= 0')
         if pending['steering_sign'] not in (-1.0, 1.0):
             return SetParametersResult(successful=False, reason='steering_sign must be -1.0 or 1.0')
         if pending['invalid_timeout'] < 0.0:
@@ -513,6 +576,19 @@ class LineFollowerController(Node):
             return SetParametersResult(successful=False, reason='perception_stop_timeout must be >= 0')
         if pending['lane_state_timeout'] < 0.0:
             return SetParametersResult(successful=False, reason='lane_state_timeout must be >= 0')
+        if pending['heading_term_limit'] < 0.0:
+            return SetParametersResult(successful=False, reason='heading_term_limit must be >= 0')
+        if pending['lookahead_error_limit'] < 0.0:
+            return SetParametersResult(successful=False, reason='lookahead_error_limit must be >= 0')
+        if pending['curvature_term_limit'] < 0.0:
+            return SetParametersResult(successful=False, reason='curvature_term_limit must be >= 0')
+        if pending['lane_term_offset_fade_start'] < 0.0:
+            return SetParametersResult(successful=False, reason='lane_term_offset_fade_start must be >= 0')
+        if pending['lane_term_offset_fade_full'] <= pending['lane_term_offset_fade_start']:
+            return SetParametersResult(
+                successful=False,
+                reason='lane_term_offset_fade_full must be > lane_term_offset_fade_start'
+            )
         if pending['start_boost_duration'] < 0.0:
             return SetParametersResult(successful=False, reason='start_boost_duration must be >= 0')
         if pending['start_boost_speed'] < 0.0:
@@ -532,6 +608,10 @@ class LineFollowerController(Node):
         self.Kp = pending['Kp']
         self.Ki = pending['Ki']
         self.Kd = pending['Kd']
+        self.enable_error_gain_schedule = pending['enable_error_gain_schedule']
+        self.small_error_gain_scale = pending['small_error_gain_scale']
+        self.large_error_gain_scale = pending['large_error_gain_scale']
+        self.gain_schedule_full_error = pending['gain_schedule_full_error']
         self.integral_max = pending['integral_max']
         self.integral = max(-self.integral_max, min(self.integral_max, self.integral))
         self.linear_speed_mps = pending['linear_speed']
@@ -560,6 +640,7 @@ class LineFollowerController(Node):
         self.wheel_radius = pending['wheel_radius']
         self.max_steering = pending['max_steering']
         self.steering_slew_rate = pending['steering_slew_rate']
+        self.steering_return_slew_rate = pending['steering_return_slew_rate']
         self.steering_sign = pending['steering_sign']
         self.invalid_timeout = pending['invalid_timeout']
         self.enable_perception_stop = pending['enable_perception_stop']
@@ -570,7 +651,13 @@ class LineFollowerController(Node):
         self.use_lane_state = pending['use_lane_state']
         self.lane_state_timeout = pending['lane_state_timeout']
         self.heading_gain = pending['heading_gain']
+        self.heading_term_limit = pending['heading_term_limit']
+        self.lookahead_heading_gain = pending['lookahead_heading_gain']
+        self.lookahead_error_limit = pending['lookahead_error_limit']
         self.curvature_gain = pending['curvature_gain']
+        self.curvature_term_limit = pending['curvature_term_limit']
+        self.lane_term_offset_fade_start = pending['lane_term_offset_fade_start']
+        self.lane_term_offset_fade_full = pending['lane_term_offset_fade_full']
         self.enable_start_boost = pending['enable_start_boost']
         self.start_boost_task_state = pending['start_boost_task_state']
         self.start_boost_duration = pending['start_boost_duration']
@@ -585,6 +672,7 @@ class LineFollowerController(Node):
         self.get_logger().info(
             'Updated controller parameters: '
             f'Kp={self.Kp}, Ki={self.Ki}, Kd={self.Kd}, '
+            f'gain_schedule={self.enable_error_gain_schedule}, '
             f'linear_speed={self.linear_speed_mps}, dynamic_speed={self.enable_dynamic_speed}, '
             f'min_linear_speed={self.min_linear_speed_mps}, wheel_radius={self.wheel_radius}, '
             f'speed_curve_offset_limit={self.speed_curve_offset_limit}, '
@@ -752,6 +840,8 @@ class LineFollowerController(Node):
         self.start_boost_logged = False
         if self.autonomous_enabled:
             self.start_boost_used = False
+        self.low_confidence_start_time = None
+        self.low_confidence_logged = False
         self.disabled_stop_logged = False
         self.manual_override_logged = False
         self.perception_stop_logged = False
@@ -904,8 +994,35 @@ class LineFollowerController(Node):
             self.prev_time = current_time
             return
 
+        if self.should_hold_for_low_confidence(current_time):
+            self.integral = 0.0
+            elapsed = current_time - self.low_confidence_start_time
+            if elapsed <= self.low_confidence_hold_timeout:
+                self.last_control_mode = 'low_conf_hold'
+                self.current_speed_mps = min(
+                    self.current_speed_mps,
+                    self.low_confidence_hold_speed_mps
+                )
+                self.current_wheel_speed_rps = self.speed_to_wheel_rps(self.current_speed_mps)
+                self.publish_cmd_vel(self.last_steering)
+            else:
+                self.last_control_mode = 'low_conf_stop'
+                self.current_speed_mps = 0.0
+                self.current_wheel_speed_rps = 0.0
+                self.publish_stop(log=False)
+            if not self.low_confidence_logged:
+                self.get_logger().warn(
+                    f'Low lane confidence ({self.lane_confidence:.2f}); holding/stopping control'
+                )
+                self.low_confidence_logged = True
+            self.prev_offset = self.current_offset
+            self.prev_time = current_time
+            return
+
         # 有赛道，正常控制
         self.invalid_start_time = None
+        self.low_confidence_start_time = None
+        self.low_confidence_logged = False
 
         self.update_curve_adaptive_state(current_time)
         target_speed_mps = self.compute_target_speed(self.current_offset)
@@ -933,13 +1050,34 @@ class LineFollowerController(Node):
         """限制舵量变化率，降低高速下短周期左右猛打。"""
         if self.current_steering_slew_rate <= 0.0 or dt <= 0.0:
             return steering
-        max_delta = self.current_steering_slew_rate * dt
+        slew_rate = self.current_steering_slew_rate
+        if (
+            self.steering_return_slew_rate > 0.0
+            and abs(steering) < abs(self.last_steering)
+        ):
+            slew_rate = self.steering_return_slew_rate
+        max_delta = slew_rate * dt
         delta = steering - self.last_steering
         if delta > max_delta:
             return self.last_steering + max_delta
         if delta < -max_delta:
             return self.last_steering - max_delta
         return steering
+
+    def should_hold_for_low_confidence(self, current_time: float) -> bool:
+        if self.low_confidence_threshold <= 0.0:
+            return False
+        if not self.has_fresh_lane_state(current_time):
+            self.low_confidence_start_time = None
+            self.low_confidence_logged = False
+            return False
+        if self.lane_confidence >= self.low_confidence_threshold:
+            self.low_confidence_start_time = None
+            self.low_confidence_logged = False
+            return False
+        if self.low_confidence_start_time is None:
+            self.low_confidence_start_time = current_time
+        return True
 
     def compute_steering(self, dt: float, current_time: float) -> float:
         steering = self.pid_control(self.current_offset, dt)
@@ -949,10 +1087,41 @@ class LineFollowerController(Node):
         if self.has_fresh_lane_state(current_time):
             heading_term = self.heading_gain * self.current_heading_error
             curvature_term = self.curvature_gain * self.current_curvature
+            heading_term = self.limit_lane_term(heading_term, self.heading_term_limit)
+            curvature_term = self.limit_lane_term(curvature_term, self.curvature_term_limit)
+            lane_term_scale = self.compute_lane_term_scale()
+            heading_term *= lane_term_scale
+            curvature_term *= lane_term_scale
             steering += heading_term + curvature_term
 
         self.last_lane_terms = (heading_term, curvature_term)
         return self.steering_sign * steering
+
+    def limit_lane_term(self, term: float, limit: float) -> float:
+        if limit <= 0.0:
+            return term
+        return max(-limit, min(limit, term))
+
+    def compute_lane_term_scale(self) -> float:
+        """Keep heading/curvature feed-forward helpful near entry, quiet during recovery."""
+        scale = 1.0
+        fade_start = self.lane_term_offset_fade_start
+        fade_full = self.lane_term_offset_fade_full
+        abs_offset = abs(self.current_offset)
+        if abs_offset > fade_start:
+            ratio = (abs_offset - fade_start) / max(1e-6, fade_full - fade_start)
+            scale *= max(0.0, 1.0 - min(1.0, ratio))
+
+        if self.low_confidence_threshold > 0.0 and self.lane_confidence < self.low_confidence_threshold:
+            scale = 0.0
+        elif self.lane_confidence < 0.70:
+            ratio = (self.lane_confidence - self.low_confidence_threshold) / max(
+                1e-6,
+                0.70 - self.low_confidence_threshold
+            )
+            scale *= max(0.0, min(1.0, ratio))
+
+        return scale
 
     def update_curve_adaptive_state(self, current_time: float):
         if not self.enable_curve_adaptive_control:
@@ -1081,9 +1250,12 @@ class LineFollowerController(Node):
             float: 控制输出 (steering)
         """
         effective_error = self.apply_offset_deadband(error)
+        p_error = self.compute_lookahead_error(effective_error)
 
         # 1. 比例项
-        P = self.Kp * effective_error
+        scheduled_kp = self.compute_scheduled_kp(p_error)
+        P = scheduled_kp * p_error
+        self.last_scheduled_kp = scheduled_kp
         
         # 2. 积分项（累积误差）
         self.integral += effective_error * dt
@@ -1101,6 +1273,33 @@ class LineFollowerController(Node):
         output = P + I + D
         
         return output
+
+    def compute_lookahead_error(self, effective_error: float) -> float:
+        if self.lookahead_heading_gain == 0.0 or not self.has_fresh_lane_state(time.time()):
+            return effective_error
+
+        heading_component = self.lookahead_heading_gain * self.current_heading_error
+        lookahead_error = effective_error + heading_component
+        if self.lookahead_error_limit > 0.0:
+            center = effective_error
+            delta = max(
+                -self.lookahead_error_limit,
+                min(self.lookahead_error_limit, lookahead_error - center)
+            )
+            lookahead_error = center + delta
+        return max(-1.0, min(1.0, lookahead_error))
+
+    def compute_scheduled_kp(self, effective_error: float) -> float:
+        if not self.enable_error_gain_schedule:
+            return self.Kp
+
+        ratio = min(1.0, abs(effective_error) / self.gain_schedule_full_error)
+        gain_scale = self.lerp(
+            self.small_error_gain_scale,
+            self.large_error_gain_scale,
+            ratio
+        )
+        return self.Kp * gain_scale
     
     def log_control_status(self, steering: float, dt: float, current_time: float):
         """根据日志模式输出普通控制日志或PID调参日志"""
@@ -1123,6 +1322,7 @@ class LineFollowerController(Node):
                 f'curve={self.current_curve_factor:.2f} '
                 f'maxS={self.current_max_steering:.2f} '
                 f'slew={self.current_steering_slew_rate:.2f} '
+                f'KpEff={self.last_scheduled_kp:.2f} '
                 f'P={p_term:+.3f} I={i_term:+.3f} D={d_term:+.3f} '
                 f'H={heading_term:+.3f} C={curvature_term:+.3f} '
                 f'geo={self.lane_debug_top_norm:+.2f}/{self.lane_debug_mid_norm:+.2f}/{self.lane_debug_bottom_norm:+.2f} '
@@ -1157,6 +1357,7 @@ class LineFollowerController(Node):
                 f'Speed: {self.current_speed_mps:.2f}m/s, '
                 f'Curve: {self.current_curve_factor:.2f}, '
                 f'MaxSteer: {self.current_max_steering:.2f}, '
+                f'KpEff: {self.last_scheduled_kp:.2f}, '
                 f'Integral: {self.integral:.3f}, '
                 f'HeadingTerm: {heading_term:.3f}, '
                 f'CurvTerm: {curvature_term:.3f}, '
@@ -1236,6 +1437,8 @@ class LineFollowerController(Node):
             f'speed_factor={self.current_speed_curve_factor:.3f} '
             f'max_steer={self.current_max_steering:.3f} '
             f'slew_rate={self.current_steering_slew_rate:.3f} '
+            f'steering_cmd={self.last_steering:+.3f} '
+            f'kp_eff={self.last_scheduled_kp:.3f} '
             f'steer_sign={self.steering_sign:+.0f} '
             f'heading={self.current_heading_error:+.3f} '
             f'curvature={self.current_curvature:+.3f} '

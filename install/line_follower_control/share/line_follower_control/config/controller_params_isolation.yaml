@@ -1,0 +1,93 @@
+# Line Follower Controller Parameters - Isolation Tuning Profile
+#
+# 用途：
+# 1. 先把“速度曲线 / 弯道自适应 / 复杂舵量调度”关掉。
+# 2. 用固定 0.60m/s 判断问题主要来自 PID、舵量响应，还是感知 offset。
+# 3. 跑稳定后，再逐项把动态速度和弯道自适应加回来。
+
+/**:
+  ros__parameters:
+    # ==================== 只先调这 3 个 ====================
+    Kp: 0.82
+    Ki: 0.0
+    Kd: 0.045
+
+    # 隔离阶段关闭增益调度，避免 Kp 随 offset 变化造成误判。
+    enable_error_gain_schedule: false
+    small_error_gain_scale: 1.0
+    large_error_gain_scale: 1.0
+    gain_schedule_full_error: 0.60
+    integral_max: 0.25
+
+    # ==================== 固定速度 ====================
+    # 先从 0.60m/s 定位控制相位问题；稳定后再提速。
+    linear_speed: 0.60
+    enable_dynamic_speed: false
+    min_linear_speed: 0.60
+    speed_offset_start: 0.05
+    speed_offset_full_slow: 0.65
+    speed_curve_exponent: 2.0
+    speed_accel_rate: 0.35
+    speed_decel_rate: 3.0
+    speed_curve_offset_limit: 0.24
+    speed_curve_heading_weight: 0.0
+    speed_curve_curvature_weight: 0.0
+
+    # ==================== 固定舵量限制 ====================
+    # 隔离阶段关闭曲率自适应，使用 max_steering / steering_slew_rate。
+    enable_curve_adaptive_control: false
+    curve_offset_limit: 0.42
+    curve_heading_limit: 0.46
+    curve_curvature_limit: 2.00
+    curve_factor_smoothing_alpha: 0.35
+    curve_factor_attack_alpha: 0.55
+    curve_factor_release_alpha: 0.10
+
+    offset_deadband: 0.020
+    wheel_radius: 0.032
+
+    # 入弯不足时优先加 steering_slew_rate 或 max_steering，不先加 Kp。
+    max_steering: 0.82
+    steering_slew_rate: 4.5
+    steering_sign: 1.0
+
+    # 这些参数在 enable_curve_adaptive_control=false 时不会参与控制，保留默认安全值。
+    straight_max_steering: 0.32
+    curve_max_steering: 0.90
+    straight_steering_slew_rate: 2.2
+    curve_steering_slew_rate: 5.0
+
+    # ==================== 安全/状态 ====================
+    invalid_timeout: 1.0
+    enable_perception_stop: true
+    ignore_stop_requests: true
+    perception_stop_timeout: 0.5
+    autonomous_enabled_on_start: false
+    publish_stop_when_disabled: true
+    enable_manual_override: true
+
+    # 仍然读取 lane_state，但隔离阶段不用 heading/curvature 前馈。
+    use_lane_state: true
+    lane_state_timeout: 0.3
+    low_confidence_threshold: 0.35
+    low_confidence_hold_timeout: 1.0
+    low_confidence_hold_speed: 0.30
+    heading_gain: 0.12
+    heading_term_limit: 0.10
+    curvature_gain: 0.0
+    curvature_term_limit: 0.00
+    lane_term_offset_fade_start: 0.45
+    lane_term_offset_fade_full: 0.80
+
+    # ==================== 弹射起步关闭 ====================
+    enable_start_boost: false
+    start_boost_task_state: "START_BOOST"
+    start_boost_duration: 0.7
+    start_boost_speed: 0.8
+    start_boost_steering: 0.0
+
+    # ==================== 调参日志 ====================
+    controller_log_mode: "pid_tuning"
+    pid_tuning_log_hz: 20.0
+    pid_tuning_bar_width: 41
+    controller_debug_hz: 2.0

@@ -22,6 +22,14 @@ struct LaneDecisionConfig {
   int branch_detect_min_bands{2};
   int branch_confirm_frames{2};
   float branch_detect_far_band_ratio{0.7f};
+  int near_split_detect_min_bands{2};
+  float near_split_detect_near_band_ratio{0.45f};
+  int near_split_hold_frames{18};
+  float near_split_residual_slope_norm{0.22f};
+  float near_split_residual_bottom_norm{0.05f};
+  int near_split_template_skip_bands{4};
+  std::string near_split_template_side{"right"};
+  float near_split_unlock_min_lock_time{0.8f};
   bool enable_branch_entry_transition{true};
   float branch_transition_near_main_ratio{0.4f};
   int branch_transition_min_branch_points{2};
@@ -74,6 +82,9 @@ struct LaneDecisionConfig {
   std::string left_boundary_template_offsets;
   int left_boundary_template_min_points{6};
   float left_boundary_template_weight{1.0f};
+  std::string right_boundary_template_offsets;
+  int right_boundary_template_min_points{6};
+  float right_boundary_template_weight{1.0f};
 
   bool enable_obstacle_avoidance{false};
   std::unordered_set<std::string> obstacle_labels{"Human", "Car"};
@@ -145,6 +156,8 @@ struct LaneDebugInfo {
   std::vector<double> fit_coeffs;
   bool branch_detected{false};
   int branch_score{0};
+  bool near_split_detected{false};
+  int near_split_score{0};
   bool guideboard_seen{false};
   int guideboard_count{0};
   int guideboard_roi_count{0};
@@ -162,6 +175,7 @@ struct LaneDebugInfo {
   bool left_boundary_template_active{false};
   int left_boundary_template_points{0};
   std::string left_boundary_template_reason;
+  std::string boundary_template_side;
   int raw_point_count{0};
   int fit_point_count{0};
   int segment_count{0};
@@ -201,6 +215,7 @@ class LaneDecision {
   enum class RoadClass {
     Normal,
     Branch,
+    NearSplit,
     AsymWide,
     LowConfidence,
   };
@@ -213,15 +228,19 @@ class LaneDecision {
                                                         int band_y0, int band_y1,
                                                         const std::vector<ObstacleZone>& zones) const;
   std::pair<bool, int> detectBranchFromBands(const std::vector<Band>& bands) const;
+  std::pair<bool, int> detectNearSplitFromBands(const std::vector<Band>& bands) const;
   std::optional<std::string> chooseBranchSideByContinuity(const std::vector<Band>& bands,
                                                           int image_width, double last_center_x) const;
   std::optional<Segment> chooseTargetSegment(const Band& band, const std::string& side) const;
   std::optional<Segment> chooseLockedSegmentByContinuity(const Band& band, int image_width,
                                                          double last_center_x) const;
   bool shouldUseLockedPathContinuity(double now) const;
+  bool detectNearSplitResidual(const std::vector<cv::Point3f>& raw_points,
+                               int image_width) const;
   RoadClass classifyRoadGeometry(const std::vector<Band>& bands,
                                  const std::vector<cv::Point3f>& raw_points,
                                  bool branch_detected, int branch_score,
+                                 bool near_split_detected,
                                  int image_width) const;
   std::string roadClassName(RoadClass road_class) const;
   int countAsymWideBands(const std::vector<Band>& bands) const;
@@ -229,10 +248,13 @@ class LaneDecision {
                                  int image_width) const;
   double calculateLaneConfidence(const std::vector<cv::Point3f>& fit_points,
                                  const std::vector<Band>& bands) const;
-  bool isLeftBoundaryTemplateReady() const;
-  bool shouldUseLeftBoundaryTemplate(bool branch_detected);
-  std::vector<cv::Point3f> collectLeftBoundaryTemplatePoints(std::vector<Band>& bands,
-                                                             int image_width);
+  bool isBoundaryTemplateReady(const std::string& side) const;
+  int boundaryTemplateMinPoints(const std::string& side) const;
+  bool shouldUseBoundaryTemplate(const std::string& side, bool template_trigger);
+  std::vector<cv::Point3f> collectBoundaryTemplatePoints(std::vector<Band>& bands,
+                                                         int image_width,
+                                                         const std::string& side,
+                                                         int min_band_index = 0);
   std::vector<cv::Point3f> collectCenterlinePoints(std::vector<Band>& bands, bool branch_locked,
                                                    const std::string& side,
                                                    std::optional<double> last_center_x,
@@ -273,7 +295,9 @@ class LaneDecision {
   double lock_start_time_{0.0};
   int branch_confirm_count_{0};
   int exit_confirm_count_{0};
+  int near_split_hold_count_{0};
   std::vector<double> left_boundary_template_offsets_;
+  std::vector<double> right_boundary_template_offsets_;
   bool traffic_stop_active_{false};
   bool finish_stop_active_{false};
   bool obstacle_stop_active_{false};

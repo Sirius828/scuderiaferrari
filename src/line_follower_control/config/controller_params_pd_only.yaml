@@ -1,0 +1,78 @@
+# Pure PD isolation profile.
+# Purpose: diagnose why the car cannot enter corners without dynamic speed,
+# heading/curvature feed-forward, gain scheduling, or curve-adaptive steering.
+
+/**:
+  ros__parameters:
+    Kp: 0.80
+    Ki: 0.0
+    Kd: 0.035
+    enable_error_gain_schedule: false
+    small_error_gain_scale: 1.0
+    large_error_gain_scale: 1.0
+    gain_schedule_full_error: 0.60
+    integral_max: 0.0
+
+    linear_speed: 0.50
+    enable_dynamic_speed: false
+    min_linear_speed: 0.50
+    speed_offset_start: 0.05
+    speed_offset_full_slow: 0.65
+    speed_curve_exponent: 1.0
+    speed_accel_rate: 0.0
+    speed_decel_rate: 0.0
+    speed_curve_offset_limit: 0.55
+    speed_curve_heading_weight: 0.0
+    speed_curve_curvature_weight: 0.0
+
+    enable_curve_adaptive_control: false
+    curve_offset_limit: 0.45
+    curve_heading_limit: 0.46
+    curve_curvature_limit: 2.00
+    curve_factor_smoothing_alpha: 0.35
+    curve_factor_attack_alpha: 0.55
+    curve_factor_release_alpha: 0.08
+    offset_deadband: 0.015
+
+    wheel_radius: 0.032
+    max_steering: 0.85
+    steering_slew_rate: 0.0
+    steering_return_slew_rate: 0.0
+    steering_sign: 1.0
+    straight_max_steering: 0.30
+    curve_max_steering: 0.85
+    straight_steering_slew_rate: 1.8
+    curve_steering_slew_rate: 4.0
+
+    invalid_timeout: 0.6
+    enable_perception_stop: true
+    ignore_stop_requests: true
+    perception_stop_timeout: 0.5
+    autonomous_enabled_on_start: false
+    publish_stop_when_disabled: true
+    enable_manual_override: true
+
+    use_lane_state: true
+    lane_state_timeout: 0.3
+    low_confidence_threshold: 0.0
+    low_confidence_hold_timeout: 0.0
+    low_confidence_hold_speed: 0.30
+    heading_gain: 0.0
+    heading_term_limit: 0.0
+    lookahead_heading_gain: 0.0
+    lookahead_error_limit: 0.0
+    curvature_gain: 0.0
+    curvature_term_limit: 0.0
+    lane_term_offset_fade_start: 0.45
+    lane_term_offset_fade_full: 0.80
+
+    enable_start_boost: false
+    start_boost_task_state: "START_BOOST"
+    start_boost_duration: 0.7
+    start_boost_speed: 0.8
+    start_boost_steering: 0.0
+
+    controller_log_mode: "pid_tuning"
+    pid_tuning_log_hz: 20.0
+    pid_tuning_bar_width: 41
+    controller_debug_hz: 2.0

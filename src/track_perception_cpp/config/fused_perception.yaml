@@ -18,7 +18,7 @@ fused_perception_node:
 
     # 画面显示：只影响 OpenCV 预览窗口，不影响终端日志
     show_window: true
-    blend_alpha: 0.35
+    blend_alpha: 1.0
     show_branch_debug: true
     enable_debug_screenshots: false
     debug_screenshot_interval_sec: 0.0
@@ -37,7 +37,7 @@ fused_perception_node:
     det_core_id: 0
     det_input_width: 320 #384
     det_input_height: 320 # 288
-    det_conf_threshold: 0.7
+    det_conf_threshold: 0.75
     det_nms_threshold: 0.35
     det_raw_output: true
     publish_detections: true
@@ -53,7 +53,7 @@ fused_perception_node:
     seg_crop_y0_ratio: 0.5
     seg_crop_y1_ratio: 1.0
     seg_pad_value: 114
-    seg_conf_threshold: 0.30
+    seg_conf_threshold: 0.20
     seg_nms_threshold: 0.45
     seg_nms_contain_threshold: 0.0
     seg_mask_threshold: 0.5
@@ -70,7 +70,7 @@ fused_perception_node:
     guideboard_detect_y1_ratio: 0.7
 
     # Band 扫描
-    enable_segment_branch_logic: true
+    enable_segment_branch_logic: false
     band_count: 20
     band_y_min_ratio: 0.60
     band_y_max_ratio: 1.0
@@ -83,6 +83,14 @@ fused_perception_node:
     branch_detect_min_bands: 2
     branch_confirm_frames: 3
     branch_detect_far_band_ratio: 0.7
+    near_split_detect_min_bands: 2
+    near_split_detect_near_band_ratio: 0.45
+    near_split_hold_frames: 2
+    near_split_residual_slope_norm: 0.22
+    near_split_residual_bottom_norm: 0.05
+    near_split_template_skip_bands: 10
+    near_split_template_side: "right"
+    near_split_unlock_min_lock_time: 0.8
     enable_branch_entry_transition: true
     branch_transition_near_main_ratio: 0.4
     branch_transition_min_branch_points: 2
@@ -102,7 +110,7 @@ fused_perception_node:
 
     # 非对称宽路/合流残留静态判定：当前帧判定，不依赖历史车道宽度
     asym_wide_segment_ratio: 1.45
-    asym_wide_min_bands: 5
+    asym_wide_min_bands: 7
     asym_wide_center_residual_ratio: 0.16
     asym_wide_center_residual_px: 90.0
     asym_wide_min_normal_points: 5
@@ -130,9 +138,12 @@ fused_perception_node:
     # 左边界模板线：检测到岔路且目标为 left 时，使用 current_left_boundary + template_offset 作为全部拟合点
     enable_left_boundary_template_line: true
     left_boundary_template_side: "left"
-    left_boundary_template_offsets: "49.0,50.7,53.5,56.2,61.4,63.7,67.4,72.2,80.4,87.1,93.4,100.6,108.3,117.6,124.3,129.1,135.3,144.5,153.8,168.0"
+    left_boundary_template_offsets: "22.0,25.7,29.5,33.2,39.4,43.7,48.4,54.2,62.4,69.1,75.4,83.6,91.3,99.6,105.3,110.1,116.3,123.5,131.8,140.0"
     left_boundary_template_min_points: 6
     left_boundary_template_weight: 1.0
+    right_boundary_template_offsets: "0.0,0.0,0.0,0.0,0.0,0.0,106.0,109.0,140.0,141.0,140.0,140.0,140.0,141.0,143.0,147.0,152.0,158.0,165.0,172.0"
+    right_boundary_template_min_points: 6
+    right_boundary_template_weight: 1.0
 
     # 障碍避让 V2：
     # - obstacle_labels: 从 band segment 中扣除这些障碍区域，仍输出可通行 control_offset

@@ -156,7 +156,14 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.branch_fit_order = clampValue(cfg_.branch_fit_order, 1, 2);
   cfg_.left_boundary_template_min_points = std::max(1, cfg_.left_boundary_template_min_points);
   cfg_.left_boundary_template_weight = std::max(0.01f, cfg_.left_boundary_template_weight);
+  cfg_.right_boundary_template_min_points = std::max(1, cfg_.right_boundary_template_min_points);
+  cfg_.right_boundary_template_weight = std::max(0.01f, cfg_.right_boundary_template_weight);
+  if (cfg_.near_split_template_side != "left" && cfg_.near_split_template_side != "right") {
+    cfg_.near_split_template_side = cfg_.outer_side;
+  }
+  cfg_.near_split_unlock_min_lock_time = std::max(0.0f, cfg_.near_split_unlock_min_lock_time);
   left_boundary_template_offsets_ = parseDoubleList(cfg_.left_boundary_template_offsets);
+  right_boundary_template_offsets_ = parseDoubleList(cfg_.right_boundary_template_offsets);
   locked_branch_side_ = cfg_.outer_side;
 }
 
@@ -189,6 +196,13 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
   if (cfg_.enable_segment_branch_logic) {
     bands = buildBands(seg_map, detections);
     auto [branch_detected, branch_score] = detectBranchFromBands(bands);
+    auto [near_split_detected, near_split_score] = detectNearSplitFromBands(bands);
+    if (near_split_detected) {
+      near_split_hold_count_ = std::max(0, cfg_.near_split_hold_frames);
+    } else if (near_split_hold_count_ > 0) {
+      --near_split_hold_count_;
+    }
+    bool near_split_active = near_split_detected || near_split_hold_count_ > 0;
     int guideboard_count = 0;
     int guideboard_roi_count = 0;
     float guideboard_best_confidence = 0.0f;
@@ -211,14 +225,30 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     bool guideboard_seen = cfg_.enable_guideboard_branch_selection && guideboard_roi_count > 0;
     debug_info_.branch_detected = branch_detected;
     debug_info_.branch_score = branch_score;
+    debug_info_.near_split_detected = near_split_active;
+    debug_info_.near_split_score = near_split_score;
     debug_info_.guideboard_seen = guideboard_seen;
     debug_info_.guideboard_count = guideboard_count;
     debug_info_.guideboard_roi_count = guideboard_roi_count;
     debug_info_.guideboard_best_confidence = guideboard_best_confidence;
     debug_info_.guideboard_best_center = guideboard_best_center;
+    bool near_split_overrides_branch = near_split_active && !guideboard_seen &&
+                                       near_split_score >= branch_score;
+    bool branch_lock_candidate = !near_split_overrides_branch &&
+                                 (branch_detected || (guideboard_seen && branch_score > 0));
+    if (branch_locked_ && near_split_active &&
+        locked_branch_side_ != cfg_.near_split_template_side &&
+        current_time - lock_start_time_ >= cfg_.near_split_unlock_min_lock_time &&
+        near_split_score >= branch_score) {
+      branch_locked_ = false;
+      locked_branch_side_ = cfg_.outer_side;
+      branch_confirm_count_ = 0;
+      exit_confirm_count_ = 0;
+      debug_info_.branch_transition_reason = "near_split_unlock";
+    }
 
     if (!branch_locked_) {
-      if (branch_detected) {
+      if (branch_lock_candidate) {
         ++branch_confirm_count_;
       } else {
         branch_confirm_count_ = 0;
@@ -226,10 +256,10 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
       if (branch_confirm_count_ >= cfg_.branch_confirm_frames) {
         double last_center_x = last_offset_ * w / 2.0 + w / 2.0;
         std::string target_branch = cfg_.outer_side;
-        if (isLeftBoundaryTemplateReady()) {
-          target_branch = cfg_.left_boundary_template_side;
-        } else if (guideboard_seen) {
+        if (guideboard_seen) {
           target_branch = cfg_.guideboard_branch;
+        } else if (isBoundaryTemplateReady(cfg_.outer_side)) {
+          target_branch = cfg_.outer_side;
         } else if (cfg_.enable_continuity_branch_selection) {
           auto continuity_branch = chooseBranchSideByContinuity(bands, w, last_center_x);
           if (continuity_branch) {
@@ -275,24 +305,45 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
       }
     }
 
-    std::string target_side = branch_locked_ ? locked_branch_side_ : cfg_.outer_side;
+    std::string target_side = branch_locked_
+                                  ? locked_branch_side_
+                                  : (near_split_active ? cfg_.near_split_template_side : cfg_.outer_side);
     double last_center_x = last_offset_ * w / 2.0 + w / 2.0;
     raw_points = collectCenterlinePoints(bands, branch_locked_, target_side, last_center_x, w, current_time);
-    RoadClass road_class = classifyRoadGeometry(bands, raw_points, branch_detected, branch_score, w);
+    bool near_split_residual = !branch_detected && !branch_locked_ &&
+                               detectNearSplitResidual(raw_points, w);
+    if (near_split_residual) {
+      near_split_active = true;
+      target_side = cfg_.near_split_template_side;
+      near_split_hold_count_ = std::max(near_split_hold_count_, std::max(0, cfg_.near_split_hold_frames / 2));
+      debug_info_.near_split_detected = true;
+    }
+    RoadClass road_class = classifyRoadGeometry(bands, raw_points, branch_detected, branch_score,
+                                                near_split_active, w);
     road_state = roadClassName(road_class);
     debug_info_.asym_wide_detected = road_class == RoadClass::AsymWide;
     debug_info_.asym_wide_band_count = countAsymWideBands(bands);
     debug_info_.center_residual_px = static_cast<float>(calculateCenterResidual(raw_points, w));
-    bool template_active = shouldUseLeftBoundaryTemplate(branch_detected);
+    bool template_trigger = branch_detected || branch_locked_ || near_split_active;
+    bool template_active = shouldUseBoundaryTemplate(target_side, template_trigger);
     if (template_active) {
-      auto template_points = collectLeftBoundaryTemplatePoints(bands, w);
-      if (static_cast<int>(template_points.size()) >= cfg_.left_boundary_template_min_points) {
+      int template_min_band_index = near_split_active && !branch_locked_
+                                        ? std::max(0, cfg_.near_split_template_skip_bands)
+                                        : 0;
+      auto template_points = collectBoundaryTemplatePoints(bands, w, target_side,
+                                                           template_min_band_index);
+      if (static_cast<int>(template_points.size()) >= boundaryTemplateMinPoints(target_side)) {
         raw_points = std::move(template_points);
-        road_state = "BRANCH";
+        if (near_split_active && !branch_locked_) {
+          road_state = "NEAR_SPLIT";
+        } else {
+          road_state = "BRANCH";
+        }
         debug_info_.left_boundary_template_active = true;
+        debug_info_.boundary_template_side = target_side;
         debug_info_.left_boundary_template_reason = "active";
         debug_info_.branch_entry_transition_active = false;
-        debug_info_.branch_transition_reason = "left_boundary_template";
+        debug_info_.branch_transition_reason = target_side + "_boundary_template";
       } else {
         debug_info_.left_boundary_template_reason = "few_points";
       }
@@ -542,6 +593,43 @@ std::pair<bool, int> LaneDecision::detectBranchFromBands(const std::vector<Band>
   return {branch_bands >= cfg_.branch_detect_min_bands, branch_bands};
 }
 
+std::pair<bool, int> LaneDecision::detectNearSplitFromBands(const std::vector<Band>& bands) const {
+  if (bands.empty()) {
+    return {false, 0};
+  }
+  int near_count = static_cast<int>(
+      std::ceil(static_cast<double>(bands.size()) *
+                clampValue(cfg_.near_split_detect_near_band_ratio, 0.1f, 1.0f)));
+  near_count = std::max(1, std::min(near_count, static_cast<int>(bands.size())));
+  int start = std::max(0, static_cast<int>(bands.size()) - near_count);
+  int split_bands = 0;
+  for (int i = start; i < static_cast<int>(bands.size()); ++i) {
+    int valid = 0;
+    const auto& segs = bands[i].segments;
+    for (size_t a = 0; a < segs.size(); ++a) {
+      bool isolated = true;
+      for (size_t b = 0; b < segs.size(); ++b) {
+        if (a == b) {
+          continue;
+        }
+        double gap = std::abs(segs[a].center_x - segs[b].center_x) -
+                     (segs[a].width / 2.0 + segs[b].width / 2.0);
+        if (gap < cfg_.min_segment_gap_px) {
+          isolated = false;
+          break;
+        }
+      }
+      if (isolated) {
+        ++valid;
+      }
+    }
+    if (valid >= 2) {
+      ++split_bands;
+    }
+  }
+  return {split_bands >= cfg_.near_split_detect_min_bands, split_bands};
+}
+
 std::optional<std::string> LaneDecision::chooseBranchSideByContinuity(
     const std::vector<Band>& bands, int image_width, double last_center_x) const {
   if (bands.empty()) {
@@ -632,9 +720,30 @@ bool LaneDecision::shouldUseLockedPathContinuity(double now) const {
          (now - lock_start_time_) >= cfg_.locked_path_continuity_after_time;
 }
 
+bool LaneDecision::detectNearSplitResidual(const std::vector<cv::Point3f>& raw_points,
+                                           int image_width) const {
+  if (raw_points.size() < 6 || image_width <= 1) {
+    return false;
+  }
+  auto ordered = raw_points;
+  std::sort(ordered.begin(), ordered.end(), [](const cv::Point3f& a, const cv::Point3f& b) {
+    return a.y < b.y;
+  });
+  double top_x = ordered.front().x;
+  double bottom_x = ordered.back().x;
+  double half_w = image_width / 2.0;
+  double slope_norm = (top_x - bottom_x) / half_w;
+  double bottom_norm = (bottom_x - half_w) / half_w;
+  double top_norm = (top_x - half_w) / half_w;
+  bool right_sweep = slope_norm >= cfg_.near_split_residual_slope_norm &&
+                     bottom_norm >= -cfg_.near_split_residual_bottom_norm;
+  bool bottom_near_center = std::abs(bottom_norm) <= cfg_.near_split_residual_bottom_norm;
+  return right_sweep && bottom_near_center;
+}
+
 LaneDecision::RoadClass LaneDecision::classifyRoadGeometry(
     const std::vector<Band>& bands, const std::vector<cv::Point3f>& raw_points,
-    bool branch_detected, int branch_score, int image_width) const {
+    bool branch_detected, int branch_score, bool near_split_detected, int image_width) const {
   if (branch_locked_) {
     return RoadClass::Branch;
   }
@@ -646,6 +755,9 @@ LaneDecision::RoadClass LaneDecision::classifyRoadGeometry(
   }
   if (valid_band_count <= 0 || static_cast<int>(raw_points.size()) < cfg_.fit_min_points) {
     return RoadClass::LowConfidence;
+  }
+  if (near_split_detected && !branch_detected && branch_score == 0) {
+    return RoadClass::NearSplit;
   }
   int wide_bands = countAsymWideBands(bands);
   double residual = calculateCenterResidual(raw_points, image_width);
@@ -670,6 +782,8 @@ std::string LaneDecision::roadClassName(RoadClass road_class) const {
   switch (road_class) {
     case RoadClass::Branch:
       return "BRANCH";
+    case RoadClass::NearSplit:
+      return "NEAR_SPLIT";
     case RoadClass::AsymWide:
       return "ASYM_WIDE";
     case RoadClass::LowConfidence:
@@ -743,55 +857,111 @@ double LaneDecision::calculateLaneConfidence(const std::vector<cv::Point3f>& fit
   return clampValue(static_cast<double>(fit_points.size()) / valid_band_count, 0.0, 1.0);
 }
 
-bool LaneDecision::isLeftBoundaryTemplateReady() const {
-  return cfg_.enable_left_boundary_template_line &&
-         !left_boundary_template_offsets_.empty() &&
-         cfg_.left_boundary_template_side == "left";
+bool LaneDecision::isBoundaryTemplateReady(const std::string& side) const {
+  if (!cfg_.enable_left_boundary_template_line) {
+    return false;
+  }
+  if (side == "left") {
+    return !left_boundary_template_offsets_.empty();
+  }
+  if (side == "right") {
+    return !right_boundary_template_offsets_.empty();
+  }
+  return false;
 }
 
-bool LaneDecision::shouldUseLeftBoundaryTemplate(bool branch_detected) {
+int LaneDecision::boundaryTemplateMinPoints(const std::string& side) const {
+  return side == "right" ? cfg_.right_boundary_template_min_points
+                         : cfg_.left_boundary_template_min_points;
+}
+
+bool LaneDecision::shouldUseBoundaryTemplate(const std::string& side, bool template_trigger) {
   if (!cfg_.enable_left_boundary_template_line) {
     debug_info_.left_boundary_template_reason = "disabled";
     return false;
   }
-  if (left_boundary_template_offsets_.empty()) {
+  if (side != "left" && side != "right") {
+    debug_info_.left_boundary_template_reason = "bad_side";
+    return false;
+  }
+  if (!isBoundaryTemplateReady(side)) {
     debug_info_.left_boundary_template_reason = "no_offsets";
     return false;
   }
-  if (cfg_.left_boundary_template_side != "left") {
-    debug_info_.left_boundary_template_reason = "side_not_left";
+  if (!template_trigger) {
+    debug_info_.left_boundary_template_reason = "no_template_trigger";
     return false;
   }
-  if (!branch_detected && !branch_locked_) {
-    debug_info_.left_boundary_template_reason = "no_branch_or_lock";
-    return false;
-  }
+  debug_info_.boundary_template_side = side;
   debug_info_.left_boundary_template_reason = "ready";
   return true;
 }
 
-std::vector<cv::Point3f> LaneDecision::collectLeftBoundaryTemplatePoints(
-    std::vector<Band>& bands, int image_width) {
+std::vector<cv::Point3f> LaneDecision::collectBoundaryTemplatePoints(
+    std::vector<Band>& bands, int image_width, const std::string& side,
+    int min_band_index) {
   std::vector<cv::Point3f> points;
-  if (left_boundary_template_offsets_.empty()) {
+  const std::vector<double>* offsets = nullptr;
+  float weight = 1.0f;
+  if (side == "left") {
+    offsets = &left_boundary_template_offsets_;
+    weight = std::max(0.01f, cfg_.left_boundary_template_weight);
+  } else if (side == "right") {
+    offsets = &right_boundary_template_offsets_;
+    weight = std::max(0.01f, cfg_.right_boundary_template_weight);
+  }
+  if (!offsets || offsets->empty()) {
     debug_info_.left_boundary_template_reason = "no_offsets";
     return points;
   }
-  float weight = std::max(0.01f, cfg_.left_boundary_template_weight);
   for (auto& band : bands) {
-    if (band.segments.empty() || band.index < 0 ||
-        band.index >= static_cast<int>(left_boundary_template_offsets_.size())) {
+    band.selected_segment.reset();
+  }
+  std::optional<double> last_template_x;
+  for (auto it_band = bands.rbegin(); it_band != bands.rend(); ++it_band) {
+    auto& band = *it_band;
+    if (band.segments.empty() || band.index < min_band_index ||
+        band.index >= static_cast<int>(offsets->size())) {
       continue;
     }
-    double offset = left_boundary_template_offsets_[band.index];
+    double offset = (*offsets)[band.index];
     if (!std::isfinite(offset) || offset <= 0.0) {
       continue;
     }
-    const auto& left_segment = *std::min_element(
-        band.segments.begin(), band.segments.end(),
-        [](const Segment& a, const Segment& b) { return a.x0 < b.x0; });
-    double target_x = clampValue(static_cast<double>(left_segment.x0) + offset,
-                                 0.0, static_cast<double>(std::max(0, image_width - 1)));
+    auto target_for_segment = [&](const Segment& seg) {
+      double x = side == "right" ? static_cast<double>(seg.x1) - offset
+                                 : static_cast<double>(seg.x0) + offset;
+      double margin = std::min(3.0, std::max(0.0, seg.width * 0.25));
+      return clampValue(x, static_cast<double>(seg.x0) + margin,
+                        static_cast<double>(seg.x1) - margin);
+    };
+    const Segment* source_segment = nullptr;
+    if (last_template_x) {
+      auto it = std::min_element(
+          band.segments.begin(), band.segments.end(),
+          [&](const Segment& a, const Segment& b) {
+            return std::abs(target_for_segment(a) - *last_template_x) <
+                   std::abs(target_for_segment(b) - *last_template_x);
+          });
+      if (it != band.segments.end()) {
+        source_segment = &(*it);
+      }
+    }
+    if (!source_segment) {
+      auto it = side == "right"
+                    ? std::max_element(band.segments.begin(), band.segments.end(),
+                                       [](const Segment& a, const Segment& b) { return a.x1 < b.x1; })
+                    : std::min_element(band.segments.begin(), band.segments.end(),
+                                       [](const Segment& a, const Segment& b) { return a.x0 < b.x0; });
+      if (it != band.segments.end()) {
+        source_segment = &(*it);
+      }
+    }
+    if (!source_segment) {
+      continue;
+    }
+    double target_x = target_for_segment(*source_segment);
+    target_x = clampValue(target_x, 0.0, static_cast<double>(std::max(0, image_width - 1)));
     Segment virtual_seg;
     virtual_seg.x0 = static_cast<int>(std::round(target_x));
     virtual_seg.x1 = virtual_seg.x0;
@@ -801,10 +971,12 @@ std::vector<cv::Point3f> LaneDecision::collectLeftBoundaryTemplatePoints(
     virtual_seg.virtual_segment = true;
     band.selected_segment = virtual_seg;
     points.emplace_back(static_cast<float>(target_x), static_cast<float>(band.y_center), weight);
+    last_template_x = target_x;
   }
   debug_info_.left_boundary_template_points = static_cast<int>(points.size());
+  debug_info_.boundary_template_side = side;
   if (points.empty()) {
-    debug_info_.left_boundary_template_reason = "no_valid_left_boundary";
+    debug_info_.left_boundary_template_reason = "no_valid_boundary";
   }
   return points;
 }
