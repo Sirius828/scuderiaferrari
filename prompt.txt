@@ -342,3 +342,5 @@ https://beeapi.ai/api-keys
 stream disconnected before completion: Upstream temporarily unavailable, please retry shortly.
 
 把最低速调到0.7然后对齐
+
+https://github.com/chengzipsy/paddlepaddle-yolo11-private

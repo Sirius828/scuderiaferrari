@@ -1,13 +1,7 @@
 Car
-Human
-Gold
-Go
 Gate
+Go
+Gold
 GuideBoard
-Speed_Limit
-red_light
-yellow_light
-green_light
+Human
 Stop
-Rock
-Zebra

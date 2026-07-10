@@ -7,18 +7,18 @@ fused_perception_node:
   ros__parameters:
     # 基础输入
     shm_name: "shm_ar_video"
-    enable_flip: true
+    enable_flip: false
     flip_code: 0
     input_format: "RGB"
     model_input_format: "RGB"
 
     # 性能日志：只看 FPS、RKNN 推理耗时、后处理耗时、发布耗时
-    enable_perf_stats: false
+    enable_perf_stats: true
     perf_interval: 2.0
 
     # 画面显示：只影响 OpenCV 预览窗口，不影响终端日志
     show_window: true
-    blend_alpha: 1.0
+    blend_alpha: 0.35
     show_branch_debug: true
     enable_debug_screenshots: false
     debug_screenshot_interval_sec: 0.0
@@ -28,33 +28,37 @@ fused_perception_node:
     # 决策日志：
     # - enable_status_log: 每 0.5s 打印一次当前 road_state/branch/GuideBoard/点数等状态
     # - enable_branch_event_log: 只在 GuideBoard、岔路、任务状态变化时打印
-    enable_status_log: true
+    enable_status_log: false
     enable_branch_event_log: false
 
     # 目标检测模型
-    det_model_path: "model/yolov8_n_det_split_int8_v2.rknn"
+    det_model_path: "model/yolo11n_det_zhang_320x320_raw3_sim.rknn"
     label_list_path: "model/label_list.txt"
     det_core_id: 0
-    det_input_width: 384
-    det_input_height: 288
-    det_conf_threshold: 0.40
+    det_input_width: 320 #384
+    det_input_height: 320 # 288
+    det_conf_threshold: 0.7
     det_nms_threshold: 0.35
+    det_raw_output: true
     publish_detections: true
     publish_rate: 0
     use_fast_postprocess: false
 
     # 实例分割模型
     seg_model_dir: "/home/orangepi/scuderiaferrari/src/track_perception/model"
-    seg_model_filename: "yolo11n_seg_160x384_int8.rknn"
+    seg_model_filename: "yolo11_seg_zhang_320x320_raw4_sim.rknn"
     seg_core_ids: "1,2"
-    seg_input_width: 384
-    seg_input_height: 160
+    seg_input_width: 320 #384
+    seg_input_height: 320 #160
     seg_crop_y0_ratio: 0.5
     seg_crop_y1_ratio: 1.0
-    seg_pad_value: 0
-    seg_conf_threshold: 0.15
-    seg_mask_threshold: 0.1
+    seg_pad_value: 114
+    seg_conf_threshold: 0.30
+    seg_nms_threshold: 0.45
+    seg_nms_contain_threshold: 0.0
+    seg_mask_threshold: 0.5
     seg_max_detections: 30
+    seg_raw_output: true
 
     # 外圈方向
     outer_side: "left"
@@ -77,7 +81,7 @@ fused_perception_node:
 
     # 岔路确认
     branch_detect_min_bands: 2
-    branch_confirm_frames: 2
+    branch_confirm_frames: 3
     branch_detect_far_band_ratio: 0.7
     enable_branch_entry_transition: true
     branch_transition_near_main_ratio: 0.4
@@ -116,17 +120,17 @@ fused_perception_node:
     fit_point_trend_slope_delta: 0.65
     fit_point_trend_min_points: 6
     fit_point_trend_min_keep_ratio: 0.75
-    lookahead_y_ratio: 0.68
+    lookahead_y_ratio: 0.90
     use_heading_term: true
     heading_weight: 0.0
     near_offset_weight: 1.0
-    max_offset_jump: 2.0
-    offset_smoothing_alpha: 0.45
+    max_offset_jump: 0.80
+    offset_smoothing_alpha: 0.35
 
     # 左边界模板线：检测到岔路且目标为 left 时，使用 current_left_boundary + template_offset 作为全部拟合点
     enable_left_boundary_template_line: true
     left_boundary_template_side: "left"
-    left_boundary_template_offsets: "51.0,53.7,56.5,59.2,61.4,63.7,67.4,72.2,80.4,87.1,93.4,100.6,108.3,117.6,124.3,129.1,135.3,144.5,153.8,168.0"
+    left_boundary_template_offsets: "49.0,50.7,53.5,56.2,61.4,63.7,67.4,72.2,80.4,87.1,93.4,100.6,108.3,117.6,124.3,129.1,135.3,144.5,153.8,168.0"
     left_boundary_template_min_points: 6
     left_boundary_template_weight: 1.0
 

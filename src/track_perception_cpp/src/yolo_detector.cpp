@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cctype>
+#include <cmath>
 #include <fstream>
 #include <numeric>
 
@@ -13,6 +14,7 @@ namespace {
 constexpr int kPostTopkPerClass = 50;
 constexpr int kPostKeepTopk = 30;
 constexpr float kClassAgnosticNmsThresh = 0.60f;
+constexpr int kRegMax = 16;
 
 std::string trimLabel(std::string text) {
   text.erase(text.begin(), std::find_if(text.begin(), text.end(), [](unsigned char ch) {
@@ -24,14 +26,36 @@ std::string trimLabel(std::string text) {
   return text;
 }
 
+float dflExpected(const float* logits, int reg_max) {
+  float max_logit = logits[0];
+  for (int i = 1; i < reg_max; ++i) {
+    max_logit = std::max(max_logit, logits[i]);
+  }
+  float sum = 0.0f;
+  float weighted = 0.0f;
+  for (int i = 0; i < reg_max; ++i) {
+    float e = std::exp(logits[i] - max_logit);
+    sum += e;
+    weighted += e * static_cast<float>(i);
+  }
+  return sum > 0.0f ? weighted / sum : 0.0f;
+}
+
+float sigmoid(float x) {
+  x = std::clamp(x, -50.0f, 50.0f);
+  return 1.0f / (1.0f + std::exp(-x));
+}
+
 }  // namespace
 
 bool YoloDetector::init(const std::string& model_path, const std::string& label_path, int core_id,
-                        int input_width, int input_height, float conf_thresh, float nms_thresh) {
+                        int input_width, int input_height, float conf_thresh, float nms_thresh,
+                        bool raw_output) {
   input_width_ = input_width;
   input_height_ = input_height;
   conf_thresh_ = conf_thresh;
   nms_thresh_ = nms_thresh;
+  raw_output_ = raw_output;
 
   std::ifstream labels_file(label_path);
   std::string line;
@@ -69,6 +93,15 @@ float YoloDetector::iou(const cv::Rect2f& a, const cv::Rect2f& b) {
 
 void YoloDetector::postprocess(const std::vector<TensorData>& outputs, const cv::Size& original_size,
                                const LetterboxMeta& meta, std::vector<Detection>& detections) const {
+  if (raw_output_) {
+    postprocessRaw(outputs, original_size, meta, detections);
+  } else {
+    postprocessDecoded(outputs, original_size, meta, detections);
+  }
+}
+
+void YoloDetector::postprocessDecoded(const std::vector<TensorData>& outputs, const cv::Size& original_size,
+                                      const LetterboxMeta& meta, std::vector<Detection>& detections) const {
   detections.clear();
   if (outputs.size() < 2) {
     return;
@@ -156,6 +189,123 @@ void YoloDetector::postprocess(const std::vector<TensorData>& outputs, const cv:
     }
     candidates = std::move(topk_candidates);
   }
+
+  std::vector<bool> removed(candidates.size(), false);
+  for (size_t i = 0; i < candidates.size(); ++i) {
+    if (removed[i]) {
+      continue;
+    }
+    detections.push_back(candidates[i]);
+    for (size_t j = i + 1; j < candidates.size(); ++j) {
+      if (!removed[j] && candidates[i].class_id == candidates[j].class_id &&
+          iou(candidates[i].bbox, candidates[j].bbox) > nms_thresh_) {
+        removed[j] = true;
+      }
+    }
+  }
+
+  if (detections.size() > 1) {
+    std::sort(detections.begin(), detections.end(),
+              [](const Detection& a, const Detection& b) { return a.confidence > b.confidence; });
+    std::vector<Detection> agnostic;
+    agnostic.reserve(detections.size());
+    for (const auto& det : detections) {
+      bool duplicate = false;
+      for (const auto& kept : agnostic) {
+        if (iou(det.bbox, kept.bbox) > kClassAgnosticNmsThresh) {
+          duplicate = true;
+          break;
+        }
+      }
+      if (!duplicate) {
+        agnostic.push_back(det);
+      }
+    }
+    detections = std::move(agnostic);
+  }
+
+  if (kPostKeepTopk > 0 && detections.size() > static_cast<size_t>(kPostKeepTopk)) {
+    detections.resize(kPostKeepTopk);
+  }
+}
+
+void YoloDetector::postprocessRaw(const std::vector<TensorData>& outputs, const cv::Size& original_size,
+                                  const LetterboxMeta& meta, std::vector<Detection>& detections) const {
+  detections.clear();
+  int num_classes = static_cast<int>(labels_.size());
+  if (num_classes <= 0) {
+    return;
+  }
+
+  std::vector<Detection> candidates;
+  for (const auto& output : outputs) {
+    if (output.dims.size() != 4 || output.dims[0] != 1) {
+      continue;
+    }
+    int channels = output.dims[1];
+    int h = output.dims[2];
+    int w = output.dims[3];
+    int expected_min = 4 * kRegMax + num_classes;
+    if (channels < expected_min || h <= 0 || w <= 0) {
+      continue;
+    }
+    float stride_x = static_cast<float>(input_width_) / static_cast<float>(w);
+    float stride_y = static_cast<float>(input_height_) / static_cast<float>(h);
+    size_t plane = static_cast<size_t>(h) * w;
+    const float* data = output.data.data();
+
+    for (int y = 0; y < h; ++y) {
+      for (int x = 0; x < w; ++x) {
+        size_t pos = static_cast<size_t>(y) * w + x;
+        int class_id = 0;
+        float best_score = sigmoid(data[(4 * kRegMax) * plane + pos]);
+        for (int c = 1; c < num_classes; ++c) {
+          float s = sigmoid(data[(4 * kRegMax + c) * plane + pos]);
+          if (s > best_score) {
+            best_score = s;
+            class_id = c;
+          }
+        }
+        if (best_score < conf_thresh_) {
+          continue;
+        }
+
+        float dist[4];
+        for (int side = 0; side < 4; ++side) {
+          float logits[kRegMax];
+          for (int r = 0; r < kRegMax; ++r) {
+            logits[r] = data[(side * kRegMax + r) * plane + pos];
+          }
+          dist[side] = dflExpected(logits, kRegMax);
+        }
+
+        float cx = (static_cast<float>(x) + 0.5f) * stride_x;
+        float cy = (static_cast<float>(y) + 0.5f) * stride_y;
+        float x1 = (cx - dist[0] * stride_x - meta.pad_x) / std::max(meta.scale, 1e-6f);
+        float y1 = (cy - dist[1] * stride_y - meta.pad_y) / std::max(meta.scale, 1e-6f);
+        float x2 = (cx + dist[2] * stride_x - meta.pad_x) / std::max(meta.scale, 1e-6f);
+        float y2 = (cy + dist[3] * stride_y - meta.pad_y) / std::max(meta.scale, 1e-6f);
+        x1 = std::clamp(x1, 0.0f, static_cast<float>(original_size.width - 1));
+        y1 = std::clamp(y1, 0.0f, static_cast<float>(original_size.height - 1));
+        x2 = std::clamp(x2, 0.0f, static_cast<float>(original_size.width));
+        y2 = std::clamp(y2, 0.0f, static_cast<float>(original_size.height));
+        if (x2 <= x1 || y2 <= y1) {
+          continue;
+        }
+
+        Detection det;
+        det.class_id = class_id;
+        det.class_name = class_id < static_cast<int>(labels_.size()) ? labels_[class_id] : "unknown";
+        det.confidence = best_score;
+        det.bbox = cv::Rect2f(x1, y1, x2 - x1, y2 - y1);
+        det.center = cv::Point2f((x1 + x2) * 0.5f, (y1 + y2) * 0.5f);
+        candidates.push_back(det);
+      }
+    }
+  }
+
+  std::sort(candidates.begin(), candidates.end(),
+            [](const Detection& a, const Detection& b) { return a.confidence > b.confidence; });
 
   std::vector<bool> removed(candidates.size(), false);
   for (size_t i = 0; i < candidates.size(); ++i) {

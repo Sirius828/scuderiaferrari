@@ -199,6 +199,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<int>("det_input_height", 288);
     declare_parameter<double>("det_conf_threshold", 0.5);
     declare_parameter<double>("det_nms_threshold", 0.45);
+    declare_parameter<bool>("det_raw_output", false);
     declare_parameter<bool>("publish_detections", true);
     declare_parameter<int>("publish_rate", 0);
     declare_parameter<bool>("use_fast_postprocess", false);
@@ -210,10 +211,13 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<int>("seg_input_height", 160);
     declare_parameter<double>("seg_crop_y0_ratio", 0.0);
     declare_parameter<double>("seg_crop_y1_ratio", 1.0);
-    declare_parameter<int>("seg_pad_value", 0);
-    declare_parameter<double>("seg_conf_threshold", 0.15);
+    declare_parameter<int>("seg_pad_value", 114);
+    declare_parameter<double>("seg_conf_threshold", 0.45);
+    declare_parameter<double>("seg_nms_threshold", 0.45);
+    declare_parameter<double>("seg_nms_contain_threshold", 0.85);
     declare_parameter<double>("seg_mask_threshold", 0.45);
     declare_parameter<int>("seg_max_detections", 30);
+    declare_parameter<bool>("seg_raw_output", false);
 
     declare_parameter<int>("band_count", 13);
     declare_parameter<double>("band_y_min_ratio", 0.65);
@@ -342,6 +346,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     det_input_height_ = static_cast<int>(get_parameter("det_input_height").as_int());
     det_conf_threshold_ = static_cast<float>(get_parameter("det_conf_threshold").as_double());
     det_nms_threshold_ = static_cast<float>(get_parameter("det_nms_threshold").as_double());
+    det_raw_output_ = get_parameter("det_raw_output").as_bool();
 
     std::string seg_model_dir = get_parameter("seg_model_dir").as_string();
     std::string seg_model_filename = get_parameter("seg_model_filename").as_string();
@@ -354,8 +359,12 @@ class FusedPerceptionNode : public rclcpp::Node {
     seg_crop_y1_ratio_ = static_cast<float>(get_parameter("seg_crop_y1_ratio").as_double());
     seg_pad_value_ = static_cast<int>(get_parameter("seg_pad_value").as_int());
     seg_conf_threshold_ = static_cast<float>(get_parameter("seg_conf_threshold").as_double());
+    seg_nms_threshold_ = static_cast<float>(get_parameter("seg_nms_threshold").as_double());
+    seg_nms_contain_threshold_ =
+        static_cast<float>(get_parameter("seg_nms_contain_threshold").as_double());
     seg_mask_threshold_ = static_cast<float>(get_parameter("seg_mask_threshold").as_double());
     seg_max_detections_ = static_cast<int>(get_parameter("seg_max_detections").as_int());
+    seg_raw_output_ = get_parameter("seg_raw_output").as_bool();
 
     LaneDecisionConfig lane_cfg;
     lane_cfg.enable_segment_branch_logic = get_parameter("enable_segment_branch_logic").as_bool();
@@ -486,12 +495,14 @@ class FusedPerceptionNode : public rclcpp::Node {
     }
 
     if (!detector_.init(det_model_path_, label_list_path_, det_core_id_, det_input_width_,
-                        det_input_height_, det_conf_threshold_, det_nms_threshold_)) {
+                        det_input_height_, det_conf_threshold_, det_nms_threshold_,
+                        det_raw_output_)) {
       throw std::runtime_error("failed to initialize detector model");
     }
     if (!segmenter_.init(seg_model_path_, seg_core_ids_, seg_input_width_, seg_input_height_,
                          seg_crop_y0_ratio_, seg_crop_y1_ratio_, seg_pad_value_,
-                         seg_conf_threshold_, seg_mask_threshold_, seg_max_detections_)) {
+                         seg_conf_threshold_, seg_nms_threshold_, seg_mask_threshold_,
+                         seg_nms_contain_threshold_, seg_max_detections_, seg_raw_output_)) {
       throw std::runtime_error("failed to initialize segmentation model");
     }
 
@@ -545,10 +556,12 @@ class FusedPerceptionNode : public rclcpp::Node {
 
     auto seg_future = std::async(std::launch::async, [&]() {
       cv::Mat local_seg_map;
+      std::vector<YoloSegInstance> local_instances;
       double rknn_ms = 0.0;
       double post_ms = 0.0;
       bool ok = segmenter_.infer(frame_rgb, local_seg_map, &rknn_ms, &post_ms);
-      return std::make_tuple(ok, local_seg_map, rknn_ms, post_ms);
+      local_instances = segmenter_.lastInstances();
+      return std::make_tuple(ok, local_seg_map, std::move(local_instances), rknn_ms, post_ms);
     });
 
     auto det_result = det_future.get();
@@ -557,10 +570,11 @@ class FusedPerceptionNode : public rclcpp::Node {
     bool seg_ok = std::get<0>(seg_result);
     detections = std::move(std::get<1>(det_result));
     seg_map = std::get<1>(seg_result);
+    std::vector<YoloSegInstance> seg_instances = std::move(std::get<2>(seg_result));
     stats.det_rknn_ms = std::get<2>(det_result);
     stats.det_post_ms = std::get<3>(det_result);
-    stats.seg_rknn_ms = std::get<2>(seg_result);
-    stats.seg_post_ms = std::get<3>(seg_result);
+    stats.seg_rknn_ms = std::get<3>(seg_result);
+    stats.seg_post_ms = std::get<4>(seg_result);
 
     auto t_decision0 = std::chrono::steady_clock::now();
     LaneState lane_state = lane_decision_.decide(seg_map, detections);
@@ -571,7 +585,7 @@ class FusedPerceptionNode : public rclcpp::Node {
 
     refreshDebugParameters();
     if (show_window_ || enable_debug_screenshots_) {
-      showDebugWindow(frame_rgb, seg_map, detections, lane_state, lane_debug);
+      showDebugWindow(frame_rgb, seg_map, detections, seg_instances, lane_state, lane_debug);
     }
 
     auto t_pub0 = std::chrono::steady_clock::now();
@@ -587,6 +601,13 @@ class FusedPerceptionNode : public rclcpp::Node {
     sum_decision_ms_ += stats.decision_ms;
     sum_publish_ms_ += stats.publish_ms;
     last_det_count_ = detections.size();
+    const YoloSegStats& seg_stats = segmenter_.lastStats();
+    last_seg_model_instances_ = seg_stats.kept_instances;
+    last_seg_model_conf_mean_ = seg_stats.score_mean;
+    last_seg_model_conf_min_ = seg_stats.score_min;
+    last_seg_model_conf_max_ = seg_stats.score_max;
+    sum_seg_model_score_ += static_cast<double>(seg_stats.score_mean) * seg_stats.kept_instances;
+    sum_seg_model_instances_ += static_cast<uint64_t>(seg_stats.kept_instances);
 
     if (!det_ok || !seg_ok) {
       RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000,
@@ -647,7 +668,9 @@ class FusedPerceptionNode : public rclcpp::Node {
   }
 
   void showDebugWindow(const cv::Mat& frame_rgb, const cv::Mat& seg_map,
-                       const std::vector<Detection>& detections, const LaneState& lane_state,
+                       const std::vector<Detection>& detections,
+                       const std::vector<YoloSegInstance>& seg_instances,
+                       const LaneState& lane_state,
                        const LaneDebugInfo& debug_info) {
     if (frame_rgb.empty()) {
       return;
@@ -660,9 +683,11 @@ class FusedPerceptionNode : public rclcpp::Node {
       cv::Mat mask_u8;
       seg_map.convertTo(mask_u8, CV_8UC1, 255.0);
 
-      cv::Mat mask_vis(vis.size(), vis.type(), cv::Scalar(0, 0, 0));
-      mask_vis.setTo(cv::Scalar(255, 0, 0), mask_u8);
-      cv::addWeighted(vis, 1.0f - alpha, mask_vis, alpha, 0.0, vis);
+      cv::Mat overlay = vis.clone();
+      overlay.setTo(cv::Scalar(40, 220, 80), mask_u8);
+      cv::Mat blended;
+      cv::addWeighted(vis, 1.0f - alpha, overlay, alpha, 0.0, blended);
+      blended.copyTo(vis, mask_u8);
     }
 
     for (const auto& det : detections) {
@@ -673,6 +698,17 @@ class FusedPerceptionNode : public rclcpp::Node {
       label << det.class_name << " " << static_cast<int>(det.confidence * 100.0f) << "%";
       cv::putText(vis, label.str(), cv::Point(static_cast<int>(det.bbox.x), static_cast<int>(det.bbox.y) - 4),
                   cv::FONT_HERSHEY_SIMPLEX, 0.45, color, 1, cv::LINE_AA);
+    }
+
+    for (const auto& instance : seg_instances) {
+      cv::Scalar color(255, 255, 0);
+      cv::rectangle(vis, instance.bbox, color, 2);
+      std::ostringstream label;
+      label << "seg " << static_cast<int>(std::round(instance.score * 100.0f)) << "%";
+      int x = std::clamp(static_cast<int>(std::round(instance.bbox.x)), 0, std::max(0, vis.cols - 1));
+      int y = std::clamp(static_cast<int>(std::round(instance.bbox.y)) - 5, 12, std::max(12, vis.rows - 1));
+      cv::putText(vis, label.str(), cv::Point(x, y), cv::FONT_HERSHEY_SIMPLEX, 0.5,
+                  color, 2, cv::LINE_AA);
     }
 
     if (show_branch_debug_) {
@@ -824,6 +860,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     debug_screenshot_dir_ = get_parameter("debug_screenshot_dir").as_string();
     enable_status_log_ = get_parameter("enable_status_log").as_bool();
     enable_branch_event_log_ = get_parameter("enable_branch_event_log").as_bool();
+    enable_perf_stats_ = get_parameter("enable_perf_stats").as_bool();
   }
 
   void logDecisionStatus(const LaneState& lane_state, const LaneDebugInfo& debug_info) {
@@ -887,14 +924,18 @@ class FusedPerceptionNode : public rclcpp::Node {
     if (now - last_status_log_sec_ < 0.5) {
       return;
     }
+    const YoloSegStats& seg_stats = segmenter_.lastStats();
     RCLCPP_INFO(get_logger(),
                 "status road=%s branch=%s offset=%.3f lateral=%.3f heading=%.3f conf=%.2f valid=%d "
+                "seg_conf=%.3f[%.3f,%.3f]/%d "
                 "branch_detected=%d score=%d guideboard_roi=%d/%d guideboard_best=%.2f@(%.0f,%.0f) "
                 "transition=%d near_single=%d branch_pts=%d reason=%s asym=%d wide_bands=%d residual=%.1f "
                 "lb_tpl=%d lb_pts=%d lb_reason=%s obstacles=%zu segments=%d points=%d/%d task=%s",
                 lane_state.road_state.c_str(), lane_state.branch_side.c_str(),
                 lane_state.control_offset, lane_state.lateral_offset, lane_state.heading_error,
-                lane_state.confidence, lane_state.is_valid, debug_info.branch_detected,
+                lane_state.confidence, lane_state.is_valid, seg_stats.score_mean,
+                seg_stats.score_min, seg_stats.score_max, seg_stats.kept_instances,
+                debug_info.branch_detected,
                 debug_info.branch_score, debug_info.guideboard_roi_count, debug_info.guideboard_count,
                 debug_info.guideboard_best_confidence, debug_info.guideboard_best_center.x,
                 debug_info.guideboard_best_center.y, debug_info.branch_entry_transition_active,
@@ -923,13 +964,20 @@ class FusedPerceptionNode : public rclcpp::Node {
     uint64_t frames = std::max<uint64_t>(1, processed_frames_);
     double processed_fps = processed_frames_ / std::max(0.001, dt);
     double upstream_fps = upstream_frames_ / std::max(0.001, dt);
+    double seg_model_conf_avg = sum_seg_model_instances_ > 0
+                                    ? sum_seg_model_score_ / static_cast<double>(sum_seg_model_instances_)
+                                    : 0.0;
     RCLCPP_INFO(get_logger(),
                 "perf %.1fs upstream=%.1f fps processed=%.1f fps det=%.2f/%.2f ms "
-                "seg=%.2f/%.2f ms decision=%.2f ms publish=%.2f ms detections=%zu",
+                "seg=%.2f/%.2f ms decision=%.2f ms publish=%.2f ms detections=%zu "
+                "seg_model_conf_avg=%.3f seg_model_instances=%lu last_seg_conf=%.3f[%.3f,%.3f]/%d",
                 dt, upstream_fps, processed_fps, sum_det_rknn_ms_ / frames,
                 sum_det_post_ms_ / frames, sum_seg_rknn_ms_ / frames,
                 sum_seg_post_ms_ / frames, sum_decision_ms_ / frames,
-                sum_publish_ms_ / frames, last_det_count_);
+                sum_publish_ms_ / frames, last_det_count_, seg_model_conf_avg,
+                static_cast<unsigned long>(sum_seg_model_instances_), last_seg_model_conf_mean_,
+                last_seg_model_conf_min_, last_seg_model_conf_max_,
+                last_seg_model_instances_);
 
     perf_start_sec_ = now;
     processed_frames_ = 0;
@@ -940,6 +988,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     sum_seg_post_ms_ = 0.0;
     sum_decision_ms_ = 0.0;
     sum_publish_ms_ = 0.0;
+    sum_seg_model_score_ = 0.0;
+    sum_seg_model_instances_ = 0;
   }
 
   std::string shm_name_;
@@ -969,6 +1019,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   int det_input_height_{288};
   float det_conf_threshold_{0.5f};
   float det_nms_threshold_{0.45f};
+  bool det_raw_output_{false};
 
   std::string seg_model_path_;
   std::vector<int> seg_core_ids_{1, 2};
@@ -976,10 +1027,13 @@ class FusedPerceptionNode : public rclcpp::Node {
   int seg_input_height_{160};
   float seg_crop_y0_ratio_{0.0f};
   float seg_crop_y1_ratio_{1.0f};
-  int seg_pad_value_{0};
-  float seg_conf_threshold_{0.15f};
+  int seg_pad_value_{114};
+  float seg_conf_threshold_{0.45f};
+  float seg_nms_threshold_{0.45f};
+  float seg_nms_contain_threshold_{0.85f};
   float seg_mask_threshold_{0.45f};
   int seg_max_detections_{30};
+  bool seg_raw_output_{false};
 
   std::unique_ptr<ShmReader> shm_reader_;
   YoloDetector detector_;
@@ -1006,7 +1060,13 @@ class FusedPerceptionNode : public rclcpp::Node {
   double sum_seg_post_ms_{0.0};
   double sum_decision_ms_{0.0};
   double sum_publish_ms_{0.0};
+  double sum_seg_model_score_{0.0};
+  uint64_t sum_seg_model_instances_{0};
   size_t last_det_count_{0};
+  int last_seg_model_instances_{0};
+  float last_seg_model_conf_mean_{0.0f};
+  float last_seg_model_conf_min_{0.0f};
+  float last_seg_model_conf_max_{0.0f};
   double last_status_log_sec_{0.0};
   bool last_guideboard_seen_{false};
   bool last_branch_detected_{false};

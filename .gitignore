@@ -2,3 +2,4 @@ setupUI/dist/app
 setupUI/build/setup_webui/setup_webui.pkg
 *.log
 *.onnx
+*.mp4
