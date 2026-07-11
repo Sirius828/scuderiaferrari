@@ -63,6 +63,11 @@ struct ControllerParameters
   double curvature_speed_weight{0.50};
   double curve_offset_relief_start{0.15};
   double curve_offset_relief_full{0.60};
+  bool enable_dynamic_speed{true};
+  bool enable_dynamic_steering_limit{true};
+  bool enable_curve_offset_allowance{true};
+  double straight_allowed_offset{0.05};
+  double curve_allowed_offset{0.60};
 };
 
 class LineFollowerControllerCpp : public rclcpp::Node
@@ -98,6 +103,11 @@ public:
     declare_parameter<double>("curvature_speed_weight", params_.curvature_speed_weight);
     declare_parameter<double>("curve_offset_relief_start", params_.curve_offset_relief_start);
     declare_parameter<double>("curve_offset_relief_full", params_.curve_offset_relief_full);
+    declare_parameter<bool>("enable_dynamic_speed", params_.enable_dynamic_speed);
+    declare_parameter<bool>("enable_dynamic_steering_limit", params_.enable_dynamic_steering_limit);
+    declare_parameter<bool>("enable_curve_offset_allowance", params_.enable_curve_offset_allowance);
+    declare_parameter<double>("straight_allowed_offset", params_.straight_allowed_offset);
+    declare_parameter<double>("curve_allowed_offset", params_.curve_allowed_offset);
     declare_parameter<double>("steering_sign", 1.0);
     declare_parameter<double>("control_frequency", 50.0);
     declare_parameter<bool>("autonomous_enabled_on_start", false);
@@ -212,6 +222,11 @@ private:
     params_.curvature_speed_weight = get_parameter("curvature_speed_weight").as_double();
     params_.curve_offset_relief_start = get_parameter("curve_offset_relief_start").as_double();
     params_.curve_offset_relief_full = get_parameter("curve_offset_relief_full").as_double();
+    params_.enable_dynamic_speed = get_parameter("enable_dynamic_speed").as_bool();
+    params_.enable_dynamic_steering_limit = get_parameter("enable_dynamic_steering_limit").as_bool();
+    params_.enable_curve_offset_allowance = get_parameter("enable_curve_offset_allowance").as_bool();
+    params_.straight_allowed_offset = get_parameter("straight_allowed_offset").as_double();
+    params_.curve_allowed_offset = get_parameter("curve_allowed_offset").as_double();
     steering_sign_ = get_parameter("steering_sign").as_double();
     control_frequency_ = get_parameter("control_frequency").as_double();
     autonomous_enabled_on_start_ = get_parameter("autonomous_enabled_on_start").as_bool();
@@ -347,6 +362,17 @@ private:
     {
       return fail("curve_offset_relief_full must be > start and <= 1");
     }
+    if (!std::isfinite(parameters.straight_allowed_offset) ||
+      parameters.straight_allowed_offset < 0.0 || parameters.straight_allowed_offset > 1.0)
+    {
+      return fail("straight_allowed_offset must be in [0, 1]");
+    }
+    if (!std::isfinite(parameters.curve_allowed_offset) ||
+      parameters.curve_allowed_offset < parameters.straight_allowed_offset ||
+      parameters.curve_allowed_offset > 1.0)
+    {
+      return fail("curve_allowed_offset must be >= straight_allowed_offset and <= 1");
+    }
     return true;
   }
 
@@ -441,6 +467,16 @@ private:
         pending.curve_offset_relief_start = parameter.as_double();
       } else if (name == "curve_offset_relief_full") {
         pending.curve_offset_relief_full = parameter.as_double();
+      } else if (name == "enable_dynamic_speed") {
+        pending.enable_dynamic_speed = parameter.as_bool();
+      } else if (name == "enable_dynamic_steering_limit") {
+        pending.enable_dynamic_steering_limit = parameter.as_bool();
+      } else if (name == "enable_curve_offset_allowance") {
+        pending.enable_curve_offset_allowance = parameter.as_bool();
+      } else if (name == "straight_allowed_offset") {
+        pending.straight_allowed_offset = parameter.as_double();
+      } else if (name == "curve_allowed_offset") {
+        pending.curve_allowed_offset = parameter.as_double();
       } else if (name == "steering_sign") {
         pending_steering_sign = parameter.as_double();
       }
@@ -819,6 +855,9 @@ private:
 
   double compute_target_speed(double risk) const
   {
+    if (!params_.enable_dynamic_speed) {
+      return params_.linear_speed_mps;
+    }
     const double abs_offset = std::abs(risk);
     if (abs_offset <= params_.speed_offset_start) {
       return params_.linear_speed_mps;
@@ -833,6 +872,9 @@ private:
 
   double compute_dynamic_max_steering(double risk) const
   {
+    if (!params_.enable_dynamic_steering_limit) {
+      return params_.max_steering;
+    }
     const double abs_offset = std::abs(risk);
     if (abs_offset <= params_.steering_offset_start) {
       return params_.straight_max_steering;
@@ -859,9 +901,30 @@ private:
     const double lateral_risk = std::abs(current_lateral_offset_);
     const double heading_risk = std::abs(current_heading_error_);
     const double curvature_risk = params_.curvature_speed_weight * std::abs(current_curvature_);
-    const double predictive_risk = compute_offset_relief() * std::abs(current_offset_);
+    const double predictive_risk = compute_predictive_offset_risk();
     return std::clamp(
       std::max({lateral_risk, heading_risk, curvature_risk, predictive_risk}), 0.0, 1.0);
+  }
+
+  double compute_allowed_offset() const
+  {
+    const double curve_strength = compute_curve_strength();
+    if (curve_strength <= params_.curve_offset_relief_start) {
+      return params_.straight_allowed_offset;
+    }
+    const double ratio = std::clamp(
+      (curve_strength - params_.curve_offset_relief_start) /
+      (params_.curve_offset_relief_full - params_.curve_offset_relief_start), 0.0, 1.0);
+    return params_.straight_allowed_offset +
+      (params_.curve_allowed_offset - params_.straight_allowed_offset) * ratio;
+  }
+
+  double compute_predictive_offset_risk() const
+  {
+    if (!params_.enable_curve_offset_allowance) {
+      return compute_offset_relief() * std::abs(current_offset_);
+    }
+    return std::max(0.0, std::abs(current_offset_) - compute_allowed_offset());
   }
 
   double compute_curve_strength() const
@@ -941,6 +1004,8 @@ private:
     const double curve_risk = compute_curve_risk();
     const double curve_strength = compute_curve_strength();
     const double offset_relief = compute_offset_relief();
+    const double allowed_offset = compute_allowed_offset();
+    const double offset_excess = std::max(0.0, std::abs(current_offset_) - allowed_offset);
     const double dynamic_max = compute_dynamic_max_steering(curve_risk);
     text << std::fixed << std::setprecision(3)
          << "mode=" << last_mode_
@@ -957,6 +1022,8 @@ private:
          << " control_error=" << control_error
          << " curve_strength=" << curve_strength
          << " offset_relief=" << offset_relief
+         << " allowed_offset=" << allowed_offset
+         << " offset_excess=" << offset_excess
          << " curve_risk=" << curve_risk
          << " speed_mps=" << current_speed_mps_
          << " wheel_rps=" << speed_to_wheel_rps(current_speed_mps_)
