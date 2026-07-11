@@ -34,10 +34,6 @@ namespace track_perception_cpp {
 
 namespace {
 
-constexpr const char* kOcrDetModelPath =
-    "/home/orangepi/Desktop/ppocr_direction_runtime/model/ppocrv4_det.rknn";
-constexpr const char* kOcrRecModelPath =
-    "/home/orangepi/Desktop/ppocr_direction_runtime/model/ppocrv4_rec.rknn";
 constexpr double kGuideboardOcrMinIntervalSec = 0.08;
 constexpr int kOcrVoteRequired = 2;
 constexpr int kMinOcrCropSizePx = 20;
@@ -246,7 +242,18 @@ class FusedPerceptionNode : public rclcpp::Node {
     timer_ = create_wall_timer(1ms, std::bind(&FusedPerceptionNode::tick, this));
   }
 
+  ~FusedPerceptionNode() override {
+    waitForGuideboardOcr();
+  }
+
  private:
+  struct OcrTaskResult {
+    int ret{-1};
+    PPOCRDirectionResult result{};
+    int crop_width{0};
+    int crop_height{0};
+  };
+
   void declareParameters() {
     declare_parameter<std::string>("shm_name", "shm_ar_video");
     declare_parameter<bool>("enable_flip", true);
@@ -322,6 +329,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("guideboard_detect_y0_ratio", 0.2);
     declare_parameter<double>("guideboard_detect_y1_ratio", 0.7);
     declare_parameter<bool>("enable_guideboard_ocr", true);
+    declare_parameter<std::string>("ocr_det_model_path", "model/ppocrv4_det.rknn");
+    declare_parameter<std::string>("ocr_rec_model_path", "model/ppocrv4_rec.rknn");
     declare_parameter<double>("ocr_min_score", 0.75);
     declare_parameter<double>("ocr_crop_padding_ratio", 0.25);
     declare_parameter<int>("ocr_vote_window", 3);
@@ -428,6 +437,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     enable_status_log_ = get_parameter("enable_status_log").as_bool();
     enable_branch_event_log_ = get_parameter("enable_branch_event_log").as_bool();
     enable_guideboard_ocr_ = get_parameter("enable_guideboard_ocr").as_bool();
+    ocr_det_model_path_ = resolveOwnPackagePath(get_parameter("ocr_det_model_path").as_string());
+    ocr_rec_model_path_ = resolveOwnPackagePath(get_parameter("ocr_rec_model_path").as_string());
     ocr_min_score_ = static_cast<float>(get_parameter("ocr_min_score").as_double());
     ocr_crop_padding_ratio_ = static_cast<float>(get_parameter("ocr_crop_padding_ratio").as_double());
     ocr_vote_window_ = static_cast<int>(get_parameter("ocr_vote_window").as_int());
@@ -600,6 +611,15 @@ class FusedPerceptionNode : public rclcpp::Node {
     return (fs::path(share_dir) / p).string();
   }
 
+  std::string resolveOwnPackagePath(const std::string& path) const {
+    fs::path p(path);
+    if (p.is_absolute()) {
+      return p.string();
+    }
+    std::string share_dir = ament_index_cpp::get_package_share_directory("track_perception_cpp");
+    return (fs::path(share_dir) / p).string();
+  }
+
   const Detection* selectGuideboardForOcr(const std::vector<Detection>& detections, int image_height) const {
     int y0 = static_cast<int>(image_height * lane_guideboard_y0_ratio_);
     int y1 = static_cast<int>(image_height * lane_guideboard_y1_ratio_);
@@ -659,11 +679,78 @@ class FusedPerceptionNode : public rclcpp::Node {
     }
   }
 
+  void consumeGuideboardOcrResult() {
+    if (!guideboard_ocr_future_.valid() ||
+        guideboard_ocr_future_.wait_for(0ms) != std::future_status::ready) {
+      return;
+    }
+
+    OcrTaskResult task;
+    try {
+      task = guideboard_ocr_future_.get();
+    } catch (const std::exception& e) {
+      task.result.status = PPOCR_STATUS_INFERENCE_FAILED;
+      task.result.error = e.what();
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000,
+                           "GuideBoard OCR async exception: %s crop=%dx%d",
+                           task.result.error.c_str(), ocr_task_crop_width_,
+                           ocr_task_crop_height_);
+    } catch (...) {
+      task.result.status = PPOCR_STATUS_INFERENCE_FAILED;
+      task.result.error = "unknown OCR async exception";
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000,
+                           "GuideBoard OCR async exception: %s crop=%dx%d",
+                           task.result.error.c_str(), ocr_task_crop_width_,
+                           ocr_task_crop_height_);
+    }
+
+    const PPOCRDirectionResult& result = task.result;
+    last_ocr_text_ = result.text;
+    last_ocr_status_ = result.status;
+    last_ocr_raw_direction_ = result.raw_direction;
+    last_ocr_score_ = result.ocr_score;
+    last_ocr_time_ms_ = result.time_ms;
+    last_ocr_touch_edge_ = result.text_touch_edge;
+
+    if (task.ret == 0 && isOcrResultReliable(result)) {
+      addOcrVote(result.raw_direction);
+    }
+    if (result.time_ms > 0.0) {
+      sum_ocr_ms_ += result.time_ms;
+      ++ocr_run_count_;
+    }
+
+    if (enable_branch_event_log_) {
+      RCLCPP_INFO_THROTTLE(
+          get_logger(), *get_clock(), 500,
+          "GuideBoard OCR ret=%d text=%s raw=%d status=%d score=%.2f edge=%d time=%.1fms "
+          "stable=%s votes=%zu crop=%dx%d skipped=%d boxes=%s error=%s",
+          task.ret, last_ocr_text_.c_str(), last_ocr_raw_direction_, last_ocr_status_,
+          last_ocr_score_, last_ocr_touch_edge_, last_ocr_time_ms_,
+          stable_guideboard_branch_.c_str(), guideboard_ocr_votes_.size(), task.crop_width,
+          task.crop_height, result.skipped_box_count, result.skipped_box_summary.c_str(),
+          result.error.c_str());
+    }
+  }
+
+  void waitForGuideboardOcr() {
+    if (!guideboard_ocr_future_.valid()) {
+      return;
+    }
+    try {
+      guideboard_ocr_future_.wait();
+      guideboard_ocr_future_.get();
+    } catch (...) {
+    }
+  }
+
   void updateGuideboardOcr(const cv::Mat& frame_rgb, const std::vector<Detection>& detections) {
     if (!enable_guideboard_ocr_ || !guideboard_ocr_ready_ || frame_rgb.empty()) {
       lane_decision_.setGuideboardBranchHint("left", enable_guideboard_ocr_);
       return;
     }
+
+    consumeGuideboardOcrResult();
 
     const Detection* guideboard = selectGuideboardForOcr(detections, frame_rgb.rows);
     if (guideboard == nullptr) {
@@ -672,6 +759,10 @@ class FusedPerceptionNode : public rclcpp::Node {
     }
 
     double now = nowSeconds();
+    if (guideboard_ocr_future_.valid()) {
+      lane_decision_.setGuideboardBranchHint(stable_guideboard_branch_, true);
+      return;
+    }
     if (now - last_guideboard_ocr_sec_ < kGuideboardOcrMinIntervalSec) {
       lane_decision_.setGuideboardBranchHint(stable_guideboard_branch_, true);
       return;
@@ -685,33 +776,27 @@ class FusedPerceptionNode : public rclcpp::Node {
     }
 
     cv::Mat crop = frame_rgb(crop_rect).clone();
-    PPOCRDirectionResult result;
-    int ret = guideboard_ocr_.run_mat(crop, &result);
-    last_ocr_text_ = result.text;
-    last_ocr_status_ = result.status;
-    last_ocr_raw_direction_ = result.raw_direction;
-    last_ocr_score_ = result.ocr_score;
-    last_ocr_time_ms_ = result.time_ms;
-    last_ocr_touch_edge_ = result.text_touch_edge;
-
-    if (ret == 0 && isOcrResultReliable(result)) {
-      addOcrVote(result.raw_direction);
-    }
-    if (result.time_ms > 0.0) {
-      sum_ocr_ms_ += result.time_ms;
-      ++ocr_run_count_;
-    }
-
+    ocr_task_crop_width_ = crop.cols;
+    ocr_task_crop_height_ = crop.rows;
+    guideboard_ocr_future_ = std::async(std::launch::async, [this, crop = std::move(crop)]() {
+      OcrTaskResult task;
+      task.crop_width = crop.cols;
+      task.crop_height = crop.rows;
+      try {
+        task.ret = guideboard_ocr_.run_mat(crop, &task.result);
+      } catch (const cv::Exception& e) {
+        task.result.status = PPOCR_STATUS_INFERENCE_FAILED;
+        task.result.error = e.what();
+      } catch (const std::exception& e) {
+        task.result.status = PPOCR_STATUS_INFERENCE_FAILED;
+        task.result.error = e.what();
+      } catch (...) {
+        task.result.status = PPOCR_STATUS_INFERENCE_FAILED;
+        task.result.error = "unknown OCR exception";
+      }
+      return task;
+    });
     lane_decision_.setGuideboardBranchHint(stable_guideboard_branch_, true);
-
-    if (enable_branch_event_log_) {
-      RCLCPP_INFO_THROTTLE(
-          get_logger(), *get_clock(), 500,
-          "GuideBoard OCR ret=%d text=%s raw=%d status=%d score=%.2f edge=%d time=%.1fms stable=%s votes=%zu crop=%dx%d",
-          ret, last_ocr_text_.c_str(), last_ocr_raw_direction_, last_ocr_status_, last_ocr_score_,
-          last_ocr_touch_edge_, last_ocr_time_ms_, stable_guideboard_branch_.c_str(),
-          guideboard_ocr_votes_.size(), crop_rect.width, crop_rect.height);
-    }
   }
 
   void initialize() {
@@ -745,12 +830,13 @@ class FusedPerceptionNode : public rclcpp::Node {
       throw std::runtime_error("failed to initialize segmentation model");
     }
     if (enable_guideboard_ocr_) {
-      int ret = guideboard_ocr_.init(kOcrDetModelPath, kOcrRecModelPath);
+      int ret = guideboard_ocr_.init(ocr_det_model_path_.c_str(), ocr_rec_model_path_.c_str());
       if (ret != 0) {
         throw std::runtime_error("failed to initialize guideboard OCR model");
       }
       guideboard_ocr_ready_ = true;
-      RCLCPP_INFO(get_logger(), "guideboard OCR ready: det=%s rec=%s", kOcrDetModelPath, kOcrRecModelPath);
+      RCLCPP_INFO(get_logger(), "guideboard OCR ready: det=%s rec=%s",
+                  ocr_det_model_path_.c_str(), ocr_rec_model_path_.c_str());
     }
 
     std_msgs::msg::String labels_msg;
@@ -1367,12 +1453,17 @@ class FusedPerceptionNode : public rclcpp::Node {
 
   bool enable_guideboard_ocr_{true};
   bool guideboard_ocr_ready_{false};
+  std::string ocr_det_model_path_;
+  std::string ocr_rec_model_path_;
   float ocr_min_score_{0.75f};
   float ocr_crop_padding_ratio_{0.25f};
   int ocr_vote_window_{3};
   float lane_guideboard_y0_ratio_{0.2f};
   float lane_guideboard_y1_ratio_{0.7f};
   PPOCRDirectionSystem guideboard_ocr_;
+  std::future<OcrTaskResult> guideboard_ocr_future_;
+  int ocr_task_crop_width_{0};
+  int ocr_task_crop_height_{0};
   std::deque<int> guideboard_ocr_votes_;
   std::string stable_guideboard_branch_{"left"};
   int stable_guideboard_raw_direction_{0};

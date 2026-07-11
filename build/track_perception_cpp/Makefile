@@ -210,178 +210,6 @@ fused_perception_node/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/build
 .PHONY : fused_perception_node/fast
 
-#=============================================================================
-# Target rules for targets named fileutils
-
-# Build rule for target.
-fileutils: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 fileutils
-.PHONY : fileutils
-
-# fast build rule for target.
-fileutils/fast:
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/build
-.PHONY : fileutils/fast
-
-#=============================================================================
-# Target rules for targets named imagedrawing
-
-# Build rule for target.
-imagedrawing: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 imagedrawing
-.PHONY : imagedrawing
-
-# fast build rule for target.
-imagedrawing/fast:
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/build
-.PHONY : imagedrawing/fast
-
-#=============================================================================
-# Target rules for targets named imageutils
-
-# Build rule for target.
-imageutils: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 imageutils
-.PHONY : imageutils
-
-# fast build rule for target.
-imageutils/fast:
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/build
-.PHONY : imageutils/fast
-
-#=============================================================================
-# Target rules for targets named audioutils
-
-# Build rule for target.
-audioutils: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 audioutils
-.PHONY : audioutils
-
-# fast build rule for target.
-audioutils/fast:
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/build
-.PHONY : audioutils/fast
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.o: home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.o
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.o
-
-# target to build an object file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.o
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.o
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.i: home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.i
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.i
-
-# target to preprocess a source file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.i
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.i
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.s: home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.s
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.s
-
-# target to generate assembly for a file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.s
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.s
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.o: home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.o
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.o
-
-# target to build an object file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.o
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.o
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.i: home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.i
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.i
-
-# target to preprocess a source file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.i
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.i
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.s: home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.s
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.s
-
-# target to generate assembly for a file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.s
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.s
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.o: home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.o
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.o
-
-# target to build an object file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.o
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.o
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.i: home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.i
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.i
-
-# target to preprocess a source file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.i
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.i
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.s: home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.s
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.s
-
-# target to generate assembly for a file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.s
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.s
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.o: home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.o
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.o
-
-# target to build an object file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.o
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.o
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.i: home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.i
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.i
-
-# target to preprocess a source file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.i
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.i
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.s: home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.s
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.s
-
-# target to generate assembly for a file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.s
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.s
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.o: home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.o
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.o
-
-# target to build an object file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.o
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.o
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.i: home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.i
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.i
-
-# target to preprocess a source file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.i
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.i
-
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.s: home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.s
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.s
-
-# target to generate assembly for a file
-home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.s
-.PHONY : home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.s
-
 src/fused_perception_node.o: src/fused_perception_node.cpp.o
 .PHONY : src/fused_perception_node.o
 
@@ -526,6 +354,174 @@ src/yolo_seg.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.s
 .PHONY : src/yolo_seg.cpp.s
 
+third_party/ppocr/clipper.o: third_party/ppocr/clipper.cc.o
+.PHONY : third_party/ppocr/clipper.o
+
+# target to build an object file
+third_party/ppocr/clipper.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/clipper.cc.o
+.PHONY : third_party/ppocr/clipper.cc.o
+
+third_party/ppocr/clipper.i: third_party/ppocr/clipper.cc.i
+.PHONY : third_party/ppocr/clipper.i
+
+# target to preprocess a source file
+third_party/ppocr/clipper.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/clipper.cc.i
+.PHONY : third_party/ppocr/clipper.cc.i
+
+third_party/ppocr/clipper.s: third_party/ppocr/clipper.cc.s
+.PHONY : third_party/ppocr/clipper.s
+
+# target to generate assembly for a file
+third_party/ppocr/clipper.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/clipper.cc.s
+.PHONY : third_party/ppocr/clipper.cc.s
+
+third_party/ppocr/direction_rule.o: third_party/ppocr/direction_rule.cpp.o
+.PHONY : third_party/ppocr/direction_rule.o
+
+# target to build an object file
+third_party/ppocr/direction_rule.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/direction_rule.cpp.o
+.PHONY : third_party/ppocr/direction_rule.cpp.o
+
+third_party/ppocr/direction_rule.i: third_party/ppocr/direction_rule.cpp.i
+.PHONY : third_party/ppocr/direction_rule.i
+
+# target to preprocess a source file
+third_party/ppocr/direction_rule.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/direction_rule.cpp.i
+.PHONY : third_party/ppocr/direction_rule.cpp.i
+
+third_party/ppocr/direction_rule.s: third_party/ppocr/direction_rule.cpp.s
+.PHONY : third_party/ppocr/direction_rule.s
+
+# target to generate assembly for a file
+third_party/ppocr/direction_rule.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/direction_rule.cpp.s
+.PHONY : third_party/ppocr/direction_rule.cpp.s
+
+third_party/ppocr/postprocess.o: third_party/ppocr/postprocess.cc.o
+.PHONY : third_party/ppocr/postprocess.o
+
+# target to build an object file
+third_party/ppocr/postprocess.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/postprocess.cc.o
+.PHONY : third_party/ppocr/postprocess.cc.o
+
+third_party/ppocr/postprocess.i: third_party/ppocr/postprocess.cc.i
+.PHONY : third_party/ppocr/postprocess.i
+
+# target to preprocess a source file
+third_party/ppocr/postprocess.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/postprocess.cc.i
+.PHONY : third_party/ppocr/postprocess.cc.i
+
+third_party/ppocr/postprocess.s: third_party/ppocr/postprocess.cc.s
+.PHONY : third_party/ppocr/postprocess.s
+
+# target to generate assembly for a file
+third_party/ppocr/postprocess.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/postprocess.cc.s
+.PHONY : third_party/ppocr/postprocess.cc.s
+
+third_party/ppocr/ppocr_direction_system.o: third_party/ppocr/ppocr_direction_system.cc.o
+.PHONY : third_party/ppocr/ppocr_direction_system.o
+
+# target to build an object file
+third_party/ppocr/ppocr_direction_system.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/ppocr_direction_system.cc.o
+.PHONY : third_party/ppocr/ppocr_direction_system.cc.o
+
+third_party/ppocr/ppocr_direction_system.i: third_party/ppocr/ppocr_direction_system.cc.i
+.PHONY : third_party/ppocr/ppocr_direction_system.i
+
+# target to preprocess a source file
+third_party/ppocr/ppocr_direction_system.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/ppocr_direction_system.cc.i
+.PHONY : third_party/ppocr/ppocr_direction_system.cc.i
+
+third_party/ppocr/ppocr_direction_system.s: third_party/ppocr/ppocr_direction_system.cc.s
+.PHONY : third_party/ppocr/ppocr_direction_system.s
+
+# target to generate assembly for a file
+third_party/ppocr/ppocr_direction_system.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/ppocr_direction_system.cc.s
+.PHONY : third_party/ppocr/ppocr_direction_system.cc.s
+
+third_party/ppocr/rknpu2/ppocr_system.o: third_party/ppocr/rknpu2/ppocr_system.cc.o
+.PHONY : third_party/ppocr/rknpu2/ppocr_system.o
+
+# target to build an object file
+third_party/ppocr/rknpu2/ppocr_system.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/rknpu2/ppocr_system.cc.o
+.PHONY : third_party/ppocr/rknpu2/ppocr_system.cc.o
+
+third_party/ppocr/rknpu2/ppocr_system.i: third_party/ppocr/rknpu2/ppocr_system.cc.i
+.PHONY : third_party/ppocr/rknpu2/ppocr_system.i
+
+# target to preprocess a source file
+third_party/ppocr/rknpu2/ppocr_system.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/rknpu2/ppocr_system.cc.i
+.PHONY : third_party/ppocr/rknpu2/ppocr_system.cc.i
+
+third_party/ppocr/rknpu2/ppocr_system.s: third_party/ppocr/rknpu2/ppocr_system.cc.s
+.PHONY : third_party/ppocr/rknpu2/ppocr_system.s
+
+# target to generate assembly for a file
+third_party/ppocr/rknpu2/ppocr_system.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/rknpu2/ppocr_system.cc.s
+.PHONY : third_party/ppocr/rknpu2/ppocr_system.cc.s
+
+third_party/ppocr/utils/file_utils.o: third_party/ppocr/utils/file_utils.c.o
+.PHONY : third_party/ppocr/utils/file_utils.o
+
+# target to build an object file
+third_party/ppocr/utils/file_utils.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/file_utils.c.o
+.PHONY : third_party/ppocr/utils/file_utils.c.o
+
+third_party/ppocr/utils/file_utils.i: third_party/ppocr/utils/file_utils.c.i
+.PHONY : third_party/ppocr/utils/file_utils.i
+
+# target to preprocess a source file
+third_party/ppocr/utils/file_utils.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/file_utils.c.i
+.PHONY : third_party/ppocr/utils/file_utils.c.i
+
+third_party/ppocr/utils/file_utils.s: third_party/ppocr/utils/file_utils.c.s
+.PHONY : third_party/ppocr/utils/file_utils.s
+
+# target to generate assembly for a file
+third_party/ppocr/utils/file_utils.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/file_utils.c.s
+.PHONY : third_party/ppocr/utils/file_utils.c.s
+
+third_party/ppocr/utils/image_utils.o: third_party/ppocr/utils/image_utils.c.o
+.PHONY : third_party/ppocr/utils/image_utils.o
+
+# target to build an object file
+third_party/ppocr/utils/image_utils.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o
+.PHONY : third_party/ppocr/utils/image_utils.c.o
+
+third_party/ppocr/utils/image_utils.i: third_party/ppocr/utils/image_utils.c.i
+.PHONY : third_party/ppocr/utils/image_utils.i
+
+# target to preprocess a source file
+third_party/ppocr/utils/image_utils.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.i
+.PHONY : third_party/ppocr/utils/image_utils.c.i
+
+third_party/ppocr/utils/image_utils.s: third_party/ppocr/utils/image_utils.c.s
+.PHONY : third_party/ppocr/utils/image_utils.s
+
+# target to generate assembly for a file
+third_party/ppocr/utils/image_utils.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.s
+.PHONY : third_party/ppocr/utils/image_utils.c.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -541,26 +537,7 @@ help:
 	@echo "... test"
 	@echo "... track_perception_cpp_uninstall"
 	@echo "... uninstall"
-	@echo "... audioutils"
-	@echo "... fileutils"
 	@echo "... fused_perception_node"
-	@echo "... imagedrawing"
-	@echo "... imageutils"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.o"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.i"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.s"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.o"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.i"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.s"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.o"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.i"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.s"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.o"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.i"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.s"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.o"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.i"
-	@echo "... home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.s"
 	@echo "... src/fused_perception_node.o"
 	@echo "... src/fused_perception_node.i"
 	@echo "... src/fused_perception_node.s"
@@ -579,6 +556,27 @@ help:
 	@echo "... src/yolo_seg.o"
 	@echo "... src/yolo_seg.i"
 	@echo "... src/yolo_seg.s"
+	@echo "... third_party/ppocr/clipper.o"
+	@echo "... third_party/ppocr/clipper.i"
+	@echo "... third_party/ppocr/clipper.s"
+	@echo "... third_party/ppocr/direction_rule.o"
+	@echo "... third_party/ppocr/direction_rule.i"
+	@echo "... third_party/ppocr/direction_rule.s"
+	@echo "... third_party/ppocr/postprocess.o"
+	@echo "... third_party/ppocr/postprocess.i"
+	@echo "... third_party/ppocr/postprocess.s"
+	@echo "... third_party/ppocr/ppocr_direction_system.o"
+	@echo "... third_party/ppocr/ppocr_direction_system.i"
+	@echo "... third_party/ppocr/ppocr_direction_system.s"
+	@echo "... third_party/ppocr/rknpu2/ppocr_system.o"
+	@echo "... third_party/ppocr/rknpu2/ppocr_system.i"
+	@echo "... third_party/ppocr/rknpu2/ppocr_system.s"
+	@echo "... third_party/ppocr/utils/file_utils.o"
+	@echo "... third_party/ppocr/utils/file_utils.i"
+	@echo "... third_party/ppocr/utils/file_utils.s"
+	@echo "... third_party/ppocr/utils/image_utils.o"
+	@echo "... third_party/ppocr/utils/image_utils.i"
+	@echo "... third_party/ppocr/utils/image_utils.s"
 .PHONY : help
 
 

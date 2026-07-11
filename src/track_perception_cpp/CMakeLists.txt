@@ -5,9 +5,17 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_BUILD_TYPE Release)
 
-set(RKNN_MODEL_ZOO_ROOT "/home/orangepi/Desktop/rknn_model_zoo" CACHE PATH "rknn_model_zoo root path")
-set(PPOCR_DIRECTION_ROOT "/home/orangepi/Desktop/ppocr_direction_runtime/cpp" CACHE PATH "ppocr direction runtime cpp path")
 set(TARGET_SOC "rk3588" CACHE STRING "Target Rockchip SoC")
+
+set(PPOCR_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/third_party/ppocr)
+set(PPOCR_UTILS_ROOT ${PPOCR_ROOT}/utils)
+
+find_library(RKNNRT_LIB
+  NAMES rknnrt
+  PATHS /usr/lib /usr/lib/aarch64-linux-gnu
+  NO_DEFAULT_PATH
+  REQUIRED
+)
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
@@ -15,15 +23,12 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 
-add_subdirectory(${RKNN_MODEL_ZOO_ROOT}/3rdparty rknn_model_zoo_3rdparty.out)
-add_subdirectory(${RKNN_MODEL_ZOO_ROOT}/utils rknn_model_zoo_utils.out)
-
 include_directories(
   include
   third_party/rknn/include
-  ${PPOCR_DIRECTION_ROOT}
-  ${RKNN_MODEL_ZOO_ROOT}/utils
-  ${LIBRKNNRT_INCLUDES}
+  ${PPOCR_ROOT}
+  ${PPOCR_UTILS_ROOT}
+  ${PPOCR_ROOT}/stb
   ${OpenCV_INCLUDE_DIRS}
 )
 
@@ -34,11 +39,18 @@ add_executable(fused_perception_node
   src/shm_reader.cpp
   src/yolo_detector.cpp
   src/yolo_seg.cpp
-  ${PPOCR_DIRECTION_ROOT}/ppocr_direction_system.cc
-  ${PPOCR_DIRECTION_ROOT}/direction_rule.cpp
-  ${PPOCR_DIRECTION_ROOT}/postprocess.cc
-  ${PPOCR_DIRECTION_ROOT}/clipper.cc
-  ${PPOCR_DIRECTION_ROOT}/rknpu2/ppocr_system.cc
+  ${PPOCR_ROOT}/ppocr_direction_system.cc
+  ${PPOCR_ROOT}/direction_rule.cpp
+  ${PPOCR_ROOT}/postprocess.cc
+  ${PPOCR_ROOT}/clipper.cc
+  ${PPOCR_ROOT}/rknpu2/ppocr_system.cc
+  ${PPOCR_UTILS_ROOT}/file_utils.c
+  ${PPOCR_UTILS_ROOT}/image_utils.c
+)
+
+target_compile_definitions(fused_perception_node PRIVATE
+  DISABLE_RGA
+  DISABLE_LIBJPEG
 )
 
 ament_target_dependencies(fused_perception_node
@@ -48,11 +60,8 @@ ament_target_dependencies(fused_perception_node
 )
 
 target_link_libraries(fused_perception_node
-  fileutils
-  imageutils
-  imagedrawing
   ${OpenCV_LIBS}
-  ${LIBRKNNRT}
+  ${RKNNRT_LIB}
 )
 
 install(TARGETS fused_perception_node
@@ -68,6 +77,10 @@ install(DIRECTORY config
 )
 
 install(DIRECTORY scripts
+  DESTINATION share/${PROJECT_NAME}
+)
+
+install(DIRECTORY model
   DESTINATION share/${PROJECT_NAME}
 )
 

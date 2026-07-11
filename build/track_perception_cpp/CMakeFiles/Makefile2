@@ -64,58 +64,17 @@ CMAKE_BINARY_DIR = /home/orangepi/scuderiaferrari/build/track_perception_cpp
 
 # The main recursive "all" target.
 all: CMakeFiles/fused_perception_node.dir/all
-all: rknn_model_zoo_3rdparty.out/all
-all: rknn_model_zoo_utils.out/all
 .PHONY : all
 
 # The main recursive "preinstall" target.
-preinstall: rknn_model_zoo_3rdparty.out/preinstall
-preinstall: rknn_model_zoo_utils.out/preinstall
+preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
 clean: CMakeFiles/uninstall.dir/clean
 clean: CMakeFiles/track_perception_cpp_uninstall.dir/clean
 clean: CMakeFiles/fused_perception_node.dir/clean
-clean: rknn_model_zoo_3rdparty.out/clean
-clean: rknn_model_zoo_utils.out/clean
 .PHONY : clean
-
-#=============================================================================
-# Directory level rules for directory rknn_model_zoo_3rdparty.out
-
-# Recursive "all" directory target.
-rknn_model_zoo_3rdparty.out/all:
-.PHONY : rknn_model_zoo_3rdparty.out/all
-
-# Recursive "preinstall" directory target.
-rknn_model_zoo_3rdparty.out/preinstall:
-.PHONY : rknn_model_zoo_3rdparty.out/preinstall
-
-# Recursive "clean" directory target.
-rknn_model_zoo_3rdparty.out/clean:
-.PHONY : rknn_model_zoo_3rdparty.out/clean
-
-#=============================================================================
-# Directory level rules for directory rknn_model_zoo_utils.out
-
-# Recursive "all" directory target.
-rknn_model_zoo_utils.out/all: rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/all
-rknn_model_zoo_utils.out/all: rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/all
-rknn_model_zoo_utils.out/all: rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/all
-rknn_model_zoo_utils.out/all: rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/all
-.PHONY : rknn_model_zoo_utils.out/all
-
-# Recursive "preinstall" directory target.
-rknn_model_zoo_utils.out/preinstall:
-.PHONY : rknn_model_zoo_utils.out/preinstall
-
-# Recursive "clean" directory target.
-rknn_model_zoo_utils.out/clean: rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/clean
-rknn_model_zoo_utils.out/clean: rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/clean
-rknn_model_zoo_utils.out/clean: rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/clean
-rknn_model_zoo_utils.out/clean: rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/clean
-.PHONY : rknn_model_zoo_utils.out/clean
 
 #=============================================================================
 # Target rules for target CMakeFiles/uninstall.dir
@@ -173,17 +132,15 @@ CMakeFiles/track_perception_cpp_uninstall.dir/clean:
 # Target rules for target CMakeFiles/fused_perception_node.dir
 
 # All Build rule for target.
-CMakeFiles/fused_perception_node.dir/all: rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/all
-CMakeFiles/fused_perception_node.dir/all: rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/all
-CMakeFiles/fused_perception_node.dir/all: rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/all
+CMakeFiles/fused_perception_node.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=5,6,7,8,9,10,11,12,13,14,15,16 "Built target fused_perception_node"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14 "Built target fused_perception_node"
 .PHONY : CMakeFiles/fused_perception_node.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/fused_perception_node.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles 18
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles 14
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/fused_perception_node.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles 0
 .PHONY : CMakeFiles/fused_perception_node.dir/rule
@@ -196,110 +153,6 @@ fused_perception_node: CMakeFiles/fused_perception_node.dir/rule
 CMakeFiles/fused_perception_node.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/clean
 .PHONY : CMakeFiles/fused_perception_node.dir/clean
-
-#=============================================================================
-# Target rules for target rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir
-
-# All Build rule for target.
-rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/all:
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/depend
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=3,4 "Built target fileutils"
-.PHONY : rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/all
-
-# Build rule for subdir invocation for target.
-rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles 0
-.PHONY : rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/rule
-
-# Convenience name for target.
-fileutils: rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/rule
-.PHONY : fileutils
-
-# clean rule for target.
-rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/clean:
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/clean
-.PHONY : rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/clean
-
-#=============================================================================
-# Target rules for target rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir
-
-# All Build rule for target.
-rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/all:
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/depend
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=17,18 "Built target imagedrawing"
-.PHONY : rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/all
-
-# Build rule for subdir invocation for target.
-rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles 0
-.PHONY : rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/rule
-
-# Convenience name for target.
-imagedrawing: rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/rule
-.PHONY : imagedrawing
-
-# clean rule for target.
-rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/clean:
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/clean
-.PHONY : rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/clean
-
-#=============================================================================
-# Target rules for target rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir
-
-# All Build rule for target.
-rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/all:
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/depend
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=19,20 "Built target imageutils"
-.PHONY : rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/all
-
-# Build rule for subdir invocation for target.
-rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles 0
-.PHONY : rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/rule
-
-# Convenience name for target.
-imageutils: rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/rule
-.PHONY : imageutils
-
-# clean rule for target.
-rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/clean:
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/clean
-.PHONY : rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/clean
-
-#=============================================================================
-# Target rules for target rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir
-
-# All Build rule for target.
-rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/all:
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/depend
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=1,2 "Built target audioutils"
-.PHONY : rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/all
-
-# Build rule for subdir invocation for target.
-rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles 0
-.PHONY : rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/rule
-
-# Convenience name for target.
-audioutils: rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/rule
-.PHONY : audioutils
-
-# clean rule for target.
-rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/clean:
-	$(MAKE) $(MAKESILENT) -f rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/build.make rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/clean
-.PHONY : rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

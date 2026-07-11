@@ -69,6 +69,8 @@ fused_perception_node:
     guideboard_detect_y0_ratio: 0.2
     guideboard_detect_y1_ratio: 0.7
     enable_guideboard_ocr: true
+    ocr_det_model_path: "model/ppocrv4_det.rknn"
+    ocr_rec_model_path: "model/ppocrv4_rec.rknn"
     ocr_min_score: 0.75
     ocr_crop_padding_ratio: 0.25
     ocr_vote_window: 3
