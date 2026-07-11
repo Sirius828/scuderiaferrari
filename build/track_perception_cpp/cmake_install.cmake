@@ -46,6 +46,16 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
   include("/home/orangepi/scuderiaferrari/build/track_perception_cpp/ament_cmake_symlink_install/ament_cmake_symlink_install.cmake")
 endif()
 
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
+  include("/home/orangepi/scuderiaferrari/build/track_perception_cpp/rknn_model_zoo_3rdparty.out/cmake_install.cmake")
+endif()
+
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
+  include("/home/orangepi/scuderiaferrari/build/track_perception_cpp/rknn_model_zoo_utils.out/cmake_install.cmake")
+endif()
+
 if(CMAKE_INSTALL_COMPONENT)
   set(CMAKE_INSTALL_MANIFEST "install_manifest_${CMAKE_INSTALL_COMPONENT}.txt")
 else()

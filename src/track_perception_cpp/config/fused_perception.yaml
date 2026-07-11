@@ -46,11 +46,11 @@ fused_perception_node:
 
     # 实例分割模型
     seg_model_dir: "/home/orangepi/scuderiaferrari/src/track_perception/model"
-    seg_model_filename: "yolo11_seg_zhang_320x320_raw4_sim.rknn"
+    seg_model_filename: "yolo11_seg_zhang_320x128_raw4_sim.rknn"
     seg_core_ids: "1,2"
     seg_input_width: 320 #384
-    seg_input_height: 320 #160
-    seg_crop_y0_ratio: 0.5
+    seg_input_height: 128 #160
+    seg_crop_y0_ratio: 0.47
     seg_crop_y1_ratio: 1.0
     seg_pad_value: 114
     seg_conf_threshold: 0.20
@@ -68,6 +68,10 @@ fused_perception_node:
     guideboard_branch: "right"
     guideboard_detect_y0_ratio: 0.2
     guideboard_detect_y1_ratio: 0.7
+    enable_guideboard_ocr: true
+    ocr_min_score: 0.75
+    ocr_crop_padding_ratio: 0.25
+    ocr_vote_window: 3
 
     # Band 扫描
     enable_segment_branch_logic: true
@@ -86,8 +90,8 @@ fused_perception_node:
     near_split_detect_min_bands: 2
     near_split_detect_near_band_ratio: 0.45
     near_split_hold_frames: 2
-    near_split_residual_slope_norm: 0.22
-    near_split_residual_bottom_norm: 0.05
+    near_split_residual_slope_norm: 0.35
+    near_split_residual_bottom_norm: 0.03
     near_split_template_skip_bands: 10
     near_split_template_side: "left"
     near_split_unlock_min_lock_time: 0.8
@@ -175,7 +179,7 @@ fused_perception_node:
 
     # 弹射起步触发：只有同一帧同时检测到 Go 和 Gate 才输出 task_state=START_BOOST；
     # Go/Gate 连续丢失若干帧后恢复 CLEAR，且本次运行不再重复触发。
-    enable_start_boost_trigger: true
+    enable_start_boost_trigger: false
     start_boost_labels: "Go,Gate"
     start_boost_min_confidence: 0.45
     start_boost_y0_ratio: 0.0
@@ -184,7 +188,7 @@ fused_perception_node:
 
     # 红绿灯停车：red_light + Zebra 到线才 TRAFFIC_STOP
     # 6.27日 红绿灯都是15s,黄灯2.5s
-    enable_traffic_light_stop: true
+    enable_traffic_light_stop: false
     traffic_light_min_confidence: 0.45
     zebra_min_confidence: 0.45
     zebra_stop_y_ratio: 0.70
@@ -193,7 +197,7 @@ fused_perception_node:
     red_light_confirm_frames: 1
 
     # 终点停车：Stop bbox 底部达到阈值才 FINISH_STOP
-    enable_finish_stop: false
+    enable_finish_stop: true
     finish_stop_min_confidence: 0.45
     finish_stop_arm_y_ratio: 0.70
     finish_stop_lost_frames: 3

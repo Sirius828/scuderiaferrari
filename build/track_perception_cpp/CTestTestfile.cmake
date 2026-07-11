@@ -4,3 +4,5 @@
 # 
 # This file includes the relevant testing commands required for 
 # testing this directory and lists subdirectories to be tested as well.
+subdirs("rknn_model_zoo_3rdparty.out")
+subdirs("rknn_model_zoo_utils.out")

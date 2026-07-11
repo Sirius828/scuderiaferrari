@@ -10,6 +10,7 @@ setup.py
 ../../build/line_follower_control/line_follower_control.egg-info/zip-safe
 config/controller_params.yaml
 config/controller_params_isolation.yaml
+config/controller_params_pd_only.yaml
 config/controller_params_stable_debug.yaml
 launch/controller.launch.py
 line_follower_control/__init__.py

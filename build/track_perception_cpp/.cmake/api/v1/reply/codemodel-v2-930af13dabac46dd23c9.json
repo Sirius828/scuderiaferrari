@@ -1,0 +1,169 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						2
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Release-773a46def1b3a7f06fc4.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						2,
+						5,
+						6
+					]
+				},
+				{
+					"build" : "rknn_model_zoo_3rdparty.out",
+					"jsonFile" : "directory-rknn_model_zoo_3rdparty.out-Release-4e1ce4f68917a060a577.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "/home/orangepi/Desktop/rknn_model_zoo/3rdparty"
+				},
+				{
+					"build" : "rknn_model_zoo_utils.out",
+					"jsonFile" : "directory-rknn_model_zoo_utils.out-Release-cebaf555f7c388f8b43d.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 2,
+					"source" : "/home/orangepi/Desktop/rknn_model_zoo/utils",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						3,
+						4
+					]
+				}
+			],
+			"name" : "Release",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1,
+						2
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "track_perception_cpp",
+					"targetIndexes" : 
+					[
+						2,
+						5,
+						6
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "rknn_model_zoo_3rdparty_libs",
+					"parentIndex" : 0
+				},
+				{
+					"directoryIndexes" : 
+					[
+						2
+					],
+					"name" : "rknn_model_zoo_utils",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						3,
+						4
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 2,
+					"id" : "audioutils::@bfd27de97febc7861d93",
+					"jsonFile" : "target-audioutils-Release-9867623e7a063ae25bdd.json",
+					"name" : "audioutils",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "fileutils::@bfd27de97febc7861d93",
+					"jsonFile" : "target-fileutils-Release-6240903c4fb275c9e786.json",
+					"name" : "fileutils",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "fused_perception_node::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-fused_perception_node-Release-fb17ee8580905c5ec5d3.json",
+					"name" : "fused_perception_node",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "imagedrawing::@bfd27de97febc7861d93",
+					"jsonFile" : "target-imagedrawing-Release-7a18b94cc390aea2d95c.json",
+					"name" : "imagedrawing",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "imageutils::@bfd27de97febc7861d93",
+					"jsonFile" : "target-imageutils-Release-6d1fcc88478cf541e117.json",
+					"name" : "imageutils",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "track_perception_cpp_uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-track_perception_cpp_uninstall-Release-6abeb3f6d2203b374497.json",
+					"name" : "track_perception_cpp_uninstall",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-uninstall-Release-6121c29b226365941229.json",
+					"name" : "uninstall",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/orangepi/scuderiaferrari/build/track_perception_cpp",
+		"source" : "/home/orangepi/scuderiaferrari/src/track_perception_cpp"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

@@ -111,7 +111,28 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: \
  /usr/include/aarch64-linux-gnu/bits/timex.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_tm.h \
  /usr/include/aarch64-linux-gnu/bits/types/struct_itimerspec.h \
- /usr/include/c++/11/bits/parse_numbers.h /usr/include/c++/11/csignal \
+ /usr/include/c++/11/bits/parse_numbers.h /usr/include/c++/11/cmath \
+ /usr/include/math.h /usr/include/aarch64-linux-gnu/bits/math-vector.h \
+ /usr/include/aarch64-linux-gnu/bits/libm-simd-decl-stubs.h \
+ /usr/include/aarch64-linux-gnu/bits/flt-eval-method.h \
+ /usr/include/aarch64-linux-gnu/bits/fp-logb.h \
+ /usr/include/aarch64-linux-gnu/bits/fp-fast.h \
+ /usr/include/aarch64-linux-gnu/bits/mathcalls-helper-functions.h \
+ /usr/include/aarch64-linux-gnu/bits/mathcalls.h \
+ /usr/include/aarch64-linux-gnu/bits/mathcalls-narrow.h \
+ /usr/include/aarch64-linux-gnu/bits/iscanonical.h \
+ /usr/include/c++/11/bits/specfun.h /usr/include/c++/11/tr1/gamma.tcc \
+ /usr/include/c++/11/tr1/special_function_util.h \
+ /usr/include/c++/11/tr1/bessel_function.tcc \
+ /usr/include/c++/11/tr1/beta_function.tcc \
+ /usr/include/c++/11/tr1/ell_integral.tcc \
+ /usr/include/c++/11/tr1/exp_integral.tcc \
+ /usr/include/c++/11/tr1/hypergeometric.tcc \
+ /usr/include/c++/11/tr1/legendre_function.tcc \
+ /usr/include/c++/11/tr1/modified_bessel_func.tcc \
+ /usr/include/c++/11/tr1/poly_hermite.tcc \
+ /usr/include/c++/11/tr1/poly_laguerre.tcc \
+ /usr/include/c++/11/tr1/riemann_zeta.tcc /usr/include/c++/11/csignal \
  /usr/include/signal.h \
  /usr/include/aarch64-linux-gnu/bits/signum-generic.h \
  /usr/include/aarch64-linux-gnu/bits/signum-arch.h \
@@ -157,32 +178,7 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: \
  /usr/include/aarch64-linux-gnu/bits/types/struct_sigstack.h \
  /usr/include/aarch64-linux-gnu/bits/sigthread.h \
  /usr/include/aarch64-linux-gnu/bits/signal_ext.h \
- /usr/include/c++/11/cmath /usr/include/math.h \
- /usr/include/aarch64-linux-gnu/bits/math-vector.h \
- /usr/include/aarch64-linux-gnu/bits/libm-simd-decl-stubs.h \
- /usr/include/aarch64-linux-gnu/bits/flt-eval-method.h \
- /usr/include/aarch64-linux-gnu/bits/fp-logb.h \
- /usr/include/aarch64-linux-gnu/bits/fp-fast.h \
- /usr/include/aarch64-linux-gnu/bits/mathcalls-helper-functions.h \
- /usr/include/aarch64-linux-gnu/bits/mathcalls.h \
- /usr/include/aarch64-linux-gnu/bits/mathcalls-narrow.h \
- /usr/include/aarch64-linux-gnu/bits/iscanonical.h \
- /usr/include/c++/11/bits/specfun.h /usr/include/c++/11/tr1/gamma.tcc \
- /usr/include/c++/11/tr1/special_function_util.h \
- /usr/include/c++/11/tr1/bessel_function.tcc \
- /usr/include/c++/11/tr1/beta_function.tcc \
- /usr/include/c++/11/tr1/ell_integral.tcc \
- /usr/include/c++/11/tr1/exp_integral.tcc \
- /usr/include/c++/11/tr1/hypergeometric.tcc \
- /usr/include/c++/11/tr1/legendre_function.tcc \
- /usr/include/c++/11/tr1/modified_bessel_func.tcc \
- /usr/include/c++/11/tr1/poly_hermite.tcc \
- /usr/include/c++/11/tr1/poly_laguerre.tcc \
- /usr/include/c++/11/tr1/riemann_zeta.tcc /usr/include/c++/11/memory \
- /usr/include/c++/11/bits/stl_raw_storage_iter.h \
- /usr/include/c++/11/bits/align.h /usr/include/c++/11/bit \
- /usr/include/c++/11/bits/unique_ptr.h \
- /usr/include/c++/11/bits/shared_ptr.h /usr/include/c++/11/iosfwd \
+ /usr/include/c++/11/iomanip /usr/include/c++/11/iosfwd \
  /usr/include/c++/11/bits/stringfwd.h /usr/include/c++/11/bits/postypes.h \
  /usr/include/c++/11/cwchar /usr/include/wchar.h \
  /usr/lib/gcc/aarch64-linux-gnu/11/include/stdarg.h \
@@ -191,9 +187,7 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: \
  /usr/include/aarch64-linux-gnu/bits/types/__mbstate_t.h \
  /usr/include/aarch64-linux-gnu/bits/types/__FILE.h \
  /usr/include/aarch64-linux-gnu/bits/types/FILE.h \
- /usr/include/c++/11/bits/shared_ptr_base.h \
- /usr/include/c++/11/bits/allocated_ptr.h \
- /usr/include/c++/11/ext/atomicity.h \
+ /usr/include/c++/11/bits/ios_base.h /usr/include/c++/11/ext/atomicity.h \
  /usr/include/aarch64-linux-gnu/c++/11/bits/gthr.h \
  /usr/include/aarch64-linux-gnu/c++/11/bits/gthr-default.h \
  /usr/include/pthread.h /usr/include/sched.h \
@@ -205,19 +199,13 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: \
  /usr/include/aarch64-linux-gnu/bits/pthread_stack_min-dynamic.h \
  /usr/include/aarch64-linux-gnu/c++/11/bits/atomic_word.h \
  /usr/include/aarch64-linux-gnu/sys/single_threaded.h \
- /usr/include/c++/11/ext/concurrence.h /usr/include/c++/11/exception \
- /usr/include/c++/11/bits/exception_ptr.h \
- /usr/include/c++/11/bits/cxxabi_init_exception.h \
- /usr/include/c++/11/bits/nested_exception.h \
- /usr/include/c++/11/bits/shared_ptr_atomic.h \
- /usr/include/c++/11/backward/auto_ptr.h \
- /usr/include/c++/11/pstl/glue_memory_defs.h /usr/include/c++/11/string \
- /usr/include/c++/11/bits/char_traits.h \
  /usr/include/c++/11/bits/localefwd.h \
  /usr/include/aarch64-linux-gnu/c++/11/bits/c++locale.h \
  /usr/include/c++/11/clocale /usr/include/locale.h \
  /usr/include/aarch64-linux-gnu/bits/locale.h /usr/include/c++/11/cctype \
- /usr/include/ctype.h /usr/include/c++/11/bits/ostream_insert.h \
+ /usr/include/ctype.h /usr/include/c++/11/bits/locale_classes.h \
+ /usr/include/c++/11/string /usr/include/c++/11/bits/char_traits.h \
+ /usr/include/c++/11/bits/ostream_insert.h \
  /usr/include/c++/11/bits/cxxabi_forced.h \
  /usr/include/c++/11/bits/basic_string.h /usr/include/c++/11/string_view \
  /usr/include/c++/11/bits/string_view.tcc \
@@ -234,45 +222,54 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: \
  /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h \
  /usr/include/aarch64-linux-gnu/bits/types/error_t.h \
  /usr/include/c++/11/bits/charconv.h \
- /usr/include/c++/11/bits/basic_string.tcc /usr/include/c++/11/thread \
- /usr/include/c++/11/bits/std_thread.h \
- /usr/include/c++/11/bits/this_thread_sleep.h \
+ /usr/include/c++/11/bits/basic_string.tcc \
+ /usr/include/c++/11/bits/locale_classes.tcc \
+ /usr/include/c++/11/system_error \
+ /usr/include/aarch64-linux-gnu/c++/11/bits/error_constants.h \
+ /usr/include/c++/11/stdexcept /usr/include/c++/11/exception \
+ /usr/include/c++/11/bits/exception_ptr.h \
+ /usr/include/c++/11/bits/cxxabi_init_exception.h \
+ /usr/include/c++/11/bits/nested_exception.h /usr/include/c++/11/locale \
+ /usr/include/c++/11/bits/locale_facets.h /usr/include/c++/11/cwctype \
+ /usr/include/wctype.h /usr/include/aarch64-linux-gnu/bits/wctype-wchar.h \
+ /usr/include/aarch64-linux-gnu/c++/11/bits/ctype_base.h \
+ /usr/include/c++/11/streambuf /usr/include/c++/11/bits/streambuf.tcc \
+ /usr/include/c++/11/bits/streambuf_iterator.h \
+ /usr/include/aarch64-linux-gnu/c++/11/bits/ctype_inline.h \
+ /usr/include/c++/11/bits/locale_facets.tcc \
+ /usr/include/c++/11/bits/locale_facets_nonio.h \
+ /usr/include/aarch64-linux-gnu/c++/11/bits/time_members.h \
+ /usr/include/aarch64-linux-gnu/c++/11/bits/messages_members.h \
+ /usr/include/libintl.h /usr/include/c++/11/bits/codecvt.h \
+ /usr/include/c++/11/bits/locale_facets_nonio.tcc \
+ /usr/include/c++/11/bits/locale_conv.h \
+ /usr/include/c++/11/bits/unique_ptr.h \
+ /usr/include/c++/11/bits/quoted_string.h /usr/include/c++/11/sstream \
+ /usr/include/c++/11/istream /usr/include/c++/11/ios \
+ /usr/include/c++/11/bits/basic_ios.h \
+ /usr/include/c++/11/bits/basic_ios.tcc /usr/include/c++/11/ostream \
+ /usr/include/c++/11/bits/ostream.tcc \
+ /usr/include/c++/11/bits/istream.tcc \
+ /usr/include/c++/11/bits/sstream.tcc /usr/include/c++/11/memory \
+ /usr/include/c++/11/bits/stl_raw_storage_iter.h \
+ /usr/include/c++/11/bits/align.h /usr/include/c++/11/bit \
+ /usr/include/c++/11/bits/shared_ptr.h \
+ /usr/include/c++/11/bits/shared_ptr_base.h \
+ /usr/include/c++/11/bits/allocated_ptr.h \
+ /usr/include/c++/11/ext/concurrence.h \
+ /usr/include/c++/11/bits/shared_ptr_atomic.h \
+ /usr/include/c++/11/backward/auto_ptr.h \
+ /usr/include/c++/11/pstl/glue_memory_defs.h /usr/include/c++/11/optional \
  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/twist.hpp \
  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/twist__struct.hpp \
  /opt/ros/humble/include/rosidl_runtime_cpp/rosidl_runtime_cpp/bounded_vector.hpp \
- /usr/include/c++/11/stdexcept \
  /opt/ros/humble/include/rosidl_runtime_cpp/rosidl_runtime_cpp/message_initialization.hpp \
  /opt/ros/humble/include/rosidl_runtime_c/rosidl_runtime_c/message_initialization.h \
  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/vector3__struct.hpp \
  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/twist__builder.hpp \
  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/twist__traits.hpp \
- /usr/include/c++/11/sstream /usr/include/c++/11/istream \
- /usr/include/c++/11/ios /usr/include/c++/11/bits/ios_base.h \
- /usr/include/c++/11/bits/locale_classes.h \
- /usr/include/c++/11/bits/locale_classes.tcc \
- /usr/include/c++/11/system_error \
- /usr/include/aarch64-linux-gnu/c++/11/bits/error_constants.h \
- /usr/include/c++/11/streambuf /usr/include/c++/11/bits/streambuf.tcc \
- /usr/include/c++/11/bits/basic_ios.h \
- /usr/include/c++/11/bits/locale_facets.h /usr/include/c++/11/cwctype \
- /usr/include/wctype.h /usr/include/aarch64-linux-gnu/bits/wctype-wchar.h \
- /usr/include/aarch64-linux-gnu/c++/11/bits/ctype_base.h \
- /usr/include/c++/11/bits/streambuf_iterator.h \
- /usr/include/aarch64-linux-gnu/c++/11/bits/ctype_inline.h \
- /usr/include/c++/11/bits/locale_facets.tcc \
- /usr/include/c++/11/bits/basic_ios.tcc /usr/include/c++/11/ostream \
- /usr/include/c++/11/bits/ostream.tcc \
- /usr/include/c++/11/bits/istream.tcc \
- /usr/include/c++/11/bits/sstream.tcc \
  /opt/ros/humble/include/rosidl_runtime_cpp/rosidl_runtime_cpp/traits.hpp \
- /usr/include/c++/11/codecvt /usr/include/c++/11/bits/codecvt.h \
- /usr/include/c++/11/iomanip /usr/include/c++/11/locale \
- /usr/include/c++/11/bits/locale_facets_nonio.h \
- /usr/include/aarch64-linux-gnu/c++/11/bits/time_members.h \
- /usr/include/aarch64-linux-gnu/c++/11/bits/messages_members.h \
- /usr/include/libintl.h /usr/include/c++/11/bits/locale_facets_nonio.tcc \
- /usr/include/c++/11/bits/locale_conv.h \
- /usr/include/c++/11/bits/quoted_string.h \
+ /usr/include/c++/11/codecvt \
  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/vector3__traits.hpp \
  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/twist__type_support.hpp \
  /opt/ros/humble/include/rosidl_typesupport_interface/rosidl_typesupport_interface/macros.h \
@@ -293,10 +290,12 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: \
  /usr/include/c++/11/bits/unique_lock.h \
  /usr/include/c++/11/condition_variable \
  /usr/include/c++/11/bits/atomic_futex.h \
+ /usr/include/c++/11/bits/std_thread.h \
  /opt/ros/humble/include/rclcpp/rclcpp/executors/multi_threaded_executor.hpp \
  /usr/include/c++/11/set /usr/include/c++/11/bits/stl_tree.h \
  /usr/include/c++/11/bits/stl_set.h \
- /usr/include/c++/11/bits/stl_multiset.h \
+ /usr/include/c++/11/bits/stl_multiset.h /usr/include/c++/11/thread \
+ /usr/include/c++/11/bits/this_thread_sleep.h \
  /opt/ros/humble/include/rclcpp/rclcpp/executor.hpp \
  /usr/include/c++/11/cassert /usr/include/assert.h \
  /usr/include/c++/11/iostream /usr/include/c++/11/list \
@@ -391,7 +390,7 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: \
  /opt/ros/humble/include/rclcpp/rclcpp/any_executable.hpp \
  /opt/ros/humble/include/rclcpp/rclcpp/callback_group.hpp \
  /opt/ros/humble/include/rclcpp/rclcpp/client.hpp \
- /usr/include/c++/11/optional /usr/include/c++/11/variant \
+ /usr/include/c++/11/variant \
  /opt/ros/humble/include/rcl/rcl/error_handling.h \
  /opt/ros/humble/include/rclcpp/rclcpp/detail/cpp_callback_trampoline.hpp \
  /opt/ros/humble/include/rclcpp/rclcpp/exceptions.hpp \
@@ -645,9 +644,35 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: \
  /opt/ros/humble/include/rclcpp/rclcpp/wait_set_policies/thread_safe_synchronization.hpp \
  /opt/ros/humble/include/rclcpp/rclcpp/wait_set_policies/detail/write_preferring_read_write_lock.hpp \
  /opt/ros/humble/include/rclcpp/rclcpp/wait_set_template.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/bool.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/bool__struct.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/bool__builder.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/bool__traits.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/bool__type_support.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/rosidl_generator_cpp__visibility_control.hpp \
  /opt/ros/humble/include/std_msgs/std_msgs/msg/float32.hpp \
  /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32__struct.hpp \
  /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32__builder.hpp \
  /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32__traits.hpp \
  /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32__type_support.hpp \
- /opt/ros/humble/include/std_msgs/std_msgs/msg/rosidl_generator_cpp__visibility_control.hpp
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/int8.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int8__struct.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int8__builder.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int8__traits.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int8__type_support.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/string.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/string__struct.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/string__builder.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/string__traits.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/string__type_support.hpp \
+ /opt/ros/humble/include/std_srvs/std_srvs/srv/set_bool.hpp \
+ /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/set_bool__struct.hpp \
+ /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/set_bool__builder.hpp \
+ /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/set_bool__traits.hpp \
+ /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/set_bool__type_support.hpp \
+ /opt/ros/humble/include/std_srvs/std_srvs/msg/rosidl_generator_cpp__visibility_control.hpp \
+ /opt/ros/humble/include/std_srvs/std_srvs/srv/trigger.hpp \
+ /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__struct.hpp \
+ /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__builder.hpp \
+ /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__traits.hpp \
+ /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__type_support.hpp

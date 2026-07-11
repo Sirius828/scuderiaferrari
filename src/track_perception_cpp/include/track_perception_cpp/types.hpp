@@ -20,6 +20,10 @@ struct Detection {
 struct LaneState {
   float control_offset{0.0f};
   float lateral_offset{0.0f};
+  float bottom_offset{0.0f};
+  float raw_control_offset{0.0f};
+  float lookahead_x{0.0f};
+  float lookahead_y{0.0f};
   float heading_error{0.0f};
   float curvature{0.0f};
   float confidence{0.0f};

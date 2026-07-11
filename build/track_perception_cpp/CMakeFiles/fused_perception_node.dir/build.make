@@ -153,6 +153,76 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/yolo_seg.cpp -o CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.s
 
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.o: CMakeFiles/fused_perception_node.dir/flags.make
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.o: /home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.o -MF CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.o.d -o CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.o -c /home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc
+
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc > CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.i
+
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc -o CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.s
+
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.o: CMakeFiles/fused_perception_node.dir/flags.make
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.o: /home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.o -MF CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.o.d -o CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.o -c /home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp
+
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp > CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.i
+
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp -o CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.s
+
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.o: CMakeFiles/fused_perception_node.dir/flags.make
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.o: /home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.o -MF CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.o.d -o CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.o -c /home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc
+
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc > CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.i
+
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc -o CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.s
+
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.o: CMakeFiles/fused_perception_node.dir/flags.make
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.o: /home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.o -MF CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.o.d -o CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.o -c /home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc
+
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc > CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.i
+
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc -o CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.s
+
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.o: CMakeFiles/fused_perception_node.dir/flags.make
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.o: /home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.o -MF CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.o.d -o CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.o -c /home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc
+
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc > CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.i
+
+CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc -o CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.s
+
 # Object files for target fused_perception_node
 fused_perception_node_OBJECTS = \
 "CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o" \
@@ -160,7 +230,12 @@ fused_perception_node_OBJECTS = \
 "CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.o" \
 "CMakeFiles/fused_perception_node.dir/src/shm_reader.cpp.o" \
 "CMakeFiles/fused_perception_node.dir/src/yolo_detector.cpp.o" \
-"CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o"
+"CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o" \
+"CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.o" \
+"CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.o" \
+"CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.o" \
+"CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.o" \
+"CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.o"
 
 # External object files for target fused_perception_node
 fused_perception_node_EXTERNAL_OBJECTS =
@@ -171,6 +246,11 @@ fused_perception_node: CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.o
 fused_perception_node: CMakeFiles/fused_perception_node.dir/src/shm_reader.cpp.o
 fused_perception_node: CMakeFiles/fused_perception_node.dir/src/yolo_detector.cpp.o
 fused_perception_node: CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o
+fused_perception_node: CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/ppocr_direction_system.cc.o
+fused_perception_node: CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/direction_rule.cpp.o
+fused_perception_node: CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/postprocess.cc.o
+fused_perception_node: CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/clipper.cc.o
+fused_perception_node: CMakeFiles/fused_perception_node.dir/home/orangepi/Desktop/ppocr_direction_runtime/cpp/rknpu2/ppocr_system.cc.o
 fused_perception_node: CMakeFiles/fused_perception_node.dir/build.make
 fused_perception_node: /opt/ros/humble/lib/librclcpp.so
 fused_perception_node: /opt/ros/humble/lib/libstd_msgs__rosidl_typesupport_fastrtps_c.so
@@ -179,6 +259,9 @@ fused_perception_node: /opt/ros/humble/lib/libstd_msgs__rosidl_typesupport_intro
 fused_perception_node: /opt/ros/humble/lib/libstd_msgs__rosidl_typesupport_introspection_cpp.so
 fused_perception_node: /opt/ros/humble/lib/libstd_msgs__rosidl_typesupport_cpp.so
 fused_perception_node: /opt/ros/humble/lib/libstd_msgs__rosidl_generator_py.so
+fused_perception_node: rknn_model_zoo_utils.out/libfileutils.a
+fused_perception_node: rknn_model_zoo_utils.out/libimageutils.a
+fused_perception_node: rknn_model_zoo_utils.out/libimagedrawing.a
 fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_stitching.so.4.5.4d
 fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_alphamat.so.4.5.4d
 fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_aruco.so.4.5.4d
@@ -214,6 +297,7 @@ fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_viz.so.4.5.4d
 fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_wechat_qrcode.so.4.5.4d
 fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_xobjdetect.so.4.5.4d
 fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_xphoto.so.4.5.4d
+fused_perception_node: /home/orangepi/Desktop/rknn_model_zoo/3rdparty/rknpu2/Linux/aarch64/librknnrt.so
 fused_perception_node: /opt/ros/humble/lib/liblibstatistics_collector.so
 fused_perception_node: /opt/ros/humble/lib/librcl.so
 fused_perception_node: /opt/ros/humble/lib/librmw_implementation.so
@@ -269,6 +353,8 @@ fused_perception_node: /opt/ros/humble/lib/librcpputils.so
 fused_perception_node: /opt/ros/humble/lib/librosidl_runtime_c.so
 fused_perception_node: /opt/ros/humble/lib/librcutils.so
 fused_perception_node: /usr/lib/aarch64-linux-gnu/libpython3.10.so
+fused_perception_node: /home/orangepi/Desktop/rknn_model_zoo/3rdparty/librga/Linux/aarch64/librga.a
+fused_perception_node: /home/orangepi/Desktop/rknn_model_zoo/3rdparty/jpeg_turbo/Linux/aarch64/libturbojpeg.a
 fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_highgui.so.4.5.4d
 fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_datasets.so.4.5.4d
 fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_plot.so.4.5.4d
@@ -289,7 +375,7 @@ fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_photo.so.4.5.4d
 fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_imgproc.so.4.5.4d
 fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_core.so.4.5.4d
 fused_perception_node: CMakeFiles/fused_perception_node.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX executable fused_perception_node"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Linking CXX executable fused_perception_node"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/fused_perception_node.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

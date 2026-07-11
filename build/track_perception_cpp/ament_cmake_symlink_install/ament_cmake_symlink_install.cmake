@@ -315,6 +315,12 @@ message(STATUS "Execute custom install script")
 
 # begin of custom install code
 
+# install(PROGRAMS "/home/orangepi/Desktop/rknn_model_zoo/3rdparty/rknpu2/Linux/aarch64/librknnrt.so" "DESTINATION" "lib")
+ament_cmake_symlink_install_programs("/home/orangepi/Desktop/rknn_model_zoo/3rdparty" PROGRAMS "/home/orangepi/Desktop/rknn_model_zoo/3rdparty/rknpu2/Linux/aarch64/librknnrt.so" "DESTINATION" "lib")
+
+# install(PROGRAMS "/home/orangepi/Desktop/rknn_model_zoo/3rdparty/librga/Linux/aarch64/librga.so" "DESTINATION" "lib")
+ament_cmake_symlink_install_programs("/home/orangepi/Desktop/rknn_model_zoo/3rdparty" PROGRAMS "/home/orangepi/Desktop/rknn_model_zoo/3rdparty/librga/Linux/aarch64/librga.so" "DESTINATION" "lib")
+
 # install("TARGETS" "fused_perception_node" "DESTINATION" "lib/track_perception_cpp")
 include("/home/orangepi/scuderiaferrari/build/track_perception_cpp/ament_cmake_symlink_install_targets_0_${CMAKE_INSTALL_CONFIG_NAME}.cmake")
 

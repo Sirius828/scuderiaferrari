@@ -115,7 +115,10 @@ class ChassisController(Node):
     
     def enable_callback(self, msg: Int8):
         """处理使能控制"""
-        self.enabled = bool(msg.data)
+        new_enabled = bool(msg.data)
+        if new_enabled == self.enabled:
+            return
+        self.enabled = new_enabled
         self.get_logger().info(f'底盘使能状态: {"启用" if self.enabled else "禁用"}')
     
     def direction_callback(self, msg: Int8):

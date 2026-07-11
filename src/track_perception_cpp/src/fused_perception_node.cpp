@@ -2,6 +2,7 @@
 #include <atomic>
 #include <chrono>
 #include <cctype>
+#include <deque>
 #include <cmath>
 #include <filesystem>
 #include <future>
@@ -20,6 +21,7 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "ppocr_direction_system.h"
 #include "track_perception_cpp/lane_decision.hpp"
 #include "track_perception_cpp/shm_reader.hpp"
 #include "track_perception_cpp/yolo_detector.hpp"
@@ -31,6 +33,14 @@ using namespace std::chrono_literals;
 namespace track_perception_cpp {
 
 namespace {
+
+constexpr const char* kOcrDetModelPath =
+    "/home/orangepi/Desktop/ppocr_direction_runtime/model/ppocrv4_det.rknn";
+constexpr const char* kOcrRecModelPath =
+    "/home/orangepi/Desktop/ppocr_direction_runtime/model/ppocrv4_rec.rknn";
+constexpr double kGuideboardOcrMinIntervalSec = 0.08;
+constexpr int kOcrVoteRequired = 2;
+constexpr int kMinOcrCropSizePx = 20;
 
 std::vector<int> parseCoreIds(const std::string& text) {
   std::vector<int> ids;
@@ -116,6 +126,9 @@ int selectedCenterAtRatio(const LaneDebugInfo& debug_info, double ratio) {
 }
 
 int inferDebugImageWidth(const LaneDebugInfo& debug_info, int fallback_width) {
+  if (debug_info.image_width > 1) {
+    return debug_info.image_width;
+  }
   int max_x = 0;
   for (const auto& band : debug_info.bands) {
     for (const auto& seg : band.segments) {
@@ -144,6 +157,11 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"bottom_norm\":" << bottom_n << ","
      << "\"center_slope_norm\":" << (top_n - bottom_n) << ","
      << "\"near_slope_norm\":" << (mid_n - bottom_n) << ","
+     << "\"image_width\":" << image_width << ","
+     << "\"lookahead_x\":" << debug_info.lookahead_x << ","
+     << "\"lookahead_y\":" << debug_info.lookahead_y << ","
+     << "\"bottom_offset\":" << debug_info.bottom_offset << ","
+     << "\"raw_control_offset\":" << debug_info.raw_control_offset << ","
      << "\"center_residual_px\":" << debug_info.center_residual_px << ","
      << "\"raw_points\":" << debug_info.raw_point_count << ","
      << "\"fit_points\":" << debug_info.fit_point_count << ","
@@ -161,7 +179,57 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"lb_template\":" << (debug_info.left_boundary_template_active ? "true" : "false") << ","
      << "\"template_side\":\"" << jsonEscape(debug_info.boundary_template_side) << "\","
      << "\"lb_points\":" << debug_info.left_boundary_template_points << ","
-     << "\"lb_reason\":\"" << jsonEscape(debug_info.left_boundary_template_reason) << "\""
+     << "\"lb_reason\":\"" << jsonEscape(debug_info.left_boundary_template_reason) << "\","
+     << "\"bands\":[";
+  for (size_t i = 0; i < debug_info.bands.size(); ++i) {
+    const auto& band = debug_info.bands[i];
+    if (i > 0) {
+      ss << ",";
+    }
+    ss << "{\"y0\":" << band.y0
+       << ",\"y1\":" << band.y1
+       << ",\"selected_center_x\":" << band.selected_center_x
+       << ",\"segments\":[";
+    for (size_t j = 0; j < band.segments.size(); ++j) {
+      const auto& segment = band.segments[j];
+      if (j > 0) {
+        ss << ",";
+      }
+      ss << "{\"x0\":" << segment.x0
+         << ",\"x1\":" << segment.x1
+         << ",\"center_x\":" << segment.center_x
+         << ",\"pixel_count\":" << segment.pixel_count
+         << ",\"selected\":" << (segment.selected ? "true" : "false")
+         << ",\"virtual\":" << (segment.virtual_segment ? "true" : "false")
+         << ",\"obstacle_cut\":" << (segment.obstacle_cut ? "true" : "false")
+         << "}";
+    }
+    ss << "]}";
+  }
+  ss << "],\"raw_points\":[";
+  for (size_t i = 0; i < debug_info.raw_points.size(); ++i) {
+    if (i > 0) {
+      ss << ",";
+    }
+    const auto& point = debug_info.raw_points[i];
+    ss << "[" << point.x << "," << point.y << "," << point.z << "]";
+  }
+  ss << "],\"fit_points\":[";
+  for (size_t i = 0; i < debug_info.fit_points.size(); ++i) {
+    if (i > 0) {
+      ss << ",";
+    }
+    const auto& point = debug_info.fit_points[i];
+    ss << "[" << point.x << "," << point.y << "," << point.z << "]";
+  }
+  ss << "],\"fit_coeffs\":[";
+  for (size_t i = 0; i < debug_info.fit_coeffs.size(); ++i) {
+    if (i > 0) {
+      ss << ",";
+    }
+    ss << debug_info.fit_coeffs[i];
+  }
+  ss << "]"
      << "}";
   return ss.str();
 }
@@ -253,6 +321,10 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<std::string>("guideboard_branch", "right");
     declare_parameter<double>("guideboard_detect_y0_ratio", 0.2);
     declare_parameter<double>("guideboard_detect_y1_ratio", 0.7);
+    declare_parameter<bool>("enable_guideboard_ocr", true);
+    declare_parameter<double>("ocr_min_score", 0.75);
+    declare_parameter<double>("ocr_crop_padding_ratio", 0.25);
+    declare_parameter<int>("ocr_vote_window", 3);
     declare_parameter<bool>("enable_segment_branch_logic", true);
     declare_parameter<bool>("enable_continuity_branch_selection", false);
     declare_parameter<double>("branch_continuity_max_dx_ratio", 0.35);
@@ -355,6 +427,10 @@ class FusedPerceptionNode : public rclcpp::Node {
     publish_lane_state_ = get_parameter("publish_lane_state").as_bool();
     enable_status_log_ = get_parameter("enable_status_log").as_bool();
     enable_branch_event_log_ = get_parameter("enable_branch_event_log").as_bool();
+    enable_guideboard_ocr_ = get_parameter("enable_guideboard_ocr").as_bool();
+    ocr_min_score_ = static_cast<float>(get_parameter("ocr_min_score").as_double());
+    ocr_crop_padding_ratio_ = static_cast<float>(get_parameter("ocr_crop_padding_ratio").as_double());
+    ocr_vote_window_ = static_cast<int>(get_parameter("ocr_vote_window").as_int());
 
     det_model_path_ = resolveTrackPerceptionPath(get_parameter("det_model_path").as_string());
     label_list_path_ = resolveTrackPerceptionPath(get_parameter("label_list_path").as_string());
@@ -430,6 +506,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.guideboard_branch = get_parameter("guideboard_branch").as_string();
     lane_cfg.guideboard_detect_y0_ratio = static_cast<float>(get_parameter("guideboard_detect_y0_ratio").as_double());
     lane_cfg.guideboard_detect_y1_ratio = static_cast<float>(get_parameter("guideboard_detect_y1_ratio").as_double());
+    lane_guideboard_y0_ratio_ = lane_cfg.guideboard_detect_y0_ratio;
+    lane_guideboard_y1_ratio_ = lane_cfg.guideboard_detect_y1_ratio;
     lane_cfg.enable_continuity_branch_selection = get_parameter("enable_continuity_branch_selection").as_bool();
     lane_cfg.branch_continuity_max_dx_ratio = static_cast<float>(get_parameter("branch_continuity_max_dx_ratio").as_double());
     lane_cfg.branch_continuity_near_band_ratio = static_cast<float>(get_parameter("branch_continuity_near_band_ratio").as_double());
@@ -522,11 +600,129 @@ class FusedPerceptionNode : public rclcpp::Node {
     return (fs::path(share_dir) / p).string();
   }
 
+  const Detection* selectGuideboardForOcr(const std::vector<Detection>& detections, int image_height) const {
+    int y0 = static_cast<int>(image_height * lane_guideboard_y0_ratio_);
+    int y1 = static_cast<int>(image_height * lane_guideboard_y1_ratio_);
+    const Detection* best = nullptr;
+    for (const auto& det : detections) {
+      if (det.class_name != "GuideBoard" || det.center.y < y0 || det.center.y > y1 ||
+          det.bbox.width < kMinOcrCropSizePx || det.bbox.height < kMinOcrCropSizePx) {
+        continue;
+      }
+      if (best == nullptr || det.confidence > best->confidence) {
+        best = &det;
+      }
+    }
+    return best;
+  }
+
+  cv::Rect makePaddedCropRect(const cv::Rect2f& bbox, const cv::Size& image_size) const {
+    float pad = std::max(bbox.width, bbox.height) * std::max(0.0f, ocr_crop_padding_ratio_);
+    int x0 = static_cast<int>(std::floor(bbox.x - pad));
+    int y0 = static_cast<int>(std::floor(bbox.y - pad));
+    int x1 = static_cast<int>(std::ceil(bbox.x + bbox.width + pad));
+    int y1 = static_cast<int>(std::ceil(bbox.y + bbox.height + pad));
+    x0 = std::clamp(x0, 0, std::max(0, image_size.width - 1));
+    y0 = std::clamp(y0, 0, std::max(0, image_size.height - 1));
+    x1 = std::clamp(x1, x0 + 1, image_size.width);
+    y1 = std::clamp(y1, y0 + 1, image_size.height);
+    return cv::Rect(x0, y0, x1 - x0, y1 - y0);
+  }
+
+  bool isOcrResultReliable(const PPOCRDirectionResult& result) const {
+    return result.status == PPOCR_STATUS_OK && result.raw_direction != -1 &&
+           !result.text_touch_edge && result.ocr_score >= ocr_min_score_;
+  }
+
+  void addOcrVote(int raw_direction) {
+    int window = std::clamp(ocr_vote_window_, kOcrVoteRequired, 9);
+    guideboard_ocr_votes_.push_back(raw_direction);
+    while (static_cast<int>(guideboard_ocr_votes_.size()) > window) {
+      guideboard_ocr_votes_.pop_front();
+    }
+
+    int straight_votes = 0;
+    int right_votes = 0;
+    for (int vote : guideboard_ocr_votes_) {
+      if (vote == 0) {
+        ++straight_votes;
+      } else if (vote == 1) {
+        ++right_votes;
+      }
+    }
+    if (straight_votes >= kOcrVoteRequired) {
+      stable_guideboard_branch_ = "left";
+      stable_guideboard_raw_direction_ = 0;
+    } else if (right_votes >= kOcrVoteRequired) {
+      stable_guideboard_branch_ = "right";
+      stable_guideboard_raw_direction_ = 1;
+    }
+  }
+
+  void updateGuideboardOcr(const cv::Mat& frame_rgb, const std::vector<Detection>& detections) {
+    if (!enable_guideboard_ocr_ || !guideboard_ocr_ready_ || frame_rgb.empty()) {
+      lane_decision_.setGuideboardBranchHint("left", enable_guideboard_ocr_);
+      return;
+    }
+
+    const Detection* guideboard = selectGuideboardForOcr(detections, frame_rgb.rows);
+    if (guideboard == nullptr) {
+      lane_decision_.setGuideboardBranchHint(stable_guideboard_branch_, true);
+      return;
+    }
+
+    double now = nowSeconds();
+    if (now - last_guideboard_ocr_sec_ < kGuideboardOcrMinIntervalSec) {
+      lane_decision_.setGuideboardBranchHint(stable_guideboard_branch_, true);
+      return;
+    }
+    last_guideboard_ocr_sec_ = now;
+
+    cv::Rect crop_rect = makePaddedCropRect(guideboard->bbox, frame_rgb.size());
+    if (crop_rect.width < kMinOcrCropSizePx || crop_rect.height < kMinOcrCropSizePx) {
+      lane_decision_.setGuideboardBranchHint(stable_guideboard_branch_, true);
+      return;
+    }
+
+    cv::Mat crop = frame_rgb(crop_rect).clone();
+    PPOCRDirectionResult result;
+    int ret = guideboard_ocr_.run_mat(crop, &result);
+    last_ocr_text_ = result.text;
+    last_ocr_status_ = result.status;
+    last_ocr_raw_direction_ = result.raw_direction;
+    last_ocr_score_ = result.ocr_score;
+    last_ocr_time_ms_ = result.time_ms;
+    last_ocr_touch_edge_ = result.text_touch_edge;
+
+    if (ret == 0 && isOcrResultReliable(result)) {
+      addOcrVote(result.raw_direction);
+    }
+    if (result.time_ms > 0.0) {
+      sum_ocr_ms_ += result.time_ms;
+      ++ocr_run_count_;
+    }
+
+    lane_decision_.setGuideboardBranchHint(stable_guideboard_branch_, true);
+
+    if (enable_branch_event_log_) {
+      RCLCPP_INFO_THROTTLE(
+          get_logger(), *get_clock(), 500,
+          "GuideBoard OCR ret=%d text=%s raw=%d status=%d score=%.2f edge=%d time=%.1fms stable=%s votes=%zu crop=%dx%d",
+          ret, last_ocr_text_.c_str(), last_ocr_raw_direction_, last_ocr_status_, last_ocr_score_,
+          last_ocr_touch_edge_, last_ocr_time_ms_, stable_guideboard_branch_.c_str(),
+          guideboard_ocr_votes_.size(), crop_rect.width, crop_rect.height);
+    }
+  }
+
   void initialize() {
     detection_pub_ = create_publisher<std_msgs::msg::Float32MultiArray>("/detection/results", 10);
     label_pub_ = create_publisher<std_msgs::msg::String>("/detection/labels", 10);
     auto sensor_qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
     center_offset_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/center_offset", sensor_qos);
+    lateral_offset_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/lateral_offset", sensor_qos);
+    bottom_offset_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/bottom_offset", sensor_qos);
+    heading_error_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/heading_error", sensor_qos);
+    curvature_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/curvature", sensor_qos);
     is_valid_pub_ = create_publisher<std_msgs::msg::Bool>("/segmentation/is_valid", sensor_qos);
     stop_request_pub_ = create_publisher<std_msgs::msg::Bool>("/perception/stop_request", 10);
     lane_state_pub_ = create_publisher<std_msgs::msg::String>("/perception/lane_state", 10);
@@ -547,6 +743,14 @@ class FusedPerceptionNode : public rclcpp::Node {
                          seg_conf_threshold_, seg_nms_threshold_, seg_mask_threshold_,
                          seg_nms_contain_threshold_, seg_max_detections_, seg_raw_output_)) {
       throw std::runtime_error("failed to initialize segmentation model");
+    }
+    if (enable_guideboard_ocr_) {
+      int ret = guideboard_ocr_.init(kOcrDetModelPath, kOcrRecModelPath);
+      if (ret != 0) {
+        throw std::runtime_error("failed to initialize guideboard OCR model");
+      }
+      guideboard_ocr_ready_ = true;
+      RCLCPP_INFO(get_logger(), "guideboard OCR ready: det=%s rec=%s", kOcrDetModelPath, kOcrRecModelPath);
     }
 
     std_msgs::msg::String labels_msg;
@@ -619,6 +823,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     stats.seg_rknn_ms = std::get<3>(seg_result);
     stats.seg_post_ms = std::get<4>(seg_result);
 
+    updateGuideboardOcr(frame_rgb, detections);
+
     auto t_decision0 = std::chrono::steady_clock::now();
     LaneState lane_state = lane_decision_.decide(seg_map, detections);
     auto t_decision1 = std::chrono::steady_clock::now();
@@ -690,6 +896,22 @@ class FusedPerceptionNode : public rclcpp::Node {
     std_msgs::msg::Float32 offset_msg;
     offset_msg.data = lane_state.control_offset;
     center_offset_pub_->publish(offset_msg);
+
+    std_msgs::msg::Float32 lateral_msg;
+    lateral_msg.data = lane_state.lateral_offset;
+    lateral_offset_pub_->publish(lateral_msg);
+
+    std_msgs::msg::Float32 bottom_msg;
+    bottom_msg.data = lane_state.bottom_offset;
+    bottom_offset_pub_->publish(bottom_msg);
+
+    std_msgs::msg::Float32 heading_msg;
+    heading_msg.data = lane_state.heading_error;
+    heading_error_pub_->publish(heading_msg);
+
+    std_msgs::msg::Float32 curvature_msg;
+    curvature_msg.data = lane_state.curvature;
+    curvature_pub_->publish(curvature_msg);
 
     std_msgs::msg::Bool valid_msg;
     valid_msg.data = lane_state.is_valid;
@@ -1027,11 +1249,13 @@ class FusedPerceptionNode : public rclcpp::Node {
                                     : 0.0;
     RCLCPP_INFO(get_logger(),
                 "perf %.1fs upstream=%.1f fps processed=%.1f fps det=%.2f/%.2f ms "
-                "seg=%.2f/%.2f ms decision=%.2f ms publish=%.2f ms detections=%zu "
+                "seg=%.2f/%.2f ms ocr=%.2f ms/%lu decision=%.2f ms publish=%.2f ms detections=%zu "
                 "seg_model_conf_avg=%.3f seg_model_instances=%lu last_seg_conf=%.3f[%.3f,%.3f]/%d",
                 dt, upstream_fps, processed_fps, sum_det_rknn_ms_ / frames,
                 sum_det_post_ms_ / frames, sum_seg_rknn_ms_ / frames,
-                sum_seg_post_ms_ / frames, sum_decision_ms_ / frames,
+                sum_seg_post_ms_ / frames,
+                ocr_run_count_ > 0 ? sum_ocr_ms_ / static_cast<double>(ocr_run_count_) : 0.0,
+                static_cast<unsigned long>(ocr_run_count_), sum_decision_ms_ / frames,
                 sum_publish_ms_ / frames, last_det_count_, seg_model_conf_avg,
                 static_cast<unsigned long>(sum_seg_model_instances_), last_seg_model_conf_mean_,
                 last_seg_model_conf_min_, last_seg_model_conf_max_,
@@ -1046,6 +1270,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     sum_seg_post_ms_ = 0.0;
     sum_decision_ms_ = 0.0;
     sum_publish_ms_ = 0.0;
+    sum_ocr_ms_ = 0.0;
+    ocr_run_count_ = 0;
     sum_seg_model_score_ = 0.0;
     sum_seg_model_instances_ = 0;
   }
@@ -1103,6 +1329,10 @@ class FusedPerceptionNode : public rclcpp::Node {
   rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr detection_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr label_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr center_offset_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr lateral_offset_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr bottom_offset_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr heading_error_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr curvature_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr is_valid_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr stop_request_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr lane_state_pub_;
@@ -1118,6 +1348,8 @@ class FusedPerceptionNode : public rclcpp::Node {
   double sum_seg_post_ms_{0.0};
   double sum_decision_ms_{0.0};
   double sum_publish_ms_{0.0};
+  double sum_ocr_ms_{0.0};
+  uint64_t ocr_run_count_{0};
   double sum_seg_model_score_{0.0};
   uint64_t sum_seg_model_instances_{0};
   size_t last_det_count_{0};
@@ -1132,6 +1364,25 @@ class FusedPerceptionNode : public rclcpp::Node {
   std::string last_road_state_;
   std::string last_branch_side_;
   std::string last_task_state_;
+
+  bool enable_guideboard_ocr_{true};
+  bool guideboard_ocr_ready_{false};
+  float ocr_min_score_{0.75f};
+  float ocr_crop_padding_ratio_{0.25f};
+  int ocr_vote_window_{3};
+  float lane_guideboard_y0_ratio_{0.2f};
+  float lane_guideboard_y1_ratio_{0.7f};
+  PPOCRDirectionSystem guideboard_ocr_;
+  std::deque<int> guideboard_ocr_votes_;
+  std::string stable_guideboard_branch_{"left"};
+  int stable_guideboard_raw_direction_{0};
+  double last_guideboard_ocr_sec_{0.0};
+  std::string last_ocr_text_;
+  int last_ocr_status_{PPOCR_STATUS_NO_TEXT};
+  int last_ocr_raw_direction_{-1};
+  float last_ocr_score_{0.0f};
+  double last_ocr_time_ms_{0.0};
+  bool last_ocr_touch_edge_{false};
 };
 
 }  // namespace track_perception_cpp

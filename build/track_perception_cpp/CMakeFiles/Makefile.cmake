@@ -7,6 +7,8 @@ set(CMAKE_DEPENDS_GENERATOR "Unix Makefiles")
 # The top level Makefile was generated from the following files:
 set(CMAKE_MAKEFILE_DEPENDS
   "CMakeCache.txt"
+  "/home/orangepi/Desktop/rknn_model_zoo/3rdparty/CMakeLists.txt"
+  "/home/orangepi/Desktop/rknn_model_zoo/utils/CMakeLists.txt"
   "CMakeFiles/3.22.1/CMakeCCompiler.cmake"
   "CMakeFiles/3.22.1/CMakeCXXCompiler.cmake"
   "CMakeFiles/3.22.1/CMakeSystem.cmake"
@@ -614,6 +616,8 @@ set(CMAKE_MAKEFILE_PRODUCTS
   "ament_cmake_index/share/ament_index/resource_index/parent_prefix_path/track_perception_cpp"
   "ament_cmake_index/share/ament_index/resource_index/packages/track_perception_cpp"
   "CMakeFiles/CMakeDirectoryInformation.cmake"
+  "rknn_model_zoo_3rdparty.out/CMakeFiles/CMakeDirectoryInformation.cmake"
+  "rknn_model_zoo_utils.out/CMakeFiles/CMakeDirectoryInformation.cmake"
   )
 
 # Dependency information for all targets:
@@ -621,4 +625,8 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/uninstall.dir/DependInfo.cmake"
   "CMakeFiles/track_perception_cpp_uninstall.dir/DependInfo.cmake"
   "CMakeFiles/fused_perception_node.dir/DependInfo.cmake"
+  "rknn_model_zoo_utils.out/CMakeFiles/fileutils.dir/DependInfo.cmake"
+  "rknn_model_zoo_utils.out/CMakeFiles/imagedrawing.dir/DependInfo.cmake"
+  "rknn_model_zoo_utils.out/CMakeFiles/imageutils.dir/DependInfo.cmake"
+  "rknn_model_zoo_utils.out/CMakeFiles/audioutils.dir/DependInfo.cmake"
   )

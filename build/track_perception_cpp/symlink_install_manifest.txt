@@ -1,3 +1,5 @@
+/home/orangepi/scuderiaferrari/install/track_perception_cpp/lib/librknnrt.so
+/home/orangepi/scuderiaferrari/install/track_perception_cpp/lib/librga.so
 /home/orangepi/scuderiaferrari/install/track_perception_cpp/lib/track_perception_cpp/fused_perception_node
 /home/orangepi/scuderiaferrari/install/track_perception_cpp/share/track_perception_cpp/launch/__pycache__/fused_perception.launch.cpython-310.pyc
 /home/orangepi/scuderiaferrari/install/track_perception_cpp/share/track_perception_cpp/launch/fused_perception.launch.py

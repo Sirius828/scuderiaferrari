@@ -344,3 +344,193 @@ stream disconnected before completion: Upstream temporarily unavailable, please 
 把最低速调到0.7然后对齐
 
 https://github.com/chengzipsy/paddlepaddle-yolo11-private
+
+你说得对，当前参数很多，不能把它们一起调。实际调车应该按“感知 → 基础控制 → 姿态补偿 → 速度”的顺序，每次只动一组。
+
+## 第一阶段：先固定感知基准
+
+车辆停着或低速，先观察：
+
+```text
+control_offset
+bottom_offset
+heading_error
+curvature
+```
+
+确认：
+
+- 车在车道中间时，各 offset 接近 `0`
+- 车辆向右偏时，offset 符号是否稳定
+- `heading_error` 的正负方向是否和弯道方向一致
+- 舵量方向是否能减小误差
+
+这一步不对，调 PD 没意义。先固定：
+
+```yaml
+steering_sign
+wheel_radius
+offset_topic
+lateral_offset_topic
+heading_error_topic
+curvature_topic
+```
+
+## 第二阶段：只调基础 PD
+
+先临时关闭动态影响：
+
+```yaml
+linear_speed: 0.25
+min_linear_speed: 0.25
+lookahead_feedback_weight: 0.0
+lateral_feedback_weight: 1.0
+heading_feedback_gain: 0.0
+curvature_speed_weight: 0.0
+straight_max_steering: 0.30
+curve_max_steering: 0.30
+Kd: 0.0
+```
+
+此时控制器近似：
+
+```text
+steering = Kp * bottom_offset
+```
+
+调法：
+
+1. 从较小 `Kp` 开始。
+2. 逐渐增加，直到车辆能及时回到车道中心。
+3. 如果左右摆动，降低 `Kp` 约 `15%~25%`。
+4. 再逐渐增加 `Kd`，消除过冲。
+5. 如果舵量跟着视觉噪声抖动，降低 `derivative_filter_alpha` 或 `derivative_limit`。
+
+优先调的只有：
+
+```text
+Kp → Kd → derivative_filter_alpha
+```
+
+暂时不要调速度、曲率权重和动态最大舵量。
+
+## 第三阶段：加入航向误差
+
+基础 PD 稳定后，逐渐增加：
+
+```yaml
+heading_feedback_gain: 0.05
+```
+
+然后以 `0.05` 为步长增加。
+
+航向误差的作用是：
+
+- 进入弯道时提前打方向
+- 减少车头已经转向但横向 offset 还没变化时的滞后
+- 降低弯道出口的过冲
+
+如果车辆在 S 弯中左右摆动，通常是：
+
+- `heading_feedback_gain` 太大
+- `Kd` 太大
+- 航向误差噪声太大
+
+不要优先继续加 `Kp`。
+
+## 第四阶段：加入前瞻 offset
+
+建议保持权重总量接近 `1`：
+
+```yaml
+lookahead_feedback_weight: 0.10
+lateral_feedback_weight: 0.90
+```
+
+稳定后再尝试：
+
+```yaml
+lookahead_feedback_weight: 0.20
+lateral_feedback_weight: 0.80
+```
+
+前瞻权重的作用是提前响应弯道，但太大容易把“弯内侧的合理 offset”当成车辆偏离。
+
+## 第五阶段：最后调速度
+
+控制稳定后，逐级提高：
+
+```text
+0.25 → 0.30 → 0.35 → 0.40 → ...
+```
+
+每次只提高一点，观察：
+
+- `bottom_offset` 是否持续变大
+- `heading_error` 是否持续增大
+- 舵量是否长时间饱和
+- 弯道出口是否来不及回正
+- 是否出现连续左右摆动
+
+速度相关参数最后再调：
+
+```text
+linear_speed
+min_linear_speed
+speed_accel_rate
+speed_decel_rate
+speed_offset_start
+speed_offset_full
+curvature_speed_weight
+```
+
+需要注意，当前算法里的 `speed_offset_start/full` 实际作用在 `curve_risk` 上，不只是原始 offset，名字有些误导。
+
+## 当前算法对“弯道允许大 offset”的实际体现
+
+目前不是“弯道 offset 越大，速度越高”，而是：
+
+```text
+弯道越明显
+→ 前瞻 offset 对风险的影响越小
+→ 不会因为前瞻 offset 单独过大而过度减速
+→ 速度主要由近场偏差、航向误差和曲率决定
+```
+
+所以它实现的是“解除不必要的减速”，不是主动加速。
+
+如果要明确实现：
+
+> 这个弯道允许 offset 到 0.5，超过 0.5 才减速
+
+更适合改成：
+
+```text
+allowed_offset = 直道容许值 + 弯道容许增量
+offset_excess = max(0, abs(control_offset) - allowed_offset)
+```
+
+速度只惩罚 `offset_excess`，而不是惩罚整个 offset。这样调车时只需要调：
+
+```text
+straight_allowed_offset
+curve_allowed_offset
+curve_speed_limit
+```
+
+比现在调 `curve_offset_relief_start/full` 更直观。
+
+调车时建议始终同时看：
+
+```bash
+ros2 topic echo /line_follower/debug
+ros2 topic echo /perception/lane_state
+```
+
+真正重要的不是单看 `control_offset`，而是看：
+
+```text
+bottom_offset + heading_error + curvature + 实际舵量 + 实际速度
+```
+
+当前控制器已经可以按上述分阶段调，但我建议下一步把“弯道允许 offset”改成显式容许区间，减少间接参数。

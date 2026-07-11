@@ -135,6 +135,10 @@ std::string laneStateToJson(const LaneState& state) {
   ss << "{"
      << "\"control_offset\":" << state.control_offset << ","
      << "\"lateral_offset\":" << state.lateral_offset << ","
+     << "\"bottom_offset\":" << state.bottom_offset << ","
+     << "\"raw_control_offset\":" << state.raw_control_offset << ","
+     << "\"lookahead_x\":" << state.lookahead_x << ","
+     << "\"lookahead_y\":" << state.lookahead_y << ","
      << "\"heading_error\":" << state.heading_error << ","
      << "\"curvature\":" << state.curvature << ","
      << "\"confidence\":" << state.confidence << ","
@@ -170,6 +174,18 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   locked_branch_side_ = cfg_.outer_side;
 }
 
+void LaneDecision::setGuideboardBranchHint(const std::string& branch, bool valid) {
+  if (!valid) {
+    guideboard_branch_hint_valid_ = false;
+    guideboard_branch_hint_ = "left";
+    return;
+  }
+  if (branch == "left" || branch == "right") {
+    guideboard_branch_hint_ = branch;
+    guideboard_branch_hint_valid_ = true;
+  }
+}
+
 LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Detection>& detections) {
   LaneState state;
   state.timestamp = nowSeconds();
@@ -186,6 +202,7 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
   double current_time = nowSeconds();
   double center_offset = 0.0;
   double lateral_offset = 0.0;
+  double bottom_offset = 0.0;
   double heading_error = 0.0;
   double curvature = 0.0;
   double confidence = 0.0;
@@ -253,6 +270,13 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
       exit_confirm_count_ = 0;
       debug_info_.branch_transition_reason = "near_split_unlock";
     }
+    if (branch_locked_ && guideboard_seen && guideboard_branch_hint_valid_ &&
+        locked_branch_side_ != guideboard_branch_hint_) {
+      locked_branch_side_ = guideboard_branch_hint_;
+      lock_start_time_ = current_time;
+      exit_confirm_count_ = 0;
+      debug_info_.branch_transition_reason = "guideboard_ocr_override";
+    }
 
     if (!branch_locked_) {
       if (branch_lock_candidate) {
@@ -264,7 +288,7 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
         double last_center_x = last_offset_ * w / 2.0 + w / 2.0;
         std::string target_branch = cfg_.outer_side;
         if (guideboard_seen) {
-          target_branch = cfg_.guideboard_branch;
+          target_branch = guideboard_branch_hint_valid_ ? guideboard_branch_hint_ : cfg_.guideboard_branch;
         } else if (isBoundaryTemplateReady(cfg_.outer_side)) {
           target_branch = cfg_.outer_side;
         } else if (cfg_.enable_continuity_branch_selection) {
@@ -383,12 +407,22 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     if (fitCenterlineAndComputeOffset(fit_points, h, w, fit_order, &raw_offset, &fit_coeffs,
                                       &lateral_offset, &heading_error, &curvature)) {
       center_offset = smoothOffset(raw_offset);
+      const double lookahead_y = h * cfg_.lookahead_y_ratio;
+      const double bottom_y = std::max(0.0, static_cast<double>(h - 1));
+      const double bottom_x = evalPoly(fit_coeffs, bottom_y);
+      bottom_offset = clampValue((bottom_x - w / 2.0) / (w / 2.0), -1.0, 1.0);
+      debug_info_.raw_control_offset = static_cast<float>(raw_offset);
+      debug_info_.lookahead_x = static_cast<float>(evalPoly(fit_coeffs, lookahead_y));
+      debug_info_.lookahead_y = static_cast<float>(lookahead_y);
+      debug_info_.bottom_offset = static_cast<float>(bottom_offset);
+      debug_info_.image_width = w;
       is_valid = true;
       confidence = calculateLaneConfidence(fit_points, bands);
     } else {
       cv::Mat bottom_seg = seg_map(cv::Range(static_cast<int>(h * 0.8), h), cv::Range::all());
       center_offset = fallbackCenterOffset(bottom_seg);
       lateral_offset = center_offset;
+      bottom_offset = center_offset;
       is_valid = cv::countNonZero(bottom_seg == 1) > 0;
       confidence = is_valid ? 0.2 : 0.0;
       if (!is_valid && std::abs(last_offset_) > 0.01) {
@@ -397,12 +431,20 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
       road_state = "LOW_CONFIDENCE";
       fit_points.clear();
       fit_coeffs.clear();
+      debug_info_.raw_control_offset = static_cast<float>(center_offset);
+      debug_info_.bottom_offset = static_cast<float>(bottom_offset);
+      debug_info_.image_width = w;
     }
-    populateDebugInfo(bands, getActiveObstacleZones(detections, w, h), fit_points, fit_coeffs);
+    populateDebugInfo(
+      bands, getActiveObstacleZones(detections, w, h), raw_points, fit_points, fit_coeffs);
   } else {
     cv::Mat bottom_seg = seg_map(cv::Range(h / 2, h), cv::Range::all());
     center_offset = fallbackCenterOffset(bottom_seg);
     lateral_offset = center_offset;
+    bottom_offset = center_offset;
+    debug_info_.raw_control_offset = static_cast<float>(center_offset);
+    debug_info_.bottom_offset = static_cast<float>(bottom_offset);
+    debug_info_.image_width = w;
     is_valid = cv::countNonZero(bottom_seg == 1) > 0;
     confidence = is_valid ? 0.2 : 0.0;
     road_state = is_valid ? "NORMAL" : "LOW_CONFIDENCE";
@@ -415,6 +457,10 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
 
   state.control_offset = static_cast<float>(center_offset);
   state.lateral_offset = static_cast<float>(lateral_offset);
+  state.bottom_offset = static_cast<float>(bottom_offset);
+  state.raw_control_offset = debug_info_.raw_control_offset;
+  state.lookahead_x = debug_info_.lookahead_x;
+  state.lookahead_y = debug_info_.lookahead_y;
   state.heading_error = static_cast<float>(heading_error);
   state.curvature = static_cast<float>(curvature);
   state.confidence = static_cast<float>(clampValue(confidence, 0.0, 1.0));
@@ -1458,7 +1504,7 @@ bool LaneDecision::fitCenterlineAndComputeOffset(const std::vector<cv::Point3f>&
   double near_offset = (near_x - w / 2.0) / (w / 2.0);
   double heading = 0.0;
   double curv = 0.0;
-  if (cfg_.use_heading_term && coeffs->size() > 1) {
+  if (coeffs->size() > 1) {
     auto deriv = polyDeriv(*coeffs);
     double dx_dy = evalPoly(deriv, near_y);
     heading = std::atan(dx_dy) / (M_PI / 2.0);
@@ -1467,7 +1513,8 @@ bool LaneDecision::fitCenterlineAndComputeOffset(const std::vector<cv::Point3f>&
       curv = clampValue(evalPoly(second, near_y) * h, -1.0, 1.0);
     }
   }
-  *final_offset = clampValue(cfg_.near_offset_weight * near_offset + cfg_.heading_weight * heading, -1.0, 1.0);
+  const double heading_term = cfg_.use_heading_term ? cfg_.heading_weight * heading : 0.0;
+  *final_offset = clampValue(cfg_.near_offset_weight * near_offset + heading_term, -1.0, 1.0);
   *lateral_offset = clampValue(near_offset, -1.0, 1.0);
   *heading_error = clampValue(heading, -1.0, 1.0);
   *curvature = curv;
@@ -1728,10 +1775,12 @@ std::string LaneDecision::taskState() const {
 
 void LaneDecision::populateDebugInfo(const std::vector<Band>& bands,
                                      const std::vector<ObstacleZone>& zones,
+                                     const std::vector<cv::Point3f>& raw_points,
                                      const std::vector<cv::Point3f>& fit_points,
                                      const std::vector<double>& fit_coeffs) {
   debug_info_.bands.clear();
   debug_info_.obstacle_zones.clear();
+  debug_info_.raw_points = raw_points;
   debug_info_.fit_points = fit_points;
   debug_info_.fit_coeffs = fit_coeffs;
   debug_info_.branch_locked = branch_locked_;

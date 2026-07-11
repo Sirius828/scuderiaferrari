@@ -18,6 +18,7 @@ model/pp_liteseg_v2.rknn
 model/pp_liteseg_v3.rknn
 model/rknn_lt.rknn
 model/rknn_lt_v2.rknn
+model/yolo11_seg_zhang_320x128_raw4_sim.rknn
 model/yolo11_seg_zhang_320x320_raw4_sim.rknn
 model/yolo11n_det_zhang_320x320_raw3_sim.rknn
 model/yolo11n_seg_160x384_int8.rknn

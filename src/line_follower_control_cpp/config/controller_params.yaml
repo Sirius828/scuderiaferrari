@@ -1,13 +1,38 @@
-# Minimal C++ PD line follower controller parameters.
+# Safe C++ PD line follower controller parameters.
 
 /**:
   ros__parameters:
     Kp: 0.80
     Kd: 0.035
-    linear_speed: 0.50
+    linear_speed: 0.60
+    min_linear_speed: 0.25
     wheel_radius: 0.032
     max_steering: 0.85
+    straight_max_steering: 0.30
+    curve_max_steering: 0.85
+    steering_offset_start: 0.05
+    steering_offset_full: 0.60
+    speed_offset_start: 0.05
+    speed_offset_full: 0.60
+    speed_curve_exponent: 1.0
+    speed_accel_rate: 0.20
+    speed_decel_rate: 2.0
+    derivative_limit: 3.0
+    derivative_filter_alpha: 0.35
+    steering_slew_rate: 4.0
+    offset_timeout: 0.25
+    invalid_hold_speed: 0.25
+    lookahead_feedback_weight: 0.35
+    lateral_feedback_weight: 0.65
+    heading_feedback_gain: 0.35
+    curvature_speed_weight: 0.50
+    curve_offset_relief_start: 0.15
+    curve_offset_relief_full: 0.60
     steering_sign: 1.0
     control_frequency: 50.0
+    autonomous_enabled_on_start: false
     offset_topic: "/segmentation/center_offset"
+    lateral_offset_topic: "/segmentation/bottom_offset"
+    heading_error_topic: "/segmentation/heading_error"
+    curvature_topic: "/segmentation/curvature"
     cmd_vel_topic: "/cmd_vel"

@@ -155,6 +155,7 @@ struct LaneObstacleDebug {
 struct LaneDebugInfo {
   std::vector<LaneBandDebug> bands;
   std::vector<LaneObstacleDebug> obstacle_zones;
+  std::vector<cv::Point3f> raw_points;
   std::vector<cv::Point3f> fit_points;
   std::vector<double> fit_coeffs;
   bool branch_detected{false};
@@ -182,11 +183,17 @@ struct LaneDebugInfo {
   int raw_point_count{0};
   int fit_point_count{0};
   int segment_count{0};
+  float bottom_offset{0.0f};
+  float raw_control_offset{0.0f};
+  float lookahead_x{0.0f};
+  float lookahead_y{0.0f};
+  int image_width{0};
 };
 
 class LaneDecision {
  public:
   void configure(const LaneDecisionConfig& config);
+  void setGuideboardBranchHint(const std::string& branch, bool valid);
   LaneState decide(const cv::Mat& seg_map, const std::vector<Detection>& detections);
   const LaneDebugInfo& debugInfo() const { return debug_info_; }
 
@@ -288,6 +295,7 @@ class LaneDecision {
   void updateStartBoostState(const std::vector<Detection>& detections, int image_height);
   std::string taskState() const;
   void populateDebugInfo(const std::vector<Band>& bands, const std::vector<ObstacleZone>& zones,
+                         const std::vector<cv::Point3f>& raw_points,
                          const std::vector<cv::Point3f>& fit_points,
                          const std::vector<double>& fit_coeffs);
 
@@ -297,6 +305,8 @@ class LaneDecision {
   double last_offset_{0.0};
   bool branch_locked_{false};
   std::string locked_branch_side_{"left"};
+  std::string guideboard_branch_hint_{"left"};
+  bool guideboard_branch_hint_valid_{false};
   double lock_start_time_{0.0};
   int branch_confirm_count_{0};
   int exit_confirm_count_{0};
