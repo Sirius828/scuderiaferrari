@@ -1,4 +1,3 @@
-README.md
 package.xml
 setup.cfg
 setup.py
@@ -11,8 +10,12 @@ setup.py
 ../../build/chassis_controller/chassis_controller.egg-info/zip-safe
 chassis_controller/__init__.py
 chassis_controller/chassis_controller_node.py
+chassis_controller.egg-info/PKG-INFO
+chassis_controller.egg-info/SOURCES.txt
+chassis_controller.egg-info/dependency_links.txt
+chassis_controller.egg-info/entry_points.txt
+chassis_controller.egg-info/requires.txt
+chassis_controller.egg-info/top_level.txt
+chassis_controller.egg-info/zip-safe
 launch/chassis_controller.launch.py
 resource/chassis_controller
-test/test_copyright.py
-test/test_flake8.py
-test/test_pep257.py

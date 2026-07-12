@@ -77,7 +77,7 @@ fused_perception_node:
 
     # Band 扫描
     enable_segment_branch_logic: true
-    band_count: 20
+    band_count: 24
     band_y_min_ratio: 0.60
     band_y_max_ratio: 1.0
     band_height_ratio: 0.015
@@ -86,43 +86,13 @@ fused_perception_node:
     min_pixels_per_band: 80
 
     # 岔路确认
-    branch_detect_min_bands: 1
+    branch_detect_min_bands: 2
     branch_confirm_frames: 3
     branch_detect_far_band_ratio: 0.7
-    near_split_detect_min_bands: 2
-    near_split_detect_near_band_ratio: 0.45
-    near_split_hold_frames: 2
-    near_split_residual_slope_norm: 0.35
-    near_split_residual_bottom_norm: 0.03
-    near_split_template_skip_bands: 10
-    near_split_template_side: "left"
-    near_split_unlock_min_lock_time: 0.8
-    near_split_exit_recent_frames: 60
-    near_split_exit_bottom_shift_norm: 0.18
-    near_split_exit_residual_px: 20.0
-    enable_branch_entry_transition: true
-    branch_transition_near_main_ratio: 0.4
-    branch_transition_min_branch_points: 2
-    branch_transition_samples: 12
-    branch_transition_weight: 1.0
-    branch_transition_use_when_near_single_path: true
-    enable_continuity_branch_selection: false
-    branch_continuity_max_dx_ratio: 0.35
-    branch_continuity_near_band_ratio: 0.5
-    enable_locked_path_continuity: true
-    locked_path_continuity_after_time: 0.5
-    locked_path_continuity_max_dx_ratio: 0.28
-    branch_lock_time: 2.0
-    min_branch_lock_time: 0.8
-    exit_single_path_confirm_frames: 10
-    exit_single_path_min_ratio: 0.8
-
-    # 非对称宽路/合流残留静态判定：当前帧判定，不依赖历史车道宽度
-    asym_wide_segment_ratio: 1.45
-    asym_wide_min_bands: 7
-    asym_wide_center_residual_ratio: 0.16
-    asym_wide_center_residual_px: 90.0
-    asym_wide_min_normal_points: 5
+    enable_encoder_branch_hold: true
+    encoder_count_topic: "/chassis/encoder_count"
+    encoder_hold_counts: 8888
+    encoder_feedback_timeout_sec: 0.30
 
     # 中心线拟合
     fit_min_points: 4

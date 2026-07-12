@@ -1,0 +1,1 @@
+ament_cmake_symlink_install_targets("TARGET_FILES" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/fused_perception_node" "TARGETS" "fused_perception_node" "DESTINATION" "lib/track_perception_cpp")

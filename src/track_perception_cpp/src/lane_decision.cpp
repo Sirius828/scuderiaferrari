@@ -162,13 +162,8 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.left_boundary_template_weight = std::max(0.01f, cfg_.left_boundary_template_weight);
   cfg_.right_boundary_template_min_points = std::max(1, cfg_.right_boundary_template_min_points);
   cfg_.right_boundary_template_weight = std::max(0.01f, cfg_.right_boundary_template_weight);
-  if (cfg_.near_split_template_side != "left" && cfg_.near_split_template_side != "right") {
-    cfg_.near_split_template_side = cfg_.outer_side;
-  }
-  cfg_.near_split_unlock_min_lock_time = std::max(0.0f, cfg_.near_split_unlock_min_lock_time);
-  cfg_.near_split_exit_recent_frames = std::max(0, cfg_.near_split_exit_recent_frames);
-  cfg_.near_split_exit_bottom_shift_norm = std::max(0.0f, cfg_.near_split_exit_bottom_shift_norm);
-  cfg_.near_split_exit_residual_px = std::max(0.0f, cfg_.near_split_exit_residual_px);
+  cfg_.encoder_hold_counts = std::max<int64_t>(0, cfg_.encoder_hold_counts);
+  cfg_.encoder_feedback_timeout_sec = std::max(0.0, cfg_.encoder_feedback_timeout_sec);
   left_boundary_template_offsets_ = parseDoubleList(cfg_.left_boundary_template_offsets);
   right_boundary_template_offsets_ = parseDoubleList(cfg_.right_boundary_template_offsets);
   locked_branch_side_ = cfg_.outer_side;
@@ -184,6 +179,12 @@ void LaneDecision::setGuideboardBranchHint(const std::string& branch, bool valid
     guideboard_branch_hint_ = branch;
     guideboard_branch_hint_valid_ = true;
   }
+}
+
+void LaneDecision::setEncoderCount(int64_t count, double timestamp) {
+  latest_encoder_count_ = count;
+  has_encoder_count_ = true;
+  last_encoder_update_sec_ = timestamp;
 }
 
 LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Detection>& detections) {
@@ -216,17 +217,6 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
   if (cfg_.enable_segment_branch_logic) {
     bands = buildBands(seg_map, detections);
     auto [branch_detected, branch_score] = detectBranchFromBands(bands);
-    auto [near_split_detected, near_split_score] = detectNearSplitFromBands(bands);
-    if (near_split_detected) {
-      near_split_hold_count_ = std::max(0, cfg_.near_split_hold_frames);
-      near_split_recent_count_ = std::max(near_split_recent_count_, cfg_.near_split_exit_recent_frames);
-    } else if (near_split_hold_count_ > 0) {
-      --near_split_hold_count_;
-    }
-    if (!near_split_detected && near_split_recent_count_ > 0) {
-      --near_split_recent_count_;
-    }
-    bool near_split_active = near_split_detected || near_split_hold_count_ > 0;
     int guideboard_count = 0;
     int guideboard_roi_count = 0;
     float guideboard_best_confidence = 0.0f;
@@ -249,155 +239,81 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     bool guideboard_seen = cfg_.enable_guideboard_branch_selection && guideboard_roi_count > 0;
     debug_info_.branch_detected = branch_detected;
     debug_info_.branch_score = branch_score;
-    debug_info_.near_split_detected = near_split_active;
-    debug_info_.near_split_score = near_split_score;
     debug_info_.guideboard_seen = guideboard_seen;
     debug_info_.guideboard_count = guideboard_count;
     debug_info_.guideboard_roi_count = guideboard_roi_count;
     debug_info_.guideboard_best_confidence = guideboard_best_confidence;
     debug_info_.guideboard_best_center = guideboard_best_center;
-    bool near_split_overrides_branch = near_split_active && !guideboard_seen &&
-                                       near_split_score >= branch_score;
-    bool branch_lock_candidate = !near_split_overrides_branch &&
-                                 (branch_detected || (guideboard_seen && branch_score > 0));
-    if (branch_locked_ && near_split_active &&
-        locked_branch_side_ != cfg_.near_split_template_side &&
-        current_time - lock_start_time_ >= cfg_.near_split_unlock_min_lock_time &&
-        near_split_score >= branch_score) {
-      branch_locked_ = false;
-      locked_branch_side_ = cfg_.outer_side;
-      branch_confirm_count_ = 0;
-      exit_confirm_count_ = 0;
-      debug_info_.branch_transition_reason = "near_split_unlock";
-    }
-    if (branch_locked_ && guideboard_seen && guideboard_branch_hint_valid_ &&
-        locked_branch_side_ != guideboard_branch_hint_) {
-      locked_branch_side_ = guideboard_branch_hint_;
-      lock_start_time_ = current_time;
-      exit_confirm_count_ = 0;
-      debug_info_.branch_transition_reason = "guideboard_ocr_override";
-    }
-
     if (!branch_locked_) {
-      if (branch_lock_candidate) {
+      if (branch_detected || (guideboard_seen && branch_score > 0)) {
         ++branch_confirm_count_;
       } else {
         branch_confirm_count_ = 0;
       }
       if (branch_confirm_count_ >= cfg_.branch_confirm_frames) {
-        double last_center_x = last_offset_ * w / 2.0 + w / 2.0;
         std::string target_branch = cfg_.outer_side;
         if (guideboard_seen) {
           target_branch = guideboard_branch_hint_valid_ ? guideboard_branch_hint_ : cfg_.guideboard_branch;
-        } else if (isBoundaryTemplateReady(cfg_.outer_side)) {
-          target_branch = cfg_.outer_side;
-        } else if (cfg_.enable_continuity_branch_selection) {
-          auto continuity_branch = chooseBranchSideByContinuity(bands, w, last_center_x);
-          if (continuity_branch) {
-            target_branch = *continuity_branch;
-          }
         }
         if (target_branch != "left" && target_branch != "right") {
           target_branch = cfg_.outer_side;
         }
 
-        branch_locked_ = true;
+        branch_locked_ = cfg_.enable_encoder_branch_hold;
         locked_branch_side_ = target_branch;
         lock_start_time_ = current_time;
         branch_confirm_count_ = 0;
-        exit_confirm_count_ = 0;
-        (void)branch_score;
-      }
-    } else {
-      int far_bands_count = std::max(1, static_cast<int>(bands.size() * cfg_.branch_detect_far_band_ratio));
-      int single_path_count = 0;
-      for (int i = 0; i < std::min(far_bands_count, static_cast<int>(bands.size())); ++i) {
-        if (bands[i].segments.size() <= 1) {
-          ++single_path_count;
+        encoder_hold_active_ = branch_locked_;
+        encoder_hold_baseline_valid_ = false;
+        encoder_hold_delta_ = 0;
+        if (has_encoder_count_) {
+          encoder_hold_start_count_ = latest_encoder_count_;
+          encoder_hold_baseline_valid_ = true;
         }
-      }
-      double lock_duration = current_time - lock_start_time_;
-      int single_path_required = std::max(
-          cfg_.branch_detect_min_bands,
-          static_cast<int>(std::ceil(far_bands_count * cfg_.exit_single_path_min_ratio)));
-      bool branch_fully_lost = !branch_detected && branch_score == 0;
-      if (lock_duration >= cfg_.min_branch_lock_time && branch_fully_lost &&
-          single_path_count >= single_path_required) {
-        ++exit_confirm_count_;
-      } else {
-        exit_confirm_count_ = 0;
-      }
-      if (lock_duration >= cfg_.min_branch_lock_time &&
-          exit_confirm_count_ >= cfg_.exit_single_path_confirm_frames) {
-        branch_locked_ = false;
-        locked_branch_side_ = cfg_.outer_side;
-        branch_confirm_count_ = 0;
-        exit_confirm_count_ = 0;
       }
     }
 
-    std::string target_side = branch_locked_
-                                  ? locked_branch_side_
-                                  : (near_split_active ? cfg_.near_split_template_side : cfg_.outer_side);
-    double last_center_x = last_offset_ * w / 2.0 + w / 2.0;
-    raw_points = collectCenterlinePoints(bands, branch_locked_, target_side, last_center_x, w, current_time);
-    bool near_split_residual = !branch_detected && !branch_locked_ &&
-                               detectNearSplitResidual(raw_points, w);
-    bool near_split_exit_continuation = !branch_detected && !branch_locked_ &&
-                                        !near_split_active && near_split_recent_count_ > 0 &&
-                                        detectNearSplitExitContinuation(raw_points, w);
-    if (near_split_residual) {
-      near_split_active = true;
-      target_side = cfg_.near_split_template_side;
-      near_split_hold_count_ = std::max(near_split_hold_count_, std::max(0, cfg_.near_split_hold_frames / 2));
-      near_split_recent_count_ = std::max(near_split_recent_count_, cfg_.near_split_exit_recent_frames / 2);
-      debug_info_.near_split_detected = true;
-    } else if (near_split_exit_continuation) {
-      near_split_active = true;
-      target_side = cfg_.near_split_template_side;
-      debug_info_.near_split_detected = true;
-      debug_info_.branch_transition_reason = "near_split_exit";
+    if (branch_locked_ && encoder_hold_active_) {
+      if (has_encoder_count_ && !encoder_hold_baseline_valid_) {
+        encoder_hold_start_count_ = latest_encoder_count_;
+        encoder_hold_baseline_valid_ = true;
+      }
+      if (has_encoder_count_ && encoder_hold_baseline_valid_) {
+        encoder_hold_delta_ = latest_encoder_count_ - encoder_hold_start_count_;
+        if (encoder_hold_delta_ >= cfg_.encoder_hold_counts) {
+          branch_locked_ = false;
+          encoder_hold_active_ = false;
+          encoder_hold_baseline_valid_ = false;
+          encoder_hold_delta_ = 0;
+          locked_branch_side_ = cfg_.outer_side;
+        }
+      }
     }
-    RoadClass road_class = classifyRoadGeometry(bands, raw_points, branch_detected, branch_score,
-                                                near_split_active, w);
+
+    std::string target_side = branch_locked_ ? locked_branch_side_ : cfg_.outer_side;
+    double last_center_x = last_offset_ * w / 2.0 + w / 2.0;
+    raw_points = collectCenterlinePoints(bands, branch_locked_, target_side, last_center_x, w);
+    RoadClass road_class = classifyRoadGeometry(bands, raw_points);
     road_state = roadClassName(road_class);
-    debug_info_.asym_wide_detected = road_class == RoadClass::AsymWide;
-    debug_info_.asym_wide_band_count = countAsymWideBands(bands);
-    debug_info_.center_residual_px = static_cast<float>(calculateCenterResidual(raw_points, w));
-    bool template_trigger = branch_detected || branch_locked_ || near_split_active;
+    bool template_trigger = branch_locked_;
     bool template_active = shouldUseBoundaryTemplate(target_side, template_trigger);
     if (template_active) {
-      int template_min_band_index = near_split_active && !branch_locked_
-                                        ? std::max(0, cfg_.near_split_template_skip_bands)
-                                        : 0;
-      auto template_points = collectBoundaryTemplatePoints(bands, w, target_side,
-                                                           template_min_band_index);
+      auto template_points = collectBoundaryTemplatePoints(bands, w, target_side, 0);
       if (static_cast<int>(template_points.size()) >= boundaryTemplateMinPoints(target_side)) {
         raw_points = std::move(template_points);
-        if (near_split_active && !branch_locked_) {
-          road_state = "NEAR_SPLIT";
-        } else {
-          road_state = "BRANCH";
-        }
+        road_state = "BRANCH";
         debug_info_.left_boundary_template_active = true;
         debug_info_.boundary_template_side = target_side;
         debug_info_.left_boundary_template_reason = "active";
-        debug_info_.branch_entry_transition_active = false;
-        debug_info_.branch_transition_reason = target_side + "_boundary_template";
       } else {
         debug_info_.left_boundary_template_reason = "few_points";
       }
-    } else if (cfg_.enable_left_boundary_template_line) {
-      (void)0;
     }
     int fit_order = (branch_locked_ || debug_info_.left_boundary_template_active) ? cfg_.branch_fit_order : cfg_.fit_order;
     if (debug_info_.left_boundary_template_active) {
       fit_points = raw_points;
     } else {
       fit_points = filterCenterlinePoints(raw_points, w, last_center_x);
-    }
-    if (!debug_info_.left_boundary_template_active && road_class == RoadClass::AsymWide) {
-      fit_points = filterAsymWidePoints(fit_points, bands);
     }
     if (!debug_info_.left_boundary_template_active) {
       appendDetectionFitPoints(fit_points, detections, h);
@@ -656,90 +572,6 @@ std::pair<bool, int> LaneDecision::detectBranchFromBands(const std::vector<Band>
   return {branch_bands >= cfg_.branch_detect_min_bands, branch_bands};
 }
 
-std::pair<bool, int> LaneDecision::detectNearSplitFromBands(const std::vector<Band>& bands) const {
-  if (bands.empty()) {
-    return {false, 0};
-  }
-  int near_count = static_cast<int>(
-      std::ceil(static_cast<double>(bands.size()) *
-                clampValue(cfg_.near_split_detect_near_band_ratio, 0.1f, 1.0f)));
-  near_count = std::max(1, std::min(near_count, static_cast<int>(bands.size())));
-  int start = std::max(0, static_cast<int>(bands.size()) - near_count);
-  int split_bands = 0;
-  for (int i = start; i < static_cast<int>(bands.size()); ++i) {
-    int valid = 0;
-    const auto& segs = bands[i].segments;
-    for (size_t a = 0; a < segs.size(); ++a) {
-      bool isolated = true;
-      for (size_t b = 0; b < segs.size(); ++b) {
-        if (a == b) {
-          continue;
-        }
-        double gap = std::abs(segs[a].center_x - segs[b].center_x) -
-                     (segs[a].width / 2.0 + segs[b].width / 2.0);
-        if (gap < cfg_.min_segment_gap_px) {
-          isolated = false;
-          break;
-        }
-      }
-      if (isolated) {
-        ++valid;
-      }
-    }
-    if (valid >= 2) {
-      ++split_bands;
-    }
-  }
-  return {split_bands >= cfg_.near_split_detect_min_bands, split_bands};
-}
-
-std::optional<std::string> LaneDecision::chooseBranchSideByContinuity(
-    const std::vector<Band>& bands, int image_width, double last_center_x) const {
-  if (bands.empty()) {
-    return std::nullopt;
-  }
-  double near_ratio = clampValue(cfg_.branch_continuity_near_band_ratio, 0.1f, 1.0f);
-  int near_count = std::max(1, static_cast<int>(std::ceil(bands.size() * near_ratio)));
-  double max_dx = std::max(1.0, static_cast<double>(cfg_.branch_continuity_max_dx_ratio) * image_width);
-  const Segment* best_seg = nullptr;
-  const Band* best_band = nullptr;
-  double best_dist = 0.0;
-
-  for (int i = static_cast<int>(bands.size()) - 1; i >= std::max(0, static_cast<int>(bands.size()) - near_count); --i) {
-    if (bands[i].segments.size() < 2) {
-      continue;
-    }
-    auto it = std::min_element(bands[i].segments.begin(), bands[i].segments.end(),
-                               [&](const Segment& a, const Segment& b) {
-                                 return std::abs(a.center_x - last_center_x) < std::abs(b.center_x - last_center_x);
-                               });
-    double dist = std::abs(it->center_x - last_center_x);
-    if (dist > max_dx) {
-      continue;
-    }
-    if (!best_seg || dist < best_dist) {
-      best_seg = &(*it);
-      best_band = &bands[i];
-      best_dist = dist;
-    }
-  }
-  if (!best_seg || !best_band) {
-    return std::nullopt;
-  }
-  auto sorted = best_band->segments;
-  std::sort(sorted.begin(), sorted.end(), [](const Segment& a, const Segment& b) {
-    return a.center_x < b.center_x;
-  });
-  int best_index = 0;
-  for (int i = 0; i < static_cast<int>(sorted.size()); ++i) {
-    if (std::abs(sorted[i].center_x - best_seg->center_x) < 1e-3) {
-      best_index = i;
-      break;
-    }
-  }
-  return best_index < static_cast<int>(sorted.size()) / 2.0 ? "left" : "right";
-}
-
 std::optional<LaneDecision::Segment> LaneDecision::chooseTargetSegment(
     const Band& band, const std::string& side) const {
   if (band.segments.empty()) {
@@ -755,79 +587,8 @@ std::optional<LaneDecision::Segment> LaneDecision::chooseTargetSegment(
                                  [](const Segment& a, const Segment& b) { return a.center_x < b.center_x; });
 }
 
-std::optional<LaneDecision::Segment> LaneDecision::chooseLockedSegmentByContinuity(
-    const Band& band, int image_width, double last_center_x) const {
-  if (band.segments.empty()) {
-    return std::nullopt;
-  }
-  double max_dx = std::max(1.0, static_cast<double>(cfg_.locked_path_continuity_max_dx_ratio) * image_width);
-  if (band.segments.size() == 1) {
-    Segment seg = band.segments.front();
-    if (last_center_x < seg.x0 - max_dx || last_center_x > seg.x1 + max_dx) {
-      return std::nullopt;
-    }
-    return seg;
-  }
-  auto it = std::min_element(band.segments.begin(), band.segments.end(),
-                             [&](const Segment& a, const Segment& b) {
-                               return std::abs(a.center_x - last_center_x) < std::abs(b.center_x - last_center_x);
-                             });
-  if (std::abs(it->center_x - last_center_x) > max_dx) {
-    return std::nullopt;
-  }
-  return *it;
-}
-
-bool LaneDecision::shouldUseLockedPathContinuity(double now) const {
-  return cfg_.enable_locked_path_continuity && branch_locked_ &&
-         (now - lock_start_time_) >= cfg_.locked_path_continuity_after_time;
-}
-
-bool LaneDecision::detectNearSplitResidual(const std::vector<cv::Point3f>& raw_points,
-                                           int image_width) const {
-  if (raw_points.size() < 6 || image_width <= 1) {
-    return false;
-  }
-  auto ordered = raw_points;
-  std::sort(ordered.begin(), ordered.end(), [](const cv::Point3f& a, const cv::Point3f& b) {
-    return a.y < b.y;
-  });
-  double top_x = ordered.front().x;
-  double bottom_x = ordered.back().x;
-  double half_w = image_width / 2.0;
-  double slope_norm = (top_x - bottom_x) / half_w;
-  double bottom_norm = (bottom_x - half_w) / half_w;
-  double top_norm = (top_x - half_w) / half_w;
-  bool right_sweep = slope_norm >= cfg_.near_split_residual_slope_norm &&
-                     bottom_norm >= -cfg_.near_split_residual_bottom_norm;
-  bool bottom_near_center = std::abs(bottom_norm) <= cfg_.near_split_residual_bottom_norm;
-  return right_sweep && bottom_near_center;
-}
-
-bool LaneDecision::detectNearSplitExitContinuation(const std::vector<cv::Point3f>& raw_points,
-                                                   int image_width) const {
-  if (raw_points.size() < 6 || image_width <= 1) {
-    return false;
-  }
-  auto ordered = raw_points;
-  std::sort(ordered.begin(), ordered.end(), [](const cv::Point3f& a, const cv::Point3f& b) {
-    return a.y < b.y;
-  });
-  double top_x = ordered.front().x;
-  double bottom_x = ordered.back().x;
-  double half_w = image_width / 2.0;
-  double slope_norm = (top_x - bottom_x) / half_w;
-  double bottom_norm = (bottom_x - half_w) / half_w;
-  double residual = calculateCenterResidual(raw_points, image_width);
-  bool shifted_near = std::abs(bottom_norm) >= cfg_.near_split_exit_bottom_shift_norm;
-  bool still_morphing = std::abs(slope_norm) >= cfg_.near_split_residual_slope_norm ||
-                        residual >= cfg_.near_split_exit_residual_px;
-  return shifted_near && still_morphing;
-}
-
 LaneDecision::RoadClass LaneDecision::classifyRoadGeometry(
-    const std::vector<Band>& bands, const std::vector<cv::Point3f>& raw_points,
-    bool branch_detected, int branch_score, bool near_split_detected, int image_width) const {
+    const std::vector<Band>& bands, const std::vector<cv::Point3f>& raw_points) const {
   if (branch_locked_) {
     return RoadClass::Branch;
   }
@@ -840,25 +601,6 @@ LaneDecision::RoadClass LaneDecision::classifyRoadGeometry(
   if (valid_band_count <= 0 || static_cast<int>(raw_points.size()) < cfg_.fit_min_points) {
     return RoadClass::LowConfidence;
   }
-  if (near_split_detected && !branch_detected && branch_score == 0) {
-    return RoadClass::NearSplit;
-  }
-  int wide_bands = countAsymWideBands(bands);
-  double residual = calculateCenterResidual(raw_points, image_width);
-  double residual_ratio_limit = std::max(0.0f, cfg_.asym_wide_center_residual_ratio) * image_width;
-  double residual_px_limit = cfg_.asym_wide_center_residual_px > 0.0f
-                                 ? cfg_.asym_wide_center_residual_px
-                                 : residual_ratio_limit;
-  double residual_limit = std::max(1.0, std::min(residual_ratio_limit, residual_px_limit));
-  (void)branch_detected;
-  bool branch_like = branch_score > 0;
-  bool wide = wide_bands >= std::max(1, cfg_.asym_wide_min_bands);
-  bool unstable_center = residual > residual_limit;
-  bool too_few_normal_points = static_cast<int>(raw_points.size()) < std::max(cfg_.fit_min_points,
-                                                                              cfg_.asym_wide_min_normal_points);
-  if (wide || branch_like || unstable_center || too_few_normal_points) {
-    return RoadClass::AsymWide;
-  }
   return RoadClass::Normal;
 }
 
@@ -866,65 +608,12 @@ std::string LaneDecision::roadClassName(RoadClass road_class) const {
   switch (road_class) {
     case RoadClass::Branch:
       return "BRANCH";
-    case RoadClass::NearSplit:
-      return "NEAR_SPLIT";
-    case RoadClass::AsymWide:
-      return "ASYM_WIDE";
     case RoadClass::LowConfidence:
       return "LOW_CONFIDENCE";
     case RoadClass::Normal:
     default:
       return "NORMAL";
   }
-}
-
-int LaneDecision::countAsymWideBands(const std::vector<Band>& bands) const {
-  std::vector<double> single_widths;
-  single_widths.reserve(bands.size());
-  for (const auto& band : bands) {
-    if (band.segments.size() == 1) {
-      single_widths.push_back(band.segments.front().width);
-    }
-  }
-  if (single_widths.size() < 3) {
-    return 0;
-  }
-  std::sort(single_widths.begin(), single_widths.end());
-  double median_width = single_widths[single_widths.size() / 2];
-  if (median_width <= 1.0) {
-    return 0;
-  }
-  double wide_threshold = median_width * std::max(1.05f, cfg_.asym_wide_segment_ratio);
-  int wide_count = 0;
-  int run = 0;
-  int best_run = 0;
-  for (const auto& band : bands) {
-    if (band.segments.size() == 1 && band.segments.front().width >= wide_threshold) {
-      ++wide_count;
-      ++run;
-      best_run = std::max(best_run, run);
-    } else {
-      run = 0;
-    }
-  }
-  return std::max(wide_count, best_run);
-}
-
-double LaneDecision::calculateCenterResidual(const std::vector<cv::Point3f>& points,
-                                             int image_width) const {
-  if (points.size() < 4) {
-    return 0.0;
-  }
-  std::vector<double> coeffs;
-  int order = points.size() >= 5 ? 2 : 1;
-  if (!weightedPolyfit(points, order, &coeffs)) {
-    return static_cast<double>(image_width);
-  }
-  double sum = 0.0;
-  for (const auto& p : points) {
-    sum += std::abs(static_cast<double>(p.x) - evalPoly(coeffs, p.y));
-  }
-  return sum / static_cast<double>(points.size());
 }
 
 double LaneDecision::calculateLaneConfidence(const std::vector<cv::Point3f>& fit_points,
@@ -1067,17 +756,8 @@ std::vector<cv::Point3f> LaneDecision::collectBoundaryTemplatePoints(
 
 std::vector<cv::Point3f> LaneDecision::collectCenterlinePoints(
     std::vector<Band>& bands, bool branch_locked, const std::string& side,
-    std::optional<double> last_center_x, int image_width, double now) {
+    std::optional<double> last_center_x, int image_width) {
   std::vector<cv::Point3f> points;
-  if (branch_locked && cfg_.enable_branch_entry_transition) {
-    auto transition_points = collectBranchGeometryLinePoints(bands, side, image_width);
-    if (!transition_points.empty()) {
-      debug_info_.branch_entry_transition_active = true;
-      return transition_points;
-    }
-  }
-  bool use_locked_continuity = branch_locked && last_center_x &&
-                               shouldUseLockedPathContinuity(now);
   for (auto& band : bands) {
     if (band.segments.empty()) {
       continue;
@@ -1087,12 +767,7 @@ std::vector<cv::Point3f> LaneDecision::collectCenterlinePoints(
       if (band.segments.size() >= 2) {
         target = chooseTargetSegment(band, side);
       } else {
-        if (use_locked_continuity) {
-          target = chooseLockedSegmentByContinuity(band, image_width, *last_center_x);
-        }
-        if (!target) {
-          target = chooseTargetSegment(band, side);
-        }
+        target = chooseTargetSegment(band, side);
       }
     } else {
       if (band.segments.size() == 1) {
@@ -1113,157 +788,6 @@ std::vector<cv::Point3f> LaneDecision::collectCenterlinePoints(
     }
   }
   return points;
-}
-
-std::vector<cv::Point3f> LaneDecision::collectBranchGeometryLinePoints(
-    std::vector<Band>& bands, const std::string& side, int image_width) {
-  if (bands.empty() || side.empty()) {
-    debug_info_.branch_transition_reason = "no_bands";
-    return {};
-  }
-
-  int n = static_cast<int>(bands.size());
-  int near_count = std::max(1, static_cast<int>(
-      std::ceil(n * clampValue(cfg_.branch_transition_near_main_ratio, 0.0f, 1.0f))));
-  std::vector<cv::Point3f> branch_points;
-  std::vector<cv::Point3f> near_main_points;
-  std::vector<int> branch_indices;
-  branch_points.reserve(bands.size());
-  near_main_points.reserve(bands.size());
-  branch_indices.reserve(bands.size());
-
-  for (int i = 0; i < n; ++i) {
-    const auto& band = bands[i];
-    if (band.segments.empty()) {
-      continue;
-    }
-    if (band.segments.size() >= 2) {
-      auto target = chooseTargetSegment(band, side);
-      if (target) {
-        branch_points.emplace_back(static_cast<float>(target->center_x),
-                                   static_cast<float>(band.y_center), 1.0f);
-        branch_indices.push_back(i);
-      }
-    }
-  }
-
-  if (!branch_indices.empty()) {
-    int bottom_branch_index = *std::max_element(branch_indices.begin(), branch_indices.end());
-    for (int i = bottom_branch_index + 1; i < n && static_cast<int>(near_main_points.size()) < near_count; ++i) {
-      const auto& band = bands[i];
-      if (band.segments.size() != 1) {
-        break;
-      }
-      const auto& seg = band.segments.front();
-      near_main_points.emplace_back(static_cast<float>(seg.center_x),
-                                    static_cast<float>(band.y_center), 1.0f);
-    }
-  }
-
-  debug_info_.branch_transition_near_single_bands = static_cast<int>(near_main_points.size());
-  debug_info_.branch_transition_branch_points = static_cast<int>(branch_points.size());
-  if (static_cast<int>(branch_points.size()) <
-      std::max(1, cfg_.branch_transition_min_branch_points)) {
-    debug_info_.branch_transition_reason = "few_branch_points";
-    return {};
-  }
-  if (near_main_points.empty() || !cfg_.branch_transition_use_when_near_single_path) {
-    debug_info_.branch_transition_reason = "branch_only";
-    for (const auto& p : branch_points) {
-      for (auto& band : bands) {
-        if (std::abs(static_cast<double>(p.y) - band.y_center) > 1.0 || band.segments.size() < 2) {
-          continue;
-        }
-        auto target = chooseTargetSegment(band, side);
-        if (target) {
-          band.selected_segment = *target;
-        }
-        break;
-      }
-    }
-    return branch_points;
-  }
-
-  auto avg_point = [](const std::vector<cv::Point3f>& points) {
-    double sx = 0.0;
-    double sy = 0.0;
-    for (const auto& p : points) {
-      sx += p.x;
-      sy += p.y;
-    }
-    double inv = 1.0 / static_cast<double>(points.size());
-    return cv::Point2d(sx * inv, sy * inv);
-  };
-
-  auto slope_or_zero = [](const std::vector<cv::Point3f>& points) {
-    if (points.size() < 2) {
-      return 0.0;
-    }
-    std::vector<double> coeffs;
-    if (weightedPolyfit(points, 1, &coeffs) && coeffs.size() >= 2 &&
-        std::isfinite(coeffs[0])) {
-      return coeffs[0];
-    }
-    return 0.0;
-  };
-
-  cv::Point2d p0 = avg_point(near_main_points);
-  cv::Point2d p1 = avg_point(branch_points);
-  double min_dy = std::max(8.0, static_cast<double>(image_width) * 0.04);
-  if (p0.y <= p1.y + min_dy) {
-    debug_info_.branch_transition_reason = "bad_anchor_order";
-    return {};
-  }
-
-  double dy = p1.y - p0.y;
-  double main_slope = slope_or_zero(near_main_points);
-  double branch_slope = slope_or_zero(branch_points);
-  double tangent_scale = 0.45;
-  cv::Point2d m0(main_slope * dy * tangent_scale, dy * tangent_scale);
-  cv::Point2d m1(branch_slope * dy * tangent_scale, dy * tangent_scale);
-
-  int samples = std::max(4, cfg_.branch_transition_samples);
-  float weight = std::max(0.01f, cfg_.branch_transition_weight);
-  std::vector<cv::Point3f> out;
-  out.reserve(static_cast<size_t>(samples));
-  for (int i = 0; i < samples; ++i) {
-    double t = samples == 1 ? 0.0 : static_cast<double>(i) / static_cast<double>(samples - 1);
-    double tt = t * t;
-    double ttt = tt * t;
-    double h00 = 2.0 * ttt - 3.0 * tt + 1.0;
-    double h10 = ttt - 2.0 * tt + t;
-    double h01 = -2.0 * ttt + 3.0 * tt;
-    double h11 = ttt - tt;
-    double x = h00 * p0.x + h10 * m0.x + h01 * p1.x + h11 * m1.x;
-    double y = h00 * p0.y + h10 * m0.y + h01 * p1.y + h11 * m1.y;
-    x = clampValue(x, 0.0, static_cast<double>(std::max(0, image_width - 1)));
-    out.emplace_back(static_cast<float>(x), static_cast<float>(y), weight);
-  }
-
-  for (auto& band : bands) {
-    if (band.segments.empty()) {
-      continue;
-    }
-    auto nearest = std::min_element(out.begin(), out.end(), [&](const cv::Point3f& a,
-                                                                const cv::Point3f& b) {
-      return std::abs(static_cast<double>(a.y) - band.y_center) <
-             std::abs(static_cast<double>(b.y) - band.y_center);
-    });
-    if (nearest == out.end()) {
-      continue;
-    }
-    Segment seg;
-    seg.center_x = nearest->x;
-    seg.width = 1.0;
-    seg.x0 = static_cast<int>(std::round(nearest->x));
-    seg.x1 = seg.x0;
-    seg.pixel_count = 1;
-    seg.virtual_segment = true;
-    band.selected_segment = seg;
-  }
-
-  debug_info_.branch_transition_reason = "split_entry_to_branch";
-  return out;
 }
 
 std::vector<cv::Point3f> LaneDecision::filterCenterlinePoints(
@@ -1403,63 +927,6 @@ std::vector<cv::Point3f> LaneDecision::filterCenterlinePoints(
     return a.y < b.y;
   });
   return trend;
-}
-
-std::vector<cv::Point3f> LaneDecision::filterAsymWidePoints(
-    const std::vector<cv::Point3f>& points, const std::vector<Band>& bands) const {
-  if (points.empty() || bands.empty()) {
-    return points;
-  }
-  std::vector<double> single_widths;
-  single_widths.reserve(bands.size());
-  for (const auto& band : bands) {
-    if (band.segments.size() == 1) {
-      single_widths.push_back(band.segments.front().width);
-    }
-  }
-  if (single_widths.size() < 3) {
-    return points;
-  }
-  std::sort(single_widths.begin(), single_widths.end());
-  double median_width = single_widths[single_widths.size() / 2];
-  if (median_width <= 1.0) {
-    return points;
-  }
-  double wide_threshold = median_width * std::max(1.05f, cfg_.asym_wide_segment_ratio);
-  std::vector<double> wide_band_y;
-  for (const auto& band : bands) {
-    if (band.segments.size() == 1 && band.segments.front().width >= wide_threshold) {
-      wide_band_y.push_back(band.y_center);
-    }
-  }
-  if (wide_band_y.empty()) {
-    return points;
-  }
-
-  auto is_wide_point = [&](const cv::Point3f& p) {
-    return std::any_of(wide_band_y.begin(), wide_band_y.end(), [&](double y) {
-      return std::abs(static_cast<double>(p.y) - y) <= 1.0;
-    });
-  };
-
-  std::vector<cv::Point3f> kept;
-  kept.reserve(points.size());
-  for (const auto& p : points) {
-    if (!is_wide_point(p)) {
-      kept.push_back(p);
-    }
-  }
-  if (static_cast<int>(kept.size()) >= cfg_.fit_min_points) {
-    return kept;
-  }
-
-  std::vector<cv::Point3f> weighted = points;
-  for (auto& p : weighted) {
-    if (is_wide_point(p)) {
-      p.z = std::max(0.05f, p.z * 0.35f);
-    }
-  }
-  return weighted;
 }
 
 void LaneDecision::appendDetectionFitPoints(std::vector<cv::Point3f>& points,
@@ -1784,8 +1251,15 @@ void LaneDecision::populateDebugInfo(const std::vector<Band>& bands,
   debug_info_.raw_points = raw_points;
   debug_info_.fit_points = fit_points;
   debug_info_.fit_coeffs = fit_coeffs;
-  debug_info_.branch_locked = branch_locked_;
-  debug_info_.locked_branch_side = locked_branch_side_;
+  debug_info_.encoder_hold = encoder_hold_active_ && branch_locked_;
+  debug_info_.encoder_hold_side = debug_info_.encoder_hold ? locked_branch_side_ : "";
+  debug_info_.encoder_count = latest_encoder_count_;
+  debug_info_.encoder_hold_delta = encoder_hold_delta_;
+  debug_info_.encoder_hold_target = cfg_.encoder_hold_counts;
+  debug_info_.encoder_feedback_valid = has_encoder_count_ &&
+      (nowSeconds() - last_encoder_update_sec_) <= cfg_.encoder_feedback_timeout_sec;
+  debug_info_.encoder_feedback_age = has_encoder_count_
+      ? std::max(0.0, nowSeconds() - last_encoder_update_sec_) : 0.0;
   debug_info_.raw_point_count = 0;
   debug_info_.fit_point_count = static_cast<int>(fit_points.size());
   debug_info_.segment_count = 0;

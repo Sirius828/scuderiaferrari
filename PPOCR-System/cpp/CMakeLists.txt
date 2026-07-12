@@ -2,6 +2,15 @@ cmake_minimum_required(VERSION 3.10)
 
 project(rknn_ppocr_system_demo)
 
+set(RKNN_3RDPARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../3rdparty)
+set(RKNN_UTILS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../utils)
+if(NOT EXISTS ${RKNN_3RDPARTY_DIR}/CMakeLists.txt OR
+   NOT EXISTS ${RKNN_UTILS_DIR}/CMakeLists.txt)
+  message(WARNING "Skipping rknn_ppocr_system_demo: external Rockchip 3rdparty/utils dependencies are unavailable")
+  install(CODE "message(STATUS \"rknn_ppocr_system_demo skipped\")")
+  return()
+endif()
+
 if (ENABLE_ASAN)
 	message(STATUS "BUILD WITH ADDRESS SANITIZER")
 	set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
@@ -9,8 +18,8 @@ if (ENABLE_ASAN)
 	set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 endif ()
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../../../3rdparty/ 3rdparty.out)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../../../utils/ utils.out)
+add_subdirectory(${RKNN_3RDPARTY_DIR} 3rdparty.out)
+add_subdirectory(${RKNN_UTILS_DIR} utils.out)
 
 #opencv
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)

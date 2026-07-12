@@ -113,7 +113,6 @@ class LineFollowerController(Node):
         self.lane_debug_center_slope_norm = 0.0
         self.lane_debug_near_slope_norm = 0.0
         self.lane_debug_bottom_rate = 0.0
-        self.lane_debug_center_residual_px = 0.0
         self.lane_debug_raw_points = 0
         self.lane_debug_fit_points = 0
         self.lane_debug_segments = 0
@@ -121,7 +120,6 @@ class LineFollowerController(Node):
         self.lane_debug_branch_score = 0
         self.lane_debug_transition = False
         self.lane_debug_transition_reason = ''
-        self.lane_debug_asym_wide = False
         self.last_lane_debug_time = None
         self.prev_offset = 0.0             # 上一帧偏移量（用于计算微分）
         self.integral = 0.0                # 积分项累积
@@ -770,9 +768,6 @@ class LineFollowerController(Node):
         self.lane_debug_near_slope_norm = float(
             data.get('near_slope_norm', self.lane_debug_near_slope_norm)
         )
-        self.lane_debug_center_residual_px = float(
-            data.get('center_residual_px', self.lane_debug_center_residual_px)
-        )
         self.lane_debug_raw_points = int(data.get('raw_points', self.lane_debug_raw_points))
         self.lane_debug_fit_points = int(data.get('fit_points', self.lane_debug_fit_points))
         self.lane_debug_segments = int(data.get('segments', self.lane_debug_segments))
@@ -782,8 +777,6 @@ class LineFollowerController(Node):
         self.lane_debug_transition_reason = str(
             data.get('transition_reason', self.lane_debug_transition_reason)
         )
-        self.lane_debug_asym_wide = bool(data.get('asym_wide', self.lane_debug_asym_wide))
-
         if previous_time is not None:
             dt = max(1e-3, now - previous_time)
             self.lane_debug_bottom_rate = (self.lane_debug_bottom_norm - previous_bottom) / dt
@@ -1329,7 +1322,6 @@ class LineFollowerController(Node):
                 f'slope={self.lane_debug_center_slope_norm:+.2f} near={self.lane_debug_near_slope_norm:+.2f} '
                 f'bRate={self.lane_debug_bottom_rate:+.2f}/s '
                 f'pts={self.lane_debug_fit_points}/{self.lane_debug_raw_points} '
-                f'res={self.lane_debug_center_residual_px:.0f}px '
                 f'br={int(self.lane_debug_branch_detected)}:{self.lane_debug_branch_score} '
                 f'trans={int(self.lane_debug_transition)} '
                 f'road={self.road_state} conf={self.lane_confidence:.2f} '
@@ -1365,7 +1357,6 @@ class LineFollowerController(Node):
                 f'Slope: {self.lane_debug_center_slope_norm:.2f}, '
                 f'BottomRate: {self.lane_debug_bottom_rate:.2f}/s, '
                 f'FitPts: {self.lane_debug_fit_points}/{self.lane_debug_raw_points}, '
-                f'Residual: {self.lane_debug_center_residual_px:.0f}px, '
                 f'Road: {self.road_state}, '
                 f'dt: {dt*1000:.1f}ms'
             )
@@ -1450,11 +1441,9 @@ class LineFollowerController(Node):
             f'geo_bottom_rate={self.lane_debug_bottom_rate:+.3f} '
             f'fit_points={self.lane_debug_fit_points} '
             f'raw_points={self.lane_debug_raw_points} '
-            f'center_residual_px={self.lane_debug_center_residual_px:.1f} '
             f'branch_detected={self.lane_debug_branch_detected} '
             f'branch_score={self.lane_debug_branch_score} '
             f'transition={self.lane_debug_transition} '
-            f'asym_wide={self.lane_debug_asym_wide} '
             f'conf={self.lane_confidence:.2f} '
             f'road={self.road_state} '
             f'task={self.task_state} '

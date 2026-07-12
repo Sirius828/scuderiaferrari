@@ -17,6 +17,7 @@
 #include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/float32_multi_array.hpp>
+#include <std_msgs/msg/int64.hpp>
 #include <std_msgs/msg/string.hpp>
 
 #include <opencv2/opencv.hpp>
@@ -158,20 +159,18 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"lookahead_y\":" << debug_info.lookahead_y << ","
      << "\"bottom_offset\":" << debug_info.bottom_offset << ","
      << "\"raw_control_offset\":" << debug_info.raw_control_offset << ","
-     << "\"center_residual_px\":" << debug_info.center_residual_px << ","
      << "\"raw_points\":" << debug_info.raw_point_count << ","
      << "\"fit_points\":" << debug_info.fit_point_count << ","
      << "\"segments\":" << debug_info.segment_count << ","
      << "\"branch_detected\":" << (debug_info.branch_detected ? "true" : "false") << ","
      << "\"branch_score\":" << debug_info.branch_score << ","
-     << "\"near_split\":" << (debug_info.near_split_detected ? "true" : "false") << ","
-     << "\"near_split_score\":" << debug_info.near_split_score << ","
-     << "\"branch_locked\":" << (debug_info.branch_locked ? "true" : "false") << ","
-     << "\"locked_branch_side\":\"" << jsonEscape(debug_info.locked_branch_side) << "\","
-     << "\"transition\":" << (debug_info.branch_entry_transition_active ? "true" : "false") << ","
-     << "\"transition_reason\":\"" << jsonEscape(debug_info.branch_transition_reason) << "\","
-     << "\"asym_wide\":" << (debug_info.asym_wide_detected ? "true" : "false") << ","
-     << "\"wide_bands\":" << debug_info.asym_wide_band_count << ","
+     << "\"encoder_hold\":" << (debug_info.encoder_hold ? "true" : "false") << ","
+     << "\"encoder_hold_side\":\"" << jsonEscape(debug_info.encoder_hold_side) << "\","
+     << "\"encoder_count\":" << debug_info.encoder_count << ","
+     << "\"encoder_hold_delta\":" << debug_info.encoder_hold_delta << ","
+     << "\"encoder_hold_target\":" << debug_info.encoder_hold_target << ","
+     << "\"encoder_feedback_valid\":" << (debug_info.encoder_feedback_valid ? "true" : "false") << ","
+     << "\"encoder_feedback_age\":" << debug_info.encoder_feedback_age << ","
      << "\"lb_template\":" << (debug_info.left_boundary_template_active ? "true" : "false") << ","
      << "\"template_side\":\"" << jsonEscape(debug_info.boundary_template_side) << "\","
      << "\"lb_points\":" << debug_info.left_boundary_template_points << ","
@@ -307,23 +306,10 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<int>("branch_detect_min_bands", 2);
     declare_parameter<int>("branch_confirm_frames", 2);
     declare_parameter<double>("branch_detect_far_band_ratio", 0.7);
-    declare_parameter<int>("near_split_detect_min_bands", 2);
-    declare_parameter<double>("near_split_detect_near_band_ratio", 0.45);
-    declare_parameter<int>("near_split_hold_frames", 18);
-    declare_parameter<double>("near_split_residual_slope_norm", 0.22);
-    declare_parameter<double>("near_split_residual_bottom_norm", 0.05);
-    declare_parameter<int>("near_split_template_skip_bands", 4);
-    declare_parameter<std::string>("near_split_template_side", "right");
-    declare_parameter<double>("near_split_unlock_min_lock_time", 0.8);
-    declare_parameter<int>("near_split_exit_recent_frames", 18);
-    declare_parameter<double>("near_split_exit_bottom_shift_norm", 0.18);
-    declare_parameter<double>("near_split_exit_residual_px", 20.0);
-    declare_parameter<bool>("enable_branch_entry_transition", true);
-    declare_parameter<double>("branch_transition_near_main_ratio", 0.4);
-    declare_parameter<int>("branch_transition_min_branch_points", 2);
-    declare_parameter<int>("branch_transition_samples", 12);
-    declare_parameter<double>("branch_transition_weight", 1.0);
-    declare_parameter<bool>("branch_transition_use_when_near_single_path", true);
+    declare_parameter<bool>("enable_encoder_branch_hold", true);
+    declare_parameter<std::string>("encoder_count_topic", "/chassis/encoder_count");
+    declare_parameter<int64_t>("encoder_hold_counts", 5000);
+    declare_parameter<double>("encoder_feedback_timeout_sec", 0.30);
     declare_parameter<bool>("enable_guideboard_branch_selection", true);
     declare_parameter<std::string>("guideboard_branch", "right");
     declare_parameter<double>("guideboard_detect_y0_ratio", 0.2);
@@ -335,21 +321,6 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("ocr_crop_padding_ratio", 0.25);
     declare_parameter<int>("ocr_vote_window", 3);
     declare_parameter<bool>("enable_segment_branch_logic", true);
-    declare_parameter<bool>("enable_continuity_branch_selection", false);
-    declare_parameter<double>("branch_continuity_max_dx_ratio", 0.35);
-    declare_parameter<double>("branch_continuity_near_band_ratio", 0.5);
-    declare_parameter<bool>("enable_locked_path_continuity", true);
-    declare_parameter<double>("locked_path_continuity_after_time", 0.5);
-    declare_parameter<double>("locked_path_continuity_max_dx_ratio", 0.28);
-    declare_parameter<double>("branch_lock_time", 2.0);
-    declare_parameter<double>("min_branch_lock_time", 0.8);
-    declare_parameter<int>("exit_single_path_confirm_frames", 5);
-    declare_parameter<double>("exit_single_path_min_ratio", 0.8);
-    declare_parameter<double>("asym_wide_segment_ratio", 1.45);
-    declare_parameter<int>("asym_wide_min_bands", 3);
-    declare_parameter<double>("asym_wide_center_residual_ratio", 0.16);
-    declare_parameter<double>("asym_wide_center_residual_px", 90.0);
-    declare_parameter<int>("asym_wide_min_normal_points", 5);
     declare_parameter<int>("fit_min_points", 5);
     declare_parameter<int>("fit_order", 2);
     declare_parameter<int>("branch_fit_order", 2);
@@ -482,36 +453,10 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.branch_detect_min_bands = static_cast<int>(get_parameter("branch_detect_min_bands").as_int());
     lane_cfg.branch_confirm_frames = static_cast<int>(get_parameter("branch_confirm_frames").as_int());
     lane_cfg.branch_detect_far_band_ratio = static_cast<float>(get_parameter("branch_detect_far_band_ratio").as_double());
-    lane_cfg.near_split_detect_min_bands =
-        static_cast<int>(get_parameter("near_split_detect_min_bands").as_int());
-    lane_cfg.near_split_detect_near_band_ratio =
-        static_cast<float>(get_parameter("near_split_detect_near_band_ratio").as_double());
-    lane_cfg.near_split_hold_frames =
-        static_cast<int>(get_parameter("near_split_hold_frames").as_int());
-    lane_cfg.near_split_residual_slope_norm =
-        static_cast<float>(get_parameter("near_split_residual_slope_norm").as_double());
-    lane_cfg.near_split_residual_bottom_norm =
-        static_cast<float>(get_parameter("near_split_residual_bottom_norm").as_double());
-    lane_cfg.near_split_template_skip_bands =
-        static_cast<int>(get_parameter("near_split_template_skip_bands").as_int());
-    lane_cfg.near_split_template_side = get_parameter("near_split_template_side").as_string();
-    lane_cfg.near_split_unlock_min_lock_time =
-        static_cast<float>(get_parameter("near_split_unlock_min_lock_time").as_double());
-    lane_cfg.near_split_exit_recent_frames =
-        static_cast<int>(get_parameter("near_split_exit_recent_frames").as_int());
-    lane_cfg.near_split_exit_bottom_shift_norm =
-        static_cast<float>(get_parameter("near_split_exit_bottom_shift_norm").as_double());
-    lane_cfg.near_split_exit_residual_px =
-        static_cast<float>(get_parameter("near_split_exit_residual_px").as_double());
-    lane_cfg.enable_branch_entry_transition = get_parameter("enable_branch_entry_transition").as_bool();
-    lane_cfg.branch_transition_near_main_ratio =
-        static_cast<float>(get_parameter("branch_transition_near_main_ratio").as_double());
-    lane_cfg.branch_transition_min_branch_points =
-        static_cast<int>(get_parameter("branch_transition_min_branch_points").as_int());
-    lane_cfg.branch_transition_samples = static_cast<int>(get_parameter("branch_transition_samples").as_int());
-    lane_cfg.branch_transition_weight = static_cast<float>(get_parameter("branch_transition_weight").as_double());
-    lane_cfg.branch_transition_use_when_near_single_path =
-        get_parameter("branch_transition_use_when_near_single_path").as_bool();
+    lane_cfg.enable_encoder_branch_hold = get_parameter("enable_encoder_branch_hold").as_bool();
+    lane_cfg.encoder_hold_counts = get_parameter("encoder_hold_counts").as_int();
+    lane_cfg.encoder_feedback_timeout_sec = get_parameter("encoder_feedback_timeout_sec").as_double();
+    encoder_count_topic_ = get_parameter("encoder_count_topic").as_string();
     lane_cfg.outer_side = get_parameter("outer_side").as_string();
     lane_cfg.enable_guideboard_branch_selection = get_parameter("enable_guideboard_branch_selection").as_bool();
     lane_cfg.guideboard_branch = get_parameter("guideboard_branch").as_string();
@@ -519,21 +464,6 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.guideboard_detect_y1_ratio = static_cast<float>(get_parameter("guideboard_detect_y1_ratio").as_double());
     lane_guideboard_y0_ratio_ = lane_cfg.guideboard_detect_y0_ratio;
     lane_guideboard_y1_ratio_ = lane_cfg.guideboard_detect_y1_ratio;
-    lane_cfg.enable_continuity_branch_selection = get_parameter("enable_continuity_branch_selection").as_bool();
-    lane_cfg.branch_continuity_max_dx_ratio = static_cast<float>(get_parameter("branch_continuity_max_dx_ratio").as_double());
-    lane_cfg.branch_continuity_near_band_ratio = static_cast<float>(get_parameter("branch_continuity_near_band_ratio").as_double());
-    lane_cfg.enable_locked_path_continuity = get_parameter("enable_locked_path_continuity").as_bool();
-    lane_cfg.locked_path_continuity_after_time = static_cast<float>(get_parameter("locked_path_continuity_after_time").as_double());
-    lane_cfg.locked_path_continuity_max_dx_ratio = static_cast<float>(get_parameter("locked_path_continuity_max_dx_ratio").as_double());
-    lane_cfg.branch_lock_time = static_cast<float>(get_parameter("branch_lock_time").as_double());
-    lane_cfg.min_branch_lock_time = static_cast<float>(get_parameter("min_branch_lock_time").as_double());
-    lane_cfg.exit_single_path_confirm_frames = static_cast<int>(get_parameter("exit_single_path_confirm_frames").as_int());
-    lane_cfg.exit_single_path_min_ratio = static_cast<float>(get_parameter("exit_single_path_min_ratio").as_double());
-    lane_cfg.asym_wide_segment_ratio = static_cast<float>(get_parameter("asym_wide_segment_ratio").as_double());
-    lane_cfg.asym_wide_min_bands = static_cast<int>(get_parameter("asym_wide_min_bands").as_int());
-    lane_cfg.asym_wide_center_residual_ratio = static_cast<float>(get_parameter("asym_wide_center_residual_ratio").as_double());
-    lane_cfg.asym_wide_center_residual_px = static_cast<float>(get_parameter("asym_wide_center_residual_px").as_double());
-    lane_cfg.asym_wide_min_normal_points = static_cast<int>(get_parameter("asym_wide_min_normal_points").as_int());
     lane_cfg.fit_min_points = static_cast<int>(get_parameter("fit_min_points").as_int());
     lane_cfg.fit_order = static_cast<int>(get_parameter("fit_order").as_int());
     lane_cfg.branch_fit_order = static_cast<int>(get_parameter("branch_fit_order").as_int());
@@ -786,7 +716,7 @@ class FusedPerceptionNode : public rclcpp::Node {
         task.ret = guideboard_ocr_.run_mat(crop, &task.result);
       } catch (const cv::Exception& e) {
         task.result.status = PPOCR_STATUS_INFERENCE_FAILED;
-        task.result.error = e.what();
+false        task.result.error = e.what();
       } catch (const std::exception& e) {
         task.result.status = PPOCR_STATUS_INFERENCE_FAILED;
         task.result.error = e.what();
@@ -812,6 +742,11 @@ class FusedPerceptionNode : public rclcpp::Node {
     stop_request_pub_ = create_publisher<std_msgs::msg::Bool>("/perception/stop_request", 10);
     lane_state_pub_ = create_publisher<std_msgs::msg::String>("/perception/lane_state", 10);
     lane_debug_pub_ = create_publisher<std_msgs::msg::String>("/perception/lane_debug", 10);
+    encoder_count_sub_ = create_subscription<std_msgs::msg::Int64>(
+      encoder_count_topic_, rclcpp::QoS(10).reliable(),
+      [this](const std_msgs::msg::Int64::SharedPtr msg) {
+        lane_decision_.setEncoderCount(msg->data, nowSeconds());
+      });
 
     shm_reader_ = std::make_unique<ShmReader>(shm_name_);
     if (!shm_reader_->connect()) {
@@ -1072,7 +1007,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     std::ostringstream status;
     status << lane_state.road_state << " offset=" << lane_state.control_offset
            << " valid=" << (lane_state.is_valid ? 1 : 0) << " task=" << lane_state.task_state
-           << " trans=" << (debug_info.branch_entry_transition_active ? 1 : 0)
+           << " enc_hold=" << (debug_info.encoder_hold ? 1 : 0)
+           << " enc_delta=" << debug_info.encoder_hold_delta
            << " lb_tpl=" << (debug_info.left_boundary_template_active ? 1 : 0)
            << " tpl=" << debug_info.boundary_template_side
            << " alpha=" << std::clamp(blend_alpha_, 0.0f, 1.0f);
@@ -1087,10 +1023,10 @@ class FusedPerceptionNode : public rclcpp::Node {
     }
     if (enable_debug_screenshots_) {
       double now = nowSeconds();
-      bool branch_ok = !debug_screenshot_branch_only_ || debug_info.branch_locked;
+      bool branch_ok = !debug_screenshot_branch_only_ || debug_info.encoder_hold;
       double interval = std::max(0.0, debug_screenshot_interval_sec_);
       if (branch_ok && interval > 0.0 && now - last_debug_screenshot_sec_ >= interval) {
-        saveDebugScreenshot(vis, debug_info.branch_locked ? "branch" : "auto");
+        saveDebugScreenshot(vis, debug_info.encoder_hold ? "branch" : "auto");
         last_debug_screenshot_sec_ = now;
       }
     }
@@ -1234,12 +1170,12 @@ class FusedPerceptionNode : public rclcpp::Node {
       if (debug_info.guideboard_seen && !last_guideboard_seen_) {
         RCLCPP_INFO(get_logger(),
                     "GuideBoard usable: roi_count=%d total=%d best_conf=%.2f center=(%.1f,%.1f); "
-                    "branch_detected=%d score=%d locked=%d side=%s",
+                    "branch_detected=%d score=%d encoder_hold=%d side=%s",
                     debug_info.guideboard_roi_count, debug_info.guideboard_count,
                     debug_info.guideboard_best_confidence, debug_info.guideboard_best_center.x,
                     debug_info.guideboard_best_center.y, debug_info.branch_detected,
-                    debug_info.branch_score, debug_info.branch_locked,
-                    debug_info.locked_branch_side.c_str());
+                    debug_info.branch_score, debug_info.encoder_hold,
+                    debug_info.encoder_hold_side.c_str());
       } else if (!debug_info.guideboard_seen && debug_info.guideboard_count > 0 &&
                  !last_guideboard_seen_) {
         RCLCPP_INFO(get_logger(),
@@ -1252,16 +1188,15 @@ class FusedPerceptionNode : public rclcpp::Node {
       if (debug_info.branch_detected != last_branch_detected_ ||
           debug_info.branch_score != last_branch_score_) {
         RCLCPP_INFO(get_logger(),
-                    "branch_detected=%d score=%d transition=%d near_single=%d branch_points=%d reason=%s "
-                    "lb_tpl=%d tpl_side=%s lb_pts=%d lb_reason=%s asym_wide=%d wide_bands=%d residual=%.1f "
+                    "branch_detected=%d score=%d encoder_hold=%d encoder_delta=%ld/%ld "
+                    "lb_tpl=%d tpl_side=%s lb_pts=%d lb_reason=%s "
                     "segments=%d raw_points=%d fit_points=%d",
                     debug_info.branch_detected, debug_info.branch_score,
-                    debug_info.branch_entry_transition_active, debug_info.branch_transition_near_single_bands,
-                    debug_info.branch_transition_branch_points, debug_info.branch_transition_reason.c_str(),
+                    debug_info.encoder_hold, static_cast<long>(debug_info.encoder_hold_delta),
+                    static_cast<long>(debug_info.encoder_hold_target),
                     debug_info.left_boundary_template_active, debug_info.boundary_template_side.c_str(),
                     debug_info.left_boundary_template_points, debug_info.left_boundary_template_reason.c_str(),
-                    debug_info.asym_wide_detected, debug_info.asym_wide_band_count,
-                    debug_info.center_residual_px, debug_info.segment_count,
+                    debug_info.segment_count,
                     debug_info.raw_point_count, debug_info.fit_point_count);
       }
       if (lane_state.road_state != last_road_state_ ||
@@ -1295,7 +1230,7 @@ class FusedPerceptionNode : public rclcpp::Node {
                 "status road=%s branch=%s offset=%.3f lateral=%.3f heading=%.3f conf=%.2f valid=%d "
                 "seg_conf=%.3f[%.3f,%.3f]/%d "
                 "branch_detected=%d score=%d guideboard_roi=%d/%d guideboard_best=%.2f@(%.0f,%.0f) "
-                "transition=%d near_single=%d branch_pts=%d reason=%s asym=%d wide_bands=%d residual=%.1f "
+                "encoder_hold=%d encoder_delta=%ld/%ld encoder_valid=%d age=%.2f "
                 "lb_tpl=%d tpl_side=%s lb_pts=%d lb_reason=%s obstacles=%zu segments=%d points=%d/%d task=%s",
                 lane_state.road_state.c_str(), lane_state.branch_side.c_str(),
                 lane_state.control_offset, lane_state.lateral_offset, lane_state.heading_error,
@@ -1304,11 +1239,10 @@ class FusedPerceptionNode : public rclcpp::Node {
                 debug_info.branch_detected,
                 debug_info.branch_score, debug_info.guideboard_roi_count, debug_info.guideboard_count,
                 debug_info.guideboard_best_confidence, debug_info.guideboard_best_center.x,
-                debug_info.guideboard_best_center.y, debug_info.branch_entry_transition_active,
-                debug_info.branch_transition_near_single_bands,
-                debug_info.branch_transition_branch_points, debug_info.branch_transition_reason.c_str(),
-                debug_info.asym_wide_detected,
-                debug_info.asym_wide_band_count, debug_info.center_residual_px,
+                debug_info.guideboard_best_center.y, debug_info.encoder_hold,
+                static_cast<long>(debug_info.encoder_hold_delta),
+                static_cast<long>(debug_info.encoder_hold_target),
+                debug_info.encoder_feedback_valid, debug_info.encoder_feedback_age,
                 debug_info.left_boundary_template_active, debug_info.boundary_template_side.c_str(),
                 debug_info.left_boundary_template_points, debug_info.left_boundary_template_reason.c_str(),
                 debug_info.obstacle_zones.size(), debug_info.segment_count,
@@ -1363,6 +1297,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   }
 
   std::string shm_name_;
+  std::string encoder_count_topic_{"/chassis/encoder_count"};
   bool enable_flip_{true};
   int flip_code_{0};
   std::string input_format_{"RGB"};
@@ -1423,6 +1358,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr stop_request_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr lane_state_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr lane_debug_pub_;
+  rclcpp::Subscription<std_msgs::msg::Int64>::SharedPtr encoder_count_sub_;
 
   uint64_t last_fid_{0};
   uint64_t upstream_frames_{0};

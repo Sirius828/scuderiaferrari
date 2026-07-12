@@ -69,7 +69,6 @@ class Sample:
     curve_factor: float = 0.0
     max_steer: float = 0.0
     mode: str = ""
-    residual_px: float = 0.0
     fit_points: int = 0
     raw_points: int = 0
     branch_detected: bool = False
@@ -77,7 +76,6 @@ class Sample:
     near_split: bool = False
     near_split_score: int = 0
     transition: bool = False
-    asym_wide: bool = False
 
 
 @dataclass
@@ -98,7 +96,6 @@ class Window:
         steers = [s.steering for s in self.samples]
         speeds = [s.speed_mps for s in self.samples]
         confs = [s.conf for s in self.samples]
-        residuals = [s.residual_px for s in self.samples]
         fit_points = [s.fit_points for s in self.samples if s.fit_points > 0]
         modes = {}
         for s in self.samples:
@@ -107,6 +104,12 @@ class Window:
         sat_count = sum(
             1 for s in self.samples
             if s.max_steer > 0.0 and abs(s.steering) >= 0.95 * s.max_steer
+        )
+        within_040 = sum(1 for value in offsets if abs(value) <= 0.40) / len(offsets)
+        max_abs_offset = max(abs(value) for value in offsets)
+        offset_jumps = sum(
+            1 for previous, current in zip(offsets, offsets[1:])
+            if abs(current - previous) > 0.15
         )
         heading_leads = sum(
             1 for s in self.samples
@@ -121,7 +124,6 @@ class Window:
         branch_frames = sum(1 for s in self.samples if s.branch_detected or s.branch_score > 0)
         near_split_frames = sum(1 for s in self.samples if s.near_split or s.near_split_score > 0)
         transition_frames = sum(1 for s in self.samples if s.transition)
-        asym_frames = sum(1 for s in self.samples if s.asym_wide)
         modes_text = ",".join(
             f"{mode or '?'}:{count}" for mode, count in sorted(modes.items(), key=lambda item: -item[1])[:4]
         )
@@ -131,16 +133,16 @@ class Window:
             f"modes={modes_text} "
             f"offset avg={statistics.fmean(offsets):+.3f} "
             f"abs95={percentile([abs(v) for v in offsets], 95):.3f} "
+            f"within040={within_040 * 100:.1f}% max_abs={max_abs_offset:.3f} jumps15={offset_jumps} "
             f"heading abs95={percentile([abs(v) for v in headings], 95):.3f} "
             f"steer abs95={percentile([abs(v) for v in steers], 95):.3f} "
             f"maxS avg={statistics.fmean([s.max_steer for s in self.samples]):.2f} "
             f"speed avg/min/max={statistics.fmean(speeds):.2f}/{min(speeds):.2f}/{max(speeds):.2f} "
             f"conf min={min(confs):.2f} low_conf={low_conf} "
             f"high_offset={high_offset} "
-            f"res95={percentile(residuals, 95):.0f}px "
             f"fit_min={min(fit_points) if fit_points else 0} "
             f"branch={branch_frames} near_split={near_split_frames} "
-            f"transition={transition_frames} asym={asym_frames} "
+            f"transition={transition_frames} "
             f"sat={sat_count} "
             f"heading_leads_offset={heading_leads} "
             f"opposite_sign={opposite}"
@@ -220,15 +222,17 @@ class LineFollowDiag(Node):
             data = json.loads(msg.data)
         except json.JSONDecodeError:
             return
-        self.latest.residual_px = float(data.get("center_residual_px", self.latest.residual_px))
-        self.latest.fit_points = int(data.get("fit_points", self.latest.fit_points))
-        self.latest.raw_points = int(data.get("raw_points", self.latest.raw_points))
+        fit_points = data.get("fit_points", self.latest.fit_points)
+        raw_points = data.get("raw_points", self.latest.raw_points)
+        # fused_perception publishes the actual point arrays. Older diagnostics
+        # expected integer counts, so accept both wire formats.
+        self.latest.fit_points = len(fit_points) if isinstance(fit_points, list) else int(fit_points)
+        self.latest.raw_points = len(raw_points) if isinstance(raw_points, list) else int(raw_points)
         self.latest.branch_detected = bool(data.get("branch_detected", self.latest.branch_detected))
         self.latest.branch_score = int(data.get("branch_score", self.latest.branch_score))
         self.latest.near_split = bool(data.get("near_split", self.latest.near_split))
         self.latest.near_split_score = int(data.get("near_split_score", self.latest.near_split_score))
         self.latest.transition = bool(data.get("transition", self.latest.transition))
-        self.latest.asym_wide = bool(data.get("asym_wide", self.latest.asym_wide))
         self.record()
 
     def on_cmd_vel(self, msg):

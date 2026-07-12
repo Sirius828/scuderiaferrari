@@ -10,7 +10,7 @@
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int8, Int32
+from std_msgs.msg import Int8, Int32, Int64
 from geometry_msgs.msg import Twist
 import serial
 import re
@@ -46,6 +46,7 @@ class ChassisController(Node):
         self.speed = 0.0      # 速度 rad/s
         self.steering_ratio = 0.0  # 转向比例 -1.0(右满) 到 1.0(左满)
         self.latest_encoder_delta = 0
+        self.encoder_count = 0
         self.latest_speed_set_feedback = 0
         
         # 订阅话题 - 控制指令
@@ -55,6 +56,7 @@ class ChassisController(Node):
         
         # 发布话题 - 底盘反馈
         self.encoder_delta_pub = self.create_publisher(Int32, '/chassis/encoder_delta', 10)
+        self.encoder_count_pub = self.create_publisher(Int64, '/chassis/encoder_count', 10)
         self.speed_set_feedback_pub = self.create_publisher(Int32, '/chassis/speed_set_feedback', 10)
         
         # 初始化串口
@@ -254,11 +256,16 @@ class ChassisController(Node):
                                 speed_set_feedback = int(match.group(2))
 
                                 self.latest_encoder_delta = encoder_delta
+                                self.encoder_count += encoder_delta
                                 self.latest_speed_set_feedback = speed_set_feedback
 
                                 encoder_msg = Int32()
                                 encoder_msg.data = encoder_delta
                                 self.encoder_delta_pub.publish(encoder_msg)
+
+                                encoder_count_msg = Int64()
+                                encoder_count_msg.data = self.encoder_count
+                                self.encoder_count_pub.publish(encoder_count_msg)
 
                                 speed_set_msg = Int32()
                                 speed_set_msg.data = speed_set_feedback
