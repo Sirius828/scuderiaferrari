@@ -58,8 +58,9 @@ struct ControllerParameters
   double steering_slew_rate{4.0};
   double offset_timeout{0.25};
   double invalid_hold_speed_mps{0.25};
-  double lookahead_feedback_weight{0.35};
-  double lateral_feedback_weight{0.65};
+  double offset_y07_weight{0.20};
+  double offset_y08_weight{0.30};
+  double offset_y09_weight{0.50};
   double heading_feedback_gain{0.35};
   double curvature_speed_weight{0.50};
   double curve_offset_relief_start{0.15};
@@ -101,8 +102,9 @@ public:
     declare_parameter<double>("steering_slew_rate", params_.steering_slew_rate);
     declare_parameter<double>("offset_timeout", params_.offset_timeout);
     declare_parameter<double>("invalid_hold_speed", params_.invalid_hold_speed_mps);
-    declare_parameter<double>("lookahead_feedback_weight", params_.lookahead_feedback_weight);
-    declare_parameter<double>("lateral_feedback_weight", params_.lateral_feedback_weight);
+    declare_parameter<double>("offset_y07_weight", params_.offset_y07_weight);
+    declare_parameter<double>("offset_y08_weight", params_.offset_y08_weight);
+    declare_parameter<double>("offset_y09_weight", params_.offset_y09_weight);
     declare_parameter<double>("heading_feedback_gain", params_.heading_feedback_gain);
     declare_parameter<double>("curvature_speed_weight", params_.curvature_speed_weight);
     declare_parameter<double>("curve_offset_relief_start", params_.curve_offset_relief_start);
@@ -118,8 +120,9 @@ public:
     declare_parameter<double>("steering_sign", 1.0);
     declare_parameter<double>("control_frequency", 50.0);
     declare_parameter<bool>("autonomous_enabled_on_start", false);
-    declare_parameter<std::string>("offset_topic", "/segmentation/center_offset");
-    declare_parameter<std::string>("lateral_offset_topic", "/segmentation/bottom_offset");
+    declare_parameter<std::string>("offset_y07_topic", "/segmentation/offset_y07");
+    declare_parameter<std::string>("offset_y08_topic", "/segmentation/offset_y08");
+    declare_parameter<std::string>("offset_y09_topic", "/segmentation/offset_y09");
     declare_parameter<std::string>("heading_error_topic", "/segmentation/heading_error");
     declare_parameter<std::string>("curvature_topic", "/segmentation/curvature");
     declare_parameter<std::string>("lane_state_topic", "/perception/lane_state");
@@ -131,12 +134,15 @@ public:
     rclcpp::QoS sensor_qos(10);
     sensor_qos.best_effort();
 
-    offset_subscription_ = create_subscription<std_msgs::msg::Float32>(
-      offset_topic_, sensor_qos,
-      std::bind(&LineFollowerControllerCpp::offset_callback, this, std::placeholders::_1));
-    lateral_offset_subscription_ = create_subscription<std_msgs::msg::Float32>(
-      lateral_offset_topic_, sensor_qos,
-      std::bind(&LineFollowerControllerCpp::lateral_offset_callback, this, std::placeholders::_1));
+    offset_y07_subscription_ = create_subscription<std_msgs::msg::Float32>(
+      offset_y07_topic_, sensor_qos,
+      std::bind(&LineFollowerControllerCpp::offset_y07_callback, this, std::placeholders::_1));
+    offset_y08_subscription_ = create_subscription<std_msgs::msg::Float32>(
+      offset_y08_topic_, sensor_qos,
+      std::bind(&LineFollowerControllerCpp::offset_y08_callback, this, std::placeholders::_1));
+    offset_y09_subscription_ = create_subscription<std_msgs::msg::Float32>(
+      offset_y09_topic_, sensor_qos,
+      std::bind(&LineFollowerControllerCpp::offset_y09_callback, this, std::placeholders::_1));
     heading_error_subscription_ = create_subscription<std_msgs::msg::Float32>(
       heading_error_topic_, sensor_qos,
       std::bind(&LineFollowerControllerCpp::heading_error_callback, this, std::placeholders::_1));
@@ -227,8 +233,9 @@ private:
     params_.steering_slew_rate = get_parameter("steering_slew_rate").as_double();
     params_.offset_timeout = get_parameter("offset_timeout").as_double();
     params_.invalid_hold_speed_mps = get_parameter("invalid_hold_speed").as_double();
-    params_.lookahead_feedback_weight = get_parameter("lookahead_feedback_weight").as_double();
-    params_.lateral_feedback_weight = get_parameter("lateral_feedback_weight").as_double();
+    params_.offset_y07_weight = get_parameter("offset_y07_weight").as_double();
+    params_.offset_y08_weight = get_parameter("offset_y08_weight").as_double();
+    params_.offset_y09_weight = get_parameter("offset_y09_weight").as_double();
     params_.heading_feedback_gain = get_parameter("heading_feedback_gain").as_double();
     params_.curvature_speed_weight = get_parameter("curvature_speed_weight").as_double();
     params_.curve_offset_relief_start = get_parameter("curve_offset_relief_start").as_double();
@@ -244,8 +251,9 @@ private:
     steering_sign_ = get_parameter("steering_sign").as_double();
     control_frequency_ = get_parameter("control_frequency").as_double();
     autonomous_enabled_on_start_ = get_parameter("autonomous_enabled_on_start").as_bool();
-    offset_topic_ = get_parameter("offset_topic").as_string();
-    lateral_offset_topic_ = get_parameter("lateral_offset_topic").as_string();
+    offset_y07_topic_ = get_parameter("offset_y07_topic").as_string();
+    offset_y08_topic_ = get_parameter("offset_y08_topic").as_string();
+    offset_y09_topic_ = get_parameter("offset_y09_topic").as_string();
     heading_error_topic_ = get_parameter("heading_error_topic").as_string();
     curvature_topic_ = get_parameter("curvature_topic").as_string();
     lane_state_topic_ = get_parameter("lane_state_topic").as_string();
@@ -348,15 +356,16 @@ private:
     {
       return fail("invalid_hold_speed must be >= 0 and <= linear_speed");
     }
-    if (!std::isfinite(parameters.lookahead_feedback_weight) ||
-      parameters.lookahead_feedback_weight < 0.0 || parameters.lookahead_feedback_weight > 1.0)
+    if (!std::isfinite(parameters.offset_y07_weight) || parameters.offset_y07_weight < 0.0 ||
+      !std::isfinite(parameters.offset_y08_weight) || parameters.offset_y08_weight < 0.0 ||
+      !std::isfinite(parameters.offset_y09_weight) || parameters.offset_y09_weight < 0.0)
     {
-      return fail("lookahead_feedback_weight must be in [0, 1]");
+      return fail("offset weights must be finite and >= 0");
     }
-    if (!std::isfinite(parameters.lateral_feedback_weight) ||
-      parameters.lateral_feedback_weight < 0.0 || parameters.lateral_feedback_weight > 1.0)
+    if (parameters.offset_y07_weight + parameters.offset_y08_weight +
+        parameters.offset_y09_weight <= 1e-9)
     {
-      return fail("lateral_feedback_weight must be in [0, 1]");
+      return fail("offset weights must have a positive sum");
     }
     if (!std::isfinite(parameters.heading_feedback_gain) || parameters.heading_feedback_gain < 0.0) {
       return fail("heading_feedback_gain must be >= 0");
@@ -408,10 +417,8 @@ private:
     if (!std::isfinite(control_frequency_) || control_frequency_ <= 0.0) {
       throw std::runtime_error("control_frequency must be finite and > 0");
     }
-    if (offset_topic_.empty()) {
-      throw std::runtime_error("offset_topic must not be empty");
-    }
-    if (lateral_offset_topic_.empty() || heading_error_topic_.empty() || curvature_topic_.empty()) {
+    if (offset_y07_topic_.empty() || offset_y08_topic_.empty() || offset_y09_topic_.empty() ||
+      heading_error_topic_.empty() || curvature_topic_.empty()) {
       throw std::runtime_error("geometry feedback topics must not be empty");
     }
     if (cmd_vel_topic_.empty()) {
@@ -427,8 +434,9 @@ private:
 
     for (const auto & parameter : parameters) {
       const auto & name = parameter.get_name();
-      if (name == "control_frequency" || name == "offset_topic" ||
-        name == "lateral_offset_topic" || name == "heading_error_topic" ||
+      if (name == "control_frequency" || name == "offset_y07_topic" ||
+        name == "offset_y08_topic" || name == "offset_y09_topic" ||
+        name == "heading_error_topic" ||
         name == "curvature_topic" || name == "lane_state_topic" || name == "cmd_vel_topic" ||
         name == "autonomous_enabled_on_start")
       {
@@ -475,10 +483,12 @@ private:
         pending.offset_timeout = parameter.as_double();
       } else if (name == "invalid_hold_speed") {
         pending.invalid_hold_speed_mps = parameter.as_double();
-      } else if (name == "lookahead_feedback_weight") {
-        pending.lookahead_feedback_weight = parameter.as_double();
-      } else if (name == "lateral_feedback_weight") {
-        pending.lateral_feedback_weight = parameter.as_double();
+      } else if (name == "offset_y07_weight") {
+        pending.offset_y07_weight = parameter.as_double();
+      } else if (name == "offset_y08_weight") {
+        pending.offset_y08_weight = parameter.as_double();
+      } else if (name == "offset_y09_weight") {
+        pending.offset_y09_weight = parameter.as_double();
       } else if (name == "heading_feedback_gain") {
         pending.heading_feedback_gain = parameter.as_double();
       } else if (name == "curvature_speed_weight") {
@@ -541,16 +551,22 @@ private:
     return result;
   }
 
-  void offset_callback(const std_msgs::msg::Float32::SharedPtr msg)
+  void offset_y07_callback(const std_msgs::msg::Float32::SharedPtr msg)
   {
-    const double value = static_cast<double>(msg->data);
-    if (!std::isfinite(value)) {
-      has_offset_ = false;
-      return;
-    }
-    current_offset_ = std::clamp(value, -1.0, 1.0);
-    has_offset_ = true;
-    last_offset_time_ = std::chrono::steady_clock::now();
+    update_geometry_value(
+      msg->data, &current_offset_y07_, &has_offset_y07_, &last_offset_y07_time_);
+  }
+
+  void offset_y08_callback(const std_msgs::msg::Float32::SharedPtr msg)
+  {
+    update_geometry_value(
+      msg->data, &current_offset_y08_, &has_offset_y08_, &last_offset_y08_time_);
+  }
+
+  void offset_y09_callback(const std_msgs::msg::Float32::SharedPtr msg)
+  {
+    update_geometry_value(
+      msg->data, &current_offset_y09_, &has_offset_y09_, &last_offset_y09_time_);
   }
 
   void valid_callback(const std_msgs::msg::Bool::SharedPtr msg)
@@ -558,11 +574,6 @@ private:
     is_valid_ = msg->data;
     has_valid_message_ = true;
     last_valid_time_ = std::chrono::steady_clock::now();
-  }
-
-  void lateral_offset_callback(const std_msgs::msg::Float32::SharedPtr msg)
-  {
-    update_geometry_value(msg->data, &current_lateral_offset_, &has_lateral_offset_, &last_lateral_offset_time_);
   }
 
   void heading_error_callback(const std_msgs::msg::Float32::SharedPtr msg)
@@ -695,15 +706,17 @@ private:
   bool start_ready(std::string * reason) const
   {
     const auto now = std::chrono::steady_clock::now();
-    if (!has_offset_) {
+    if (!has_offset_y07_ || !has_offset_y08_ || !has_offset_y09_) {
       if (reason) {
-        *reason = "no finite offset received";
+        *reason = "one or more preview offsets have not been received";
       }
       return false;
     }
-    if (offset_age_seconds(now) > params_.offset_timeout) {
+    if (offset_age_seconds(last_offset_y07_time_, has_offset_y07_, now) > params_.offset_timeout ||
+        offset_age_seconds(last_offset_y08_time_, has_offset_y08_, now) > params_.offset_timeout ||
+        offset_age_seconds(last_offset_y09_time_, has_offset_y09_, now) > params_.offset_timeout) {
       if (reason) {
-        *reason = "offset is stale";
+        *reason = "one or more preview offsets are stale";
       }
       return false;
     }
@@ -764,7 +777,6 @@ private:
     invalid_since_.reset();
     current_speed_mps_ = 0.0;
     current_steering_ = 0.0;
-    previous_offset_ = current_offset_;
     previous_control_error_ = compute_control_error();
     filtered_derivative_ = 0.0;
     previous_control_time_ = now;
@@ -784,7 +796,6 @@ private:
     current_speed_mps_ = 0.0;
     current_steering_ = 0.0;
     filtered_derivative_ = 0.0;
-    previous_offset_ = current_offset_;
     previous_control_error_ = compute_control_error();
     previous_control_time_ = std::chrono::steady_clock::now();
     publish_stop_state();
@@ -857,7 +868,6 @@ private:
       }
       publish_debug(now);
       previous_control_time_ = now;
-      previous_offset_ = current_offset_;
       previous_control_error_ = compute_control_error();
       filtered_derivative_ = 0.0;
       return;
@@ -898,7 +908,6 @@ private:
       last_mode_ = "invalid_hold";
       publish_debug(now);
       previous_control_time_ = now;
-      previous_offset_ = current_offset_;
       filtered_derivative_ = 0.0;
       return;
     }
@@ -929,16 +938,18 @@ private:
     publish_motion_command(current_speed_mps_, current_steering_);
     last_mode_ = "running";
     publish_debug(now);
-    previous_offset_ = current_offset_;
     previous_control_error_ = control_error;
     previous_control_time_ = now;
   }
 
   bool perception_ready(const std::chrono::steady_clock::time_point & now) const
   {
-    return has_offset_ && has_valid_message_ && is_valid_ &&
+    return has_offset_y07_ && has_offset_y08_ && has_offset_y09_ &&
+           has_valid_message_ && is_valid_ &&
            lane_state_ready(now) &&
-           offset_age_seconds(now) <= params_.offset_timeout &&
+           offset_age_seconds(last_offset_y07_time_, has_offset_y07_, now) <= params_.offset_timeout &&
+           offset_age_seconds(last_offset_y08_time_, has_offset_y08_, now) <= params_.offset_timeout &&
+           offset_age_seconds(last_offset_y09_time_, has_offset_y09_, now) <= params_.offset_timeout &&
            valid_age_seconds(now) <= params_.offset_timeout &&
            geometry_ready(now);
   }
@@ -953,8 +964,11 @@ private:
 
   bool geometry_ready(const std::chrono::steady_clock::time_point & now) const
   {
-    return has_lateral_offset_ && has_heading_error_ && has_curvature_ &&
-           geometry_age_seconds(last_lateral_offset_time_, has_lateral_offset_, now) <= params_.offset_timeout &&
+    return has_offset_y07_ && has_offset_y08_ && has_offset_y09_ &&
+           has_heading_error_ && has_curvature_ &&
+           geometry_age_seconds(last_offset_y07_time_, has_offset_y07_, now) <= params_.offset_timeout &&
+           geometry_age_seconds(last_offset_y08_time_, has_offset_y08_, now) <= params_.offset_timeout &&
+           geometry_age_seconds(last_offset_y09_time_, has_offset_y09_, now) <= params_.offset_timeout &&
            geometry_age_seconds(last_heading_error_time_, has_heading_error_, now) <= params_.offset_timeout &&
            geometry_age_seconds(last_curvature_time_, has_curvature_, now) <= params_.offset_timeout;
   }
@@ -969,12 +983,14 @@ private:
     return std::chrono::duration<double>(now - timestamp).count();
   }
 
-  double offset_age_seconds(const std::chrono::steady_clock::time_point & now) const
+  double offset_age_seconds(
+    const std::chrono::steady_clock::time_point & timestamp, bool has_value,
+    const std::chrono::steady_clock::time_point & now) const
   {
-    if (!has_offset_) {
+    if (!has_value) {
       return std::numeric_limits<double>::infinity();
     }
-    return std::chrono::duration<double>(now - last_offset_time_).count();
+    return std::chrono::duration<double>(now - timestamp).count();
   }
 
   double valid_age_seconds(const std::chrono::steady_clock::time_point & now) const
@@ -1018,20 +1034,31 @@ private:
       (params_.curve_max_steering - params_.straight_max_steering) * ratio;
   }
 
+  double compute_weighted_offset() const
+  {
+    const double weight_sum = params_.offset_y07_weight +
+      params_.offset_y08_weight + params_.offset_y09_weight;
+    if (weight_sum <= 1e-9) {
+      return 0.0;
+    }
+    return std::clamp(
+      (params_.offset_y07_weight * current_offset_y07_ +
+       params_.offset_y08_weight * current_offset_y08_ +
+       params_.offset_y09_weight * current_offset_y09_) / weight_sum,
+      -1.0, 1.0);
+  }
+
   double compute_control_error() const
   {
-    const double predictive_weight =
-      params_.lookahead_feedback_weight *
-      (params_.enable_curve_offset_relief ? compute_offset_relief() : 1.0);
+    const double weighted_offset = compute_weighted_offset();
     return std::clamp(
-      predictive_weight * current_offset_ +
-      params_.lateral_feedback_weight * current_lateral_offset_ +
+      weighted_offset +
       params_.heading_feedback_gain * current_heading_error_, -1.0, 1.0);
   }
 
   double compute_curve_risk() const
   {
-    const double lateral_risk = std::abs(current_lateral_offset_);
+    const double lateral_risk = std::abs(current_offset_y09_);
     const double heading_risk = std::abs(current_heading_error_);
     const double curvature_risk = params_.curvature_speed_weight * std::abs(current_curvature_);
     const double predictive_risk = compute_predictive_offset_risk();
@@ -1055,9 +1082,9 @@ private:
   double compute_predictive_offset_risk() const
   {
     if (!params_.enable_curve_offset_allowance) {
-      return compute_offset_relief() * std::abs(current_offset_);
+      return compute_offset_relief() * std::abs(compute_weighted_offset());
     }
-    return std::max(0.0, std::abs(current_offset_) - compute_allowed_offset());
+    return std::max(0.0, std::abs(compute_weighted_offset()) - compute_allowed_offset());
   }
 
   double compute_curve_strength() const
@@ -1138,7 +1165,8 @@ private:
     const double curve_strength = compute_curve_strength();
     const double offset_relief = compute_offset_relief();
     const double allowed_offset = compute_allowed_offset();
-    const double offset_excess = std::max(0.0, std::abs(current_offset_) - allowed_offset);
+    const double weighted_offset = compute_weighted_offset();
+    const double offset_excess = std::max(0.0, std::abs(weighted_offset) - allowed_offset);
     const double dynamic_max = compute_dynamic_max_steering(curve_risk);
     text << std::fixed << std::setprecision(3)
          << "mode=" << last_mode_
@@ -1149,15 +1177,18 @@ private:
          << " confidence=" << lane_confidence_
          << " road_state=" << lane_road_state_
          << " lane_age=" << geometry_age_seconds(last_lane_state_time_, has_lane_state_, now)
-         << " bottom_age=" << geometry_age_seconds(last_lateral_offset_time_, has_lateral_offset_, now)
+         << " offset_y07_age=" << geometry_age_seconds(last_offset_y07_time_, has_offset_y07_, now)
+         << " offset_y08_age=" << geometry_age_seconds(last_offset_y08_time_, has_offset_y08_, now)
+         << " offset_y09_age=" << geometry_age_seconds(last_offset_y09_time_, has_offset_y09_, now)
          << " heading_age=" << geometry_age_seconds(last_heading_error_time_, has_heading_error_, now)
          << " curvature_age=" << geometry_age_seconds(last_curvature_time_, has_curvature_, now)
          << " perception_ready=" << (perception_ready(now) ? "True" : "False")
          << " stop_request=" << (stop_request_active_ ? "True" : "False")
          << " emergency=" << (emergency_stop_active_ ? "True" : "False")
-         << " offset=" << current_offset_
-         << " offset_age=" << offset_age_seconds(now)
-         << " bottom_offset=" << current_lateral_offset_
+         << " offset_y07=" << current_offset_y07_
+         << " offset_y08=" << current_offset_y08_
+         << " offset_y09=" << current_offset_y09_
+         << " weighted_offset=" << weighted_offset
          << " heading_error=" << current_heading_error_
          << " curvature=" << current_curvature_
          << " control_error=" << control_error
@@ -1189,8 +1220,9 @@ private:
   double control_frequency_{50.0};
   bool autonomous_enabled_on_start_{false};
   bool auto_start_pending_{false};
-  std::string offset_topic_{"/segmentation/center_offset"};
-  std::string lateral_offset_topic_{"/segmentation/bottom_offset"};
+  std::string offset_y07_topic_{"/segmentation/offset_y07"};
+  std::string offset_y08_topic_{"/segmentation/offset_y08"};
+  std::string offset_y09_topic_{"/segmentation/offset_y09"};
   std::string heading_error_topic_{"/segmentation/heading_error"};
   std::string curvature_topic_{"/segmentation/curvature"};
   std::string lane_state_topic_{"/perception/lane_state"};
@@ -1198,9 +1230,10 @@ private:
 
   bool auto_enabled_{false};
   bool safety_locked_{false};
-  bool has_offset_{false};
+  bool has_offset_y07_{false};
+  bool has_offset_y08_{false};
+  bool has_offset_y09_{false};
   bool has_valid_message_{false};
-  bool has_lateral_offset_{false};
   bool has_heading_error_{false};
   bool has_curvature_{false};
   bool has_lane_state_{false};
@@ -1208,20 +1241,21 @@ private:
   bool lane_state_valid_{false};
   bool stop_request_active_{false};
   bool emergency_stop_active_{false};
-  double current_offset_{0.0};
-  double current_lateral_offset_{0.0};
+  double current_offset_y07_{0.0};
+  double current_offset_y08_{0.0};
+  double current_offset_y09_{0.0};
   double current_heading_error_{0.0};
   double current_curvature_{0.0};
   double lane_confidence_{0.0};
-  double previous_offset_{0.0};
   double previous_control_error_{0.0};
   double filtered_derivative_{0.0};
   double current_speed_mps_{0.0};
   double current_steering_{0.0};
   std::optional<std::chrono::steady_clock::time_point> invalid_since_;
-  std::chrono::steady_clock::time_point last_offset_time_;
   std::chrono::steady_clock::time_point last_valid_time_;
-  std::chrono::steady_clock::time_point last_lateral_offset_time_;
+  std::chrono::steady_clock::time_point last_offset_y07_time_;
+  std::chrono::steady_clock::time_point last_offset_y08_time_;
+  std::chrono::steady_clock::time_point last_offset_y09_time_;
   std::chrono::steady_clock::time_point last_heading_error_time_;
   std::chrono::steady_clock::time_point last_curvature_time_;
   std::chrono::steady_clock::time_point last_lane_state_time_;
@@ -1230,8 +1264,9 @@ private:
   std::string last_mode_{"disabled"};
   std::string stop_reason_{"startup_disabled"};
 
-  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr offset_subscription_;
-  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr lateral_offset_subscription_;
+  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr offset_y07_subscription_;
+  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr offset_y08_subscription_;
+  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr offset_y09_subscription_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr heading_error_subscription_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr curvature_subscription_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr valid_subscription_;

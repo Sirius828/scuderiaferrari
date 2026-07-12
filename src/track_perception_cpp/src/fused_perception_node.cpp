@@ -155,10 +155,15 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"center_slope_norm\":" << (top_n - bottom_n) << ","
      << "\"near_slope_norm\":" << (mid_n - bottom_n) << ","
      << "\"image_width\":" << image_width << ","
-     << "\"lookahead_x\":" << debug_info.lookahead_x << ","
-     << "\"lookahead_y\":" << debug_info.lookahead_y << ","
-     << "\"bottom_offset\":" << debug_info.bottom_offset << ","
-     << "\"raw_control_offset\":" << debug_info.raw_control_offset << ","
+     << "\"offset_y07\":" << debug_info.offset_y07 << ","
+     << "\"offset_y08\":" << debug_info.offset_y08 << ","
+     << "\"offset_y09\":" << debug_info.offset_y09 << ","
+     << "\"raw_offset_y07\":" << debug_info.raw_offset_y07 << ","
+     << "\"raw_offset_y08\":" << debug_info.raw_offset_y08 << ","
+     << "\"raw_offset_y09\":" << debug_info.raw_offset_y09 << ","
+     << "\"fit_y_min\":" << debug_info.fit_y_min << ","
+     << "\"fit_y_max\":" << debug_info.fit_y_max << ","
+     << "\"fit_y_span\":" << debug_info.fit_y_span << ","
      << "\"raw_points\":" << debug_info.raw_point_count << ","
      << "\"fit_points\":" << debug_info.fit_point_count << ","
      << "\"segments\":" << debug_info.segment_count << ","
@@ -369,10 +374,9 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("finish_stop_arm_y_ratio", 0.70);
     declare_parameter<int>("finish_stop_lost_frames", 3);
     declare_parameter<double>("finish_stop_max_age", 0.5);
-    declare_parameter<double>("lookahead_y_ratio", 0.75);
-    declare_parameter<bool>("use_heading_term", true);
-    declare_parameter<double>("heading_weight", 0.10);
-    declare_parameter<double>("near_offset_weight", 0.90);
+    declare_parameter<double>("offset_y07_ratio", 0.70);
+    declare_parameter<double>("offset_y08_ratio", 0.80);
+    declare_parameter<double>("offset_y09_ratio", 0.90);
     declare_parameter<double>("max_offset_jump", 2.0);
     declare_parameter<double>("offset_smoothing_alpha", 0.35);
     declare_parameter<bool>("enable_left_boundary_template_line", false);
@@ -476,10 +480,9 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.fit_point_trend_slope_delta = static_cast<float>(get_parameter("fit_point_trend_slope_delta").as_double());
     lane_cfg.fit_point_trend_min_points = static_cast<int>(get_parameter("fit_point_trend_min_points").as_int());
     lane_cfg.fit_point_trend_min_keep_ratio = static_cast<float>(get_parameter("fit_point_trend_min_keep_ratio").as_double());
-    lane_cfg.lookahead_y_ratio = static_cast<float>(get_parameter("lookahead_y_ratio").as_double());
-    lane_cfg.use_heading_term = get_parameter("use_heading_term").as_bool();
-    lane_cfg.heading_weight = static_cast<float>(get_parameter("heading_weight").as_double());
-    lane_cfg.near_offset_weight = static_cast<float>(get_parameter("near_offset_weight").as_double());
+    lane_cfg.offset_y07_ratio = static_cast<float>(get_parameter("offset_y07_ratio").as_double());
+    lane_cfg.offset_y08_ratio = static_cast<float>(get_parameter("offset_y08_ratio").as_double());
+    lane_cfg.offset_y09_ratio = static_cast<float>(get_parameter("offset_y09_ratio").as_double());
     lane_cfg.max_offset_jump = static_cast<float>(get_parameter("max_offset_jump").as_double());
     lane_cfg.offset_smoothing_alpha = static_cast<float>(get_parameter("offset_smoothing_alpha").as_double());
     lane_cfg.enable_left_boundary_template_line =
@@ -716,7 +719,7 @@ class FusedPerceptionNode : public rclcpp::Node {
         task.ret = guideboard_ocr_.run_mat(crop, &task.result);
       } catch (const cv::Exception& e) {
         task.result.status = PPOCR_STATUS_INFERENCE_FAILED;
-false        task.result.error = e.what();
+        task.result.error = e.what();
       } catch (const std::exception& e) {
         task.result.status = PPOCR_STATUS_INFERENCE_FAILED;
         task.result.error = e.what();
@@ -733,9 +736,9 @@ false        task.result.error = e.what();
     detection_pub_ = create_publisher<std_msgs::msg::Float32MultiArray>("/detection/results", 10);
     label_pub_ = create_publisher<std_msgs::msg::String>("/detection/labels", 10);
     auto sensor_qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
-    center_offset_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/center_offset", sensor_qos);
-    lateral_offset_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/lateral_offset", sensor_qos);
-    bottom_offset_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/bottom_offset", sensor_qos);
+    offset_y07_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/offset_y07", sensor_qos);
+    offset_y08_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/offset_y08", sensor_qos);
+    offset_y09_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/offset_y09", sensor_qos);
     heading_error_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/heading_error", sensor_qos);
     curvature_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/curvature", sensor_qos);
     is_valid_pub_ = create_publisher<std_msgs::msg::Bool>("/segmentation/is_valid", sensor_qos);
@@ -914,17 +917,17 @@ false        task.result.error = e.what();
     labels_msg.data = joinLabels(current_labels);
     label_pub_->publish(labels_msg);
 
-    std_msgs::msg::Float32 offset_msg;
-    offset_msg.data = lane_state.control_offset;
-    center_offset_pub_->publish(offset_msg);
+    std_msgs::msg::Float32 offset_y07_msg;
+    offset_y07_msg.data = lane_state.offset_y07;
+    offset_y07_pub_->publish(offset_y07_msg);
 
-    std_msgs::msg::Float32 lateral_msg;
-    lateral_msg.data = lane_state.lateral_offset;
-    lateral_offset_pub_->publish(lateral_msg);
+    std_msgs::msg::Float32 offset_y08_msg;
+    offset_y08_msg.data = lane_state.offset_y08;
+    offset_y08_pub_->publish(offset_y08_msg);
 
-    std_msgs::msg::Float32 bottom_msg;
-    bottom_msg.data = lane_state.bottom_offset;
-    bottom_offset_pub_->publish(bottom_msg);
+    std_msgs::msg::Float32 offset_y09_msg;
+    offset_y09_msg.data = lane_state.offset_y09;
+    offset_y09_pub_->publish(offset_y09_msg);
 
     std_msgs::msg::Float32 heading_msg;
     heading_msg.data = lane_state.heading_error;
@@ -1005,7 +1008,8 @@ false        task.result.error = e.what();
     }
 
     std::ostringstream status;
-    status << lane_state.road_state << " offset=" << lane_state.control_offset
+    status << lane_state.road_state << " offsets=" << lane_state.offset_y07 << ","
+           << lane_state.offset_y08 << "," << lane_state.offset_y09
            << " valid=" << (lane_state.is_valid ? 1 : 0) << " task=" << lane_state.task_state
            << " enc_hold=" << (debug_info.encoder_hold ? 1 : 0)
            << " enc_delta=" << debug_info.encoder_hold_delta
@@ -1203,7 +1207,7 @@ false        task.result.error = e.what();
           lane_state.branch_side != last_branch_side_) {
         RCLCPP_INFO(get_logger(), "road_state=%s branch_side=%s offset=%.3f valid=%d guideboard=%d",
                     lane_state.road_state.c_str(), lane_state.branch_side.c_str(),
-                    lane_state.control_offset, lane_state.is_valid, debug_info.guideboard_seen);
+                    lane_state.offset_y09, lane_state.is_valid, debug_info.guideboard_seen);
       }
       if (lane_state.task_state != last_task_state_) {
         RCLCPP_INFO(get_logger(), "task_state=%s stop_request=%d",
@@ -1227,13 +1231,14 @@ false        task.result.error = e.what();
     }
     const YoloSegStats& seg_stats = segmenter_.lastStats();
     RCLCPP_INFO(get_logger(),
-                "status road=%s branch=%s offset=%.3f lateral=%.3f heading=%.3f conf=%.2f valid=%d "
+                "status road=%s branch=%s offsets=%.3f,%.3f,%.3f heading=%.3f conf=%.2f valid=%d "
                 "seg_conf=%.3f[%.3f,%.3f]/%d "
                 "branch_detected=%d score=%d guideboard_roi=%d/%d guideboard_best=%.2f@(%.0f,%.0f) "
                 "encoder_hold=%d encoder_delta=%ld/%ld encoder_valid=%d age=%.2f "
                 "lb_tpl=%d tpl_side=%s lb_pts=%d lb_reason=%s obstacles=%zu segments=%d points=%d/%d task=%s",
                 lane_state.road_state.c_str(), lane_state.branch_side.c_str(),
-                lane_state.control_offset, lane_state.lateral_offset, lane_state.heading_error,
+                lane_state.offset_y07, lane_state.offset_y08, lane_state.offset_y09,
+                lane_state.heading_error,
                 lane_state.confidence, lane_state.is_valid, seg_stats.score_mean,
                 seg_stats.score_min, seg_stats.score_max, seg_stats.kept_instances,
                 debug_info.branch_detected,
@@ -1349,9 +1354,9 @@ false        task.result.error = e.what();
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr detection_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr label_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr center_offset_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr lateral_offset_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr bottom_offset_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr offset_y07_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr offset_y08_pub_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr offset_y09_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr heading_error_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr curvature_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr is_valid_pub_;

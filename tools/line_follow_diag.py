@@ -73,8 +73,6 @@ class Sample:
     raw_points: int = 0
     branch_detected: bool = False
     branch_score: int = 0
-    near_split: bool = False
-    near_split_score: int = 0
     transition: bool = False
 
 
@@ -122,7 +120,6 @@ class Window:
         low_conf = sum(1 for s in self.samples if s.conf < 0.35)
         high_offset = sum(1 for s in self.samples if abs(s.offset) > 0.60)
         branch_frames = sum(1 for s in self.samples if s.branch_detected or s.branch_score > 0)
-        near_split_frames = sum(1 for s in self.samples if s.near_split or s.near_split_score > 0)
         transition_frames = sum(1 for s in self.samples if s.transition)
         modes_text = ",".join(
             f"{mode or '?'}:{count}" for mode, count in sorted(modes.items(), key=lambda item: -item[1])[:4]
@@ -141,7 +138,7 @@ class Window:
             f"conf min={min(confs):.2f} low_conf={low_conf} "
             f"high_offset={high_offset} "
             f"fit_min={min(fit_points) if fit_points else 0} "
-            f"branch={branch_frames} near_split={near_split_frames} "
+            f"branch={branch_frames} "
             f"transition={transition_frames} "
             f"sat={sat_count} "
             f"heading_leads_offset={heading_leads} "
@@ -187,7 +184,7 @@ class LineFollowDiag(Node):
         self.create_subscription(Twist, "/cmd_vel", self.on_cmd_vel, 10)
         self.param_client = self.create_client(
             SetParameters,
-            "/line_follower_controller/set_parameters",
+            "/line_follower_controller_cpp/set_parameters",
         )
         self.enable_client = self.create_client(
             SetBool,
@@ -199,7 +196,14 @@ class LineFollowDiag(Node):
             data = json.loads(msg.data)
         except json.JSONDecodeError:
             return
-        self.latest.offset = float(data.get("control_offset", self.latest.offset))
+        offset_y07 = data.get("offset_y07")
+        offset_y08 = data.get("offset_y08")
+        offset_y09 = data.get("offset_y09")
+        if offset_y07 is not None and offset_y08 is not None and offset_y09 is not None:
+            self.latest.offset = (
+                0.2 * float(offset_y07) +
+                0.3 * float(offset_y08) +
+                0.5 * float(offset_y09))
         self.latest.heading = float(data.get("heading_error", self.latest.heading))
         self.latest.curvature = float(data.get("curvature", self.latest.curvature))
         self.latest.conf = float(data.get("confidence", self.latest.conf))
@@ -213,6 +217,8 @@ class LineFollowDiag(Node):
         self.latest.curve_factor = float(fields.get("curve_factor", self.latest.curve_factor))
         self.latest.max_steer = float(fields.get("max_steer", self.latest.max_steer))
         self.latest.steering = float(fields.get("steering_cmd", self.latest.steering))
+        if "weighted_offset" in fields:
+            self.latest.offset = float(fields["weighted_offset"])
         if "enabled" in bools and bools["enabled"].lower() == "false":
             self.latest.mode = "disabled"
         self.record()
@@ -230,8 +236,6 @@ class LineFollowDiag(Node):
         self.latest.raw_points = len(raw_points) if isinstance(raw_points, list) else int(raw_points)
         self.latest.branch_detected = bool(data.get("branch_detected", self.latest.branch_detected))
         self.latest.branch_score = int(data.get("branch_score", self.latest.branch_score))
-        self.latest.near_split = bool(data.get("near_split", self.latest.near_split))
-        self.latest.near_split_score = int(data.get("near_split_score", self.latest.near_split_score))
         self.latest.transition = bool(data.get("transition", self.latest.transition))
         self.record()
 

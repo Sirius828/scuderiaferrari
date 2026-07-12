@@ -91,26 +91,25 @@ fused_perception_node:
     branch_detect_far_band_ratio: 0.7
     enable_encoder_branch_hold: true
     encoder_count_topic: "/chassis/encoder_count"
-    encoder_hold_counts: 8888
+    encoder_hold_counts: 5000
     encoder_feedback_timeout_sec: 0.30
 
     # 中心线拟合
     fit_min_points: 4
     fit_order: 2
     branch_fit_order: 2
-    enable_fit_point_jump_filter: true
+    enable_fit_point_jump_filter: false
     max_fit_point_dx_ratio: 0.22
     max_fit_point_dx_px: 140.0
-    enable_fit_point_trend_filter: true
+    enable_fit_point_trend_filter: false
     fit_point_trend_residual_ratio: 0.12
     fit_point_trend_residual_px: 80.0
     fit_point_trend_slope_delta: 0.65
     fit_point_trend_min_points: 6
     fit_point_trend_min_keep_ratio: 0.75
-    lookahead_y_ratio: 0.90
-    use_heading_term: true
-    heading_weight: 0.0
-    near_offset_weight: 1.0
+    offset_y07_ratio: 0.70
+    offset_y08_ratio: 0.80
+    offset_y09_ratio: 0.90
     max_offset_jump: 0.80
     offset_smoothing_alpha: 0.35
 
@@ -125,7 +124,7 @@ fused_perception_node:
     right_boundary_template_weight: 1.0
 
     # 障碍避让 V2：
-    # - obstacle_labels: 从 band segment 中扣除这些障碍区域，仍输出可通行 control_offset
+    # - obstacle_labels: 从 band segment 中扣除这些障碍区域，仍输出可通行 offset
     # - obstacle_stop_labels: 只有这些类别靠太近才发布 /perception/stop_request=true
     # Car 固定在赛道一侧，只绕开不停车；Rock 和 GuideBoard 同时出现时走 right 岔路，默认不纳入避障。
     enable_obstacle_avoidance: true

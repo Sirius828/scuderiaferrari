@@ -7,8 +7,7 @@
 # 4. 动态舵量/速度：确认低速稳定后，再提高 linear_speed。
 #
 # offset 的单位是图像归一化值，范围约为 [-1, 1]：
-# - center_offset：前瞻拟合点的控制偏差。
-# - bottom_offset：图像底部近场偏差，更接近车辆当前横向位置。
+# - offset_y07/offset_y08/offset_y09：拟合曲线在 0.7h/0.8h/0.9h 处的偏差。
 # - heading_error：拟合车道切线方向，范围约为 [-1, 1]。
 # - curvature：拟合车道曲率，范围约为 [-1, 1]。
 # 速度命令 linear.x 会转换为轮速 rps，舵量 command.angular.z 范围为 [-1, 1]。
@@ -17,13 +16,13 @@
   ros__parameters:
     # ==================== 基础 PD 控制 ====================
     # 比例增益：增大后回中更快，但过大容易左右摆动。
-    Kp: 1.10
+    Kp: 1.25
     # 微分增益：抑制过冲、提前刹住转向；视觉噪声大时不要过大。
-    Kd: 0.01
+    Kd: 0.35
 
     # ==================== 速度与底盘标定 ====================
     # 直道目标最高速度，单位 m/s；低风险时加速到此速度。
-    linear_speed: 0.40
+    linear_speed: 0.55
     # 弯道动态降速的最低速度，单位 m/s；不是停车速度。
     min_linear_speed: 0.10
     # 车轮半径，单位 m，用于 m/s 到轮速 rps 的换算。
@@ -60,11 +59,11 @@
     # 曲率对速度风险的权重，范围 [0, 1]。
     curvature_speed_weight: 0.20
 
-    # ==================== 几何反馈 ====================
-    # 前瞻控制偏差的权重；用于提前看弯，建议从 0.10 开始调。
-    lookahead_feedback_weight: 0.3
-    # 近场 bottom_offset 权重；代表车当前相对车道的位置。
-    lateral_feedback_weight: 0.7
+    # ==================== 多位置 offset 反馈 ====================
+    # 远处到近处的 offset 权重，控制器会按总和归一化。
+    offset_y07_weight: 0.20
+    offset_y08_weight: 0.30
+    offset_y09_weight: 0.50
     # 航向误差增益；用于提前修正车头方向，建议从 0.05 开始增加。
     heading_feedback_gain: 0.0
     # 弯道强度低于该值时，不放宽前瞻偏差的影响。
@@ -74,7 +73,7 @@
 
     # 弯道 offset 容许区间：用于让合理的弯内前瞻偏差不触发减速。
     # 弯道强度在 relief_start/full 之间时，容许值从 straight 线性增加到 curve。
-    # 只有 abs(center_offset) 超过 allowed_offset，超出部分才进入速度风险。
+    # 只有 abs(weighted_offset) 超过 allowed_offset，超出部分才进入速度风险。
     enable_curve_offset_allowance: false
     # true 时在强弯中减弱前瞻误差，优先使用近场误差稳定车辆。
     enable_curve_offset_relief: false
@@ -91,7 +90,7 @@
     # 微分项绝对限幅，单位 1/s；0 表示不限制。
     derivative_limit: 1.0
     # 微分低通滤波系数，范围 [0, 1]；越小越平滑但响应越慢。
-    derivative_filter_alpha: 0.25
+    derivative_filter_alpha: 1.0
     # 舵量变化率上限，单位 1/s；0 表示不限制。
     steering_slew_rate: 0.0
 
@@ -111,8 +110,9 @@
     # 控制循环频率，单位 Hz；启动后不可动态修改。
     control_frequency: 50.0
     # 控制器默认不抢占其它节点的话题，调试时确保只有一个 /cmd_vel 发布者。
-    offset_topic: "/segmentation/center_offset"
-    lateral_offset_topic: "/segmentation/bottom_offset"
+    offset_y07_topic: "/segmentation/offset_y07"
+    offset_y08_topic: "/segmentation/offset_y08"
+    offset_y09_topic: "/segmentation/offset_y09"
     heading_error_topic: "/segmentation/heading_error"
     curvature_topic: "/segmentation/curvature"
     lane_state_topic: "/perception/lane_state"

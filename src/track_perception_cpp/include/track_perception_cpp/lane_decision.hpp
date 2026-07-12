@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <optional>
 #include <cstdint>
 #include <string>
@@ -44,10 +45,9 @@ struct LaneDecisionConfig {
   float fit_point_trend_slope_delta{0.65f};
   int fit_point_trend_min_points{6};
   float fit_point_trend_min_keep_ratio{0.75f};
-  float lookahead_y_ratio{0.75f};
-  bool use_heading_term{true};
-  float heading_weight{0.10f};
-  float near_offset_weight{0.90f};
+  float offset_y07_ratio{0.70f};
+  float offset_y08_ratio{0.80f};
+  float offset_y09_ratio{0.90f};
   float max_offset_jump{2.0f};
   float offset_smoothing_alpha{0.35f};
 
@@ -150,10 +150,15 @@ struct LaneDebugInfo {
   int raw_point_count{0};
   int fit_point_count{0};
   int segment_count{0};
-  float bottom_offset{0.0f};
-  float raw_control_offset{0.0f};
-  float lookahead_x{0.0f};
-  float lookahead_y{0.0f};
+  float offset_y07{0.0f};
+  float offset_y08{0.0f};
+  float offset_y09{0.0f};
+  float raw_offset_y07{0.0f};
+  float raw_offset_y08{0.0f};
+  float raw_offset_y09{0.0f};
+  int fit_y_min{0};
+  int fit_y_max{0};
+  int fit_y_span{0};
   int image_width{0};
 };
 
@@ -227,11 +232,11 @@ class LaneDecision {
   void appendDetectionFitPoints(std::vector<cv::Point3f>& points,
                                 const std::vector<Detection>& detections,
                                 int image_height) const;
-  bool fitCenterlineAndComputeOffset(const std::vector<cv::Point3f>& points, int h, int w,
-                                     int fit_order, double* final_offset,
-                                     std::vector<double>* coeffs, double* lateral_offset,
-                                     double* heading_error, double* curvature) const;
-  double smoothOffset(double raw_offset);
+  bool fitCenterlineAndComputeGeometry(const std::vector<cv::Point3f>& points, int h,
+                                       int fit_order, std::vector<double>* coeffs,
+                                       double* heading_error, double* curvature) const;
+  double offsetAtY(const std::vector<double>& coeffs, double y, int image_width) const;
+  double smoothOffset(double raw_offset, size_t index);
   double fallbackCenterOffset(const cv::Mat& seg_map) const;
   bool checkGuideboardInFarRoi(const std::vector<Detection>& detections, int h) const;
   void updateTrafficLightStopState(const std::vector<Detection>& detections, int image_height);
@@ -247,7 +252,7 @@ class LaneDecision {
   LaneDecisionConfig cfg_;
   LaneDebugInfo debug_info_;
 
-  double last_offset_{0.0};
+  std::array<double, 3> last_offsets_{{0.0, 0.0, 0.0}};
   bool branch_locked_{false};
   std::string locked_branch_side_{"left"};
   std::string guideboard_branch_hint_{"left"};
