@@ -17,15 +17,15 @@
   ros__parameters:
     # ==================== 基础 PD 控制 ====================
     # 比例增益：增大后回中更快，但过大容易左右摆动。
-    Kp: 0.80
+    Kp: 1.0
     # 微分增益：抑制过冲、提前刹住转向；视觉噪声大时不要过大。
-    Kd: 0.035
+    Kd: 0.0
 
     # ==================== 速度与底盘标定 ====================
-    # 直道目标最高速度，单位 m/s。
-    linear_speed: 0.60
-    # 动态降速的最低速度，单位 m/s；不是停车速度。
-    min_linear_speed: 0.25
+    # 直道目标最高速度，单位 m/s；低风险时加速到此速度。
+    linear_speed: 0.20
+    # 弯道动态降速的最低速度，单位 m/s；不是停车速度。
+    min_linear_speed: 0.10
     # 车轮半径，单位 m，用于 m/s 到轮速 rps 的换算。
     wheel_radius: 0.032
     # 舵量的绝对安全上限，范围 [0, 1]。
@@ -33,40 +33,40 @@
 
     # ==================== 动态舵量上限 ====================
     # 直道最大舵量；小舵量有助于高速直线稳定。
-    straight_max_steering: 0.30
+    straight_max_steering: 0.85
     # 弯道最大舵量；弯道允许更大修正。
     curve_max_steering: 0.85
     # 风险从该值开始放宽最大舵量。
-    steering_offset_start: 0.05
+    steering_offset_start: 0.08
     # 风险达到该值时放宽到 curve_max_steering。
-    steering_offset_full: 0.60
+    steering_offset_full: 0.40
     # false 时固定使用 max_steering，便于只调基础 PD。
-    enable_dynamic_steering_limit: true
+    enable_dynamic_steering_limit: false
 
     # ==================== 动态速度 ====================
     # true：根据近场偏差、航向、曲率和前瞻偏差超量动态调速。
-    # false：始终使用 linear_speed，仅建议低速调试使用。
-    enable_dynamic_speed: true
+    # true：直道加速，弯道按风险连续降速。
+    enable_dynamic_speed: false
     # 风险低于该值时保持 linear_speed。
     speed_offset_start: 0.05
     # 风险达到该值时降至 min_linear_speed。
-    speed_offset_full: 0.60
+    speed_offset_full: 0.35
     # 降速曲线指数；1.0 为线性，>1.0 在中等风险时更保守地保持速度。
     speed_curve_exponent: 1.0
     # 加速斜率，单位 m/s^2；限制突然冲刺。
-    speed_accel_rate: 0.20
+    speed_accel_rate: 0.35
     # 减速斜率，单位 m/s^2；越大越快降速。
     speed_decel_rate: 2.0
     # 曲率对速度风险的权重，范围 [0, 1]。
-    curvature_speed_weight: 0.50
+    curvature_speed_weight: 0.20
 
     # ==================== 几何反馈 ====================
     # 前瞻控制偏差的权重；用于提前看弯，建议从 0.10 开始调。
-    lookahead_feedback_weight: 0.35
+    lookahead_feedback_weight: 0.0
     # 近场 bottom_offset 权重；代表车当前相对车道的位置。
-    lateral_feedback_weight: 0.65
+    lateral_feedback_weight: 1.0
     # 航向误差增益；用于提前修正车头方向，建议从 0.05 开始增加。
-    heading_feedback_gain: 0.35
+    heading_feedback_gain: 0.0
     # 弯道强度低于该值时，不放宽前瞻偏差的影响。
     curve_offset_relief_start: 0.15
     # 弯道强度达到该值时，前瞻偏差不再直接作为风险来源。
@@ -75,7 +75,13 @@
     # 弯道 offset 容许区间：用于让合理的弯内前瞻偏差不触发减速。
     # 弯道强度在 relief_start/full 之间时，容许值从 straight 线性增加到 curve。
     # 只有 abs(center_offset) 超过 allowed_offset，超出部分才进入速度风险。
-    enable_curve_offset_allowance: true
+    enable_curve_offset_allowance: false
+    # true 时在强弯中减弱前瞻误差，优先使用近场误差稳定车辆。
+    enable_curve_offset_relief: false
+    # 调车阶段由 /line_follower/start 和 /line_follower/stop 完全控制启停；
+    # false 时忽略感知任务（终点、红灯、障碍物）发布的 stop_request。
+    # /race/emergency_stop 仍然保留为独立紧急停车联锁。
+    enable_perception_stop_request: false
     # 直道允许的前瞻偏差，范围 [0, 1]。
     straight_allowed_offset: 0.05
     # 强弯允许的前瞻偏差，范围 [straight_allowed_offset, 1]。
@@ -83,17 +89,19 @@
 
     # ==================== 微分与输出平滑 ====================
     # 微分项绝对限幅，单位 1/s；0 表示不限制。
-    derivative_limit: 3.0
+    derivative_limit: 1.0
     # 微分低通滤波系数，范围 [0, 1]；越小越平滑但响应越慢。
-    derivative_filter_alpha: 0.35
+    derivative_filter_alpha: 0.25
     # 舵量变化率上限，单位 1/s；0 表示不限制。
-    steering_slew_rate: 4.0
+    steering_slew_rate: 0.0
 
     # ==================== 感知安全 ====================
     # offset、is_valid 和几何数据允许的最大年龄，单位 s。
     offset_timeout: 0.25
+    # lane_state 置信度低于此值时禁止发车并锁定停车。
+    min_perception_confidence: 0.50
     # 感知短暂失效时保持的最高速度，单位 m/s。
-    invalid_hold_speed: 0.25
+    invalid_hold_speed: 0.10
     # 启动后是否自动尝试发车；false 时必须调用 /line_follower/start。
     autonomous_enabled_on_start: false
 
@@ -107,5 +115,5 @@
     lateral_offset_topic: "/segmentation/bottom_offset"
     heading_error_topic: "/segmentation/heading_error"
     curvature_topic: "/segmentation/curvature"
+    lane_state_topic: "/perception/lane_state"
     cmd_vel_topic: "/cmd_vel"
-

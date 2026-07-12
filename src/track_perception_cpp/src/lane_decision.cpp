@@ -423,9 +423,10 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
       center_offset = fallbackCenterOffset(bottom_seg);
       lateral_offset = center_offset;
       bottom_offset = center_offset;
-      is_valid = cv::countNonZero(bottom_seg == 1) > 0;
-      confidence = is_valid ? 0.2 : 0.0;
-      if (!is_valid && std::abs(last_offset_) > 0.01) {
+      const bool has_fallback_pixels = cv::countNonZero(bottom_seg == 1) > 0;
+      is_valid = false;
+      confidence = 0.0;
+      if (!has_fallback_pixels && std::abs(last_offset_) > 0.01) {
         center_offset = last_offset_;
       }
       road_state = "LOW_CONFIDENCE";
@@ -445,9 +446,9 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     debug_info_.raw_control_offset = static_cast<float>(center_offset);
     debug_info_.bottom_offset = static_cast<float>(bottom_offset);
     debug_info_.image_width = w;
-    is_valid = cv::countNonZero(bottom_seg == 1) > 0;
-    confidence = is_valid ? 0.2 : 0.0;
-    road_state = is_valid ? "NORMAL" : "LOW_CONFIDENCE";
+    is_valid = false;
+    confidence = 0.0;
+    road_state = "LOW_CONFIDENCE";
   }
 
   updateTrafficLightStopState(detections, h);

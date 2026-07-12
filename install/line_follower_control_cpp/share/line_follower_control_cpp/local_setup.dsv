@@ -1,2 +1,1 @@
-source;share/line_follower_control_cpp/environment/ament_prefix_path.sh
-source;share/line_follower_control_cpp/environment/path.sh
+/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/ament_cmake_environment_hooks/local_setup.dsv

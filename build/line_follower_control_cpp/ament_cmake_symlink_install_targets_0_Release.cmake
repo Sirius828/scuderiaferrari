@@ -1,0 +1,1 @@
+ament_cmake_symlink_install_targets("TARGET_FILES" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/controller_node" "TARGETS" "controller_node" "DESTINATION" "lib/line_follower_control_cpp")

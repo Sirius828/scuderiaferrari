@@ -86,7 +86,7 @@ fused_perception_node:
     min_pixels_per_band: 80
 
     # 岔路确认
-    branch_detect_min_bands: 2
+    branch_detect_min_bands: 1
     branch_confirm_frames: 3
     branch_detect_far_band_ratio: 0.7
     near_split_detect_min_bands: 2

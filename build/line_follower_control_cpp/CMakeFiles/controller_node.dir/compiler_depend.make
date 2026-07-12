@@ -67,6 +67,7 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
   /usr/include/aarch64-linux-gnu/bits/types/__sigset_t.h \
   /usr/include/aarch64-linux-gnu/bits/types/struct_timeval.h \
   /usr/include/aarch64-linux-gnu/bits/types/struct_timespec.h \
+  /usr/include/aarch64-linux-gnu/bits/select2.h \
   /usr/include/aarch64-linux-gnu/bits/pthreadtypes.h \
   /usr/include/aarch64-linux-gnu/bits/thread-shared-types.h \
   /usr/include/aarch64-linux-gnu/bits/pthreadtypes-arch.h \
@@ -74,7 +75,9 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
   /usr/include/aarch64-linux-gnu/bits/struct_mutex.h \
   /usr/include/aarch64-linux-gnu/bits/struct_rwlock.h \
   /usr/include/alloca.h \
+  /usr/include/aarch64-linux-gnu/bits/stdlib-bsearch.h \
   /usr/include/aarch64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/aarch64-linux-gnu/bits/stdlib.h \
   /usr/include/c++/11/bits/std_abs.h \
   /usr/include/c++/11/bits/algorithmfwd.h \
   /usr/include/c++/11/bits/stl_heap.h \
@@ -124,6 +127,8 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
   /usr/include/aarch64-linux-gnu/bits/wchar.h \
   /usr/include/aarch64-linux-gnu/bits/stdint-uintn.h \
   /usr/include/c++/11/bits/atomic_lockfree_defines.h \
+  /usr/include/c++/11/cctype \
+  /usr/include/ctype.h \
   /usr/include/c++/11/chrono \
   /usr/include/c++/11/ratio \
   /usr/include/c++/11/cstdint \
@@ -203,6 +208,7 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
   /usr/include/aarch64-linux-gnu/bits/confname.h \
   /usr/include/aarch64-linux-gnu/bits/getopt_posix.h \
   /usr/include/aarch64-linux-gnu/bits/getopt_core.h \
+  /usr/include/aarch64-linux-gnu/bits/unistd.h \
   /usr/include/aarch64-linux-gnu/bits/unistd_ext.h \
   /usr/include/linux/close_range.h \
   /usr/include/aarch64-linux-gnu/bits/ss_flags.h \
@@ -221,6 +227,7 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
   /usr/include/aarch64-linux-gnu/bits/types/__mbstate_t.h \
   /usr/include/aarch64-linux-gnu/bits/types/__FILE.h \
   /usr/include/aarch64-linux-gnu/bits/types/FILE.h \
+  /usr/include/aarch64-linux-gnu/bits/wchar2.h \
   /usr/include/c++/11/bits/ios_base.h \
   /usr/include/c++/11/ext/atomicity.h \
   /usr/include/aarch64-linux-gnu/c++/11/bits/gthr.h \
@@ -240,8 +247,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
   /usr/include/c++/11/clocale \
   /usr/include/locale.h \
   /usr/include/aarch64-linux-gnu/bits/locale.h \
-  /usr/include/c++/11/cctype \
-  /usr/include/ctype.h \
   /usr/include/c++/11/bits/locale_classes.h \
   /usr/include/c++/11/string \
   /usr/include/c++/11/bits/char_traits.h \
@@ -258,6 +263,8 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
   /usr/include/aarch64-linux-gnu/bits/types/struct_FILE.h \
   /usr/include/aarch64-linux-gnu/bits/types/cookie_io_functions_t.h \
   /usr/include/aarch64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/aarch64-linux-gnu/bits/stdio.h \
+  /usr/include/aarch64-linux-gnu/bits/stdio2.h \
   /usr/include/c++/11/cerrno \
   /usr/include/errno.h \
   /usr/include/aarch64-linux-gnu/bits/errno.h \
@@ -394,6 +401,8 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
   /usr/include/c++/11/stdlib.h \
   /usr/include/string.h \
   /usr/include/strings.h \
+  /usr/include/aarch64-linux-gnu/bits/strings_fortified.h \
+  /usr/include/aarch64-linux-gnu/bits/string_fortified.h \
   /opt/ros/humble/include/rcutils/rcutils/snprintf.h \
   /opt/ros/humble/include/rcutils/rcutils/time.h \
   /opt/ros/humble/include/rcutils/rcutils/types.h \
@@ -856,8 +865,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_waitables_interface.hpp:
 
-/opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_time_source_interface.hpp:
-
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter_value__type_support.hpp:
 
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter_value__builder.hpp:
@@ -984,13 +991,23 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /opt/ros/humble/include/rclcpp/rclcpp/rate.hpp:
 
-/usr/include/aarch64-linux-gnu/bits/stdio_lim.h:
+/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__type_support.hpp:
 
-/usr/include/c++/11/bits/stl_multiset.h:
+/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__traits.hpp:
 
-/usr/include/aarch64-linux-gnu/bits/types/struct_FILE.h:
+/opt/ros/humble/include/rclcpp/rclcpp/intra_process_setting.hpp:
 
-/usr/include/aarch64-linux-gnu/bits/types/__fpos64_t.h:
+/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__builder.hpp:
+
+/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__struct.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_base_interface.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/time.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/timer.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/subscription_content_filter_options.hpp:
 
 /usr/include/c++/11/ext/string_conversions.h:
 
@@ -1018,10 +1035,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /usr/include/aarch64-linux-gnu/sys/single_threaded.h:
 
-/opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/get_node_base_interface.hpp:
-
-/opt/ros/humble/include/rcpputils/rcpputils/visibility_control.hpp:
-
 /usr/include/aarch64-linux-gnu/c++/11/bits/atomic_word.h:
 
 /usr/include/c++/11/cwctype:
@@ -1040,10 +1053,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /usr/include/sched.h:
 
-/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter__traits.hpp:
-
-/usr/include/aarch64-linux-gnu/c++/11/bits/gthr.h:
-
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/set_parameters__builder.hpp:
 
 /usr/include/c++/11/bits/ios_base.h:
@@ -1057,6 +1066,12 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 /usr/include/aarch64-linux-gnu/bits/signal_ext.h:
 
 /usr/include/c++/11/iosfwd:
+
+/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter__traits.hpp:
+
+/usr/include/aarch64-linux-gnu/c++/11/bits/gthr.h:
+
+/usr/include/aarch64-linux-gnu/bits/unistd.h:
 
 /usr/include/aarch64-linux-gnu/bits/getopt_core.h:
 
@@ -1134,10 +1149,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /opt/ros/humble/include/rclcpp/rclcpp/expand_topic_or_service_name.hpp:
 
-/opt/ros/humble/include/rclcpp/rclcpp/wait_set_policies/static_storage.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/detail/node_interfaces_helpers.hpp:
-
 /usr/include/c++/11/tr1/ell_integral.tcc:
 
 /usr/include/aarch64-linux-gnu/bits/sigevent-consts.h:
@@ -1174,8 +1185,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /usr/include/c++/11/cmath:
 
-/usr/include/c++/11/bits/allocator.h:
-
 /usr/include/aarch64-linux-gnu/bits/procfs.h:
 
 /usr/include/c++/11/bits/parse_numbers.h:
@@ -1190,13 +1199,11 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /usr/include/aarch64-linux-gnu/bits/types/struct_tm.h:
 
-/opt/ros/humble/include/rclcpp/rclcpp/intra_process_setting.hpp:
-
-/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__builder.hpp:
-
 /usr/include/aarch64-linux-gnu/bits/timex.h:
 
 /usr/include/c++/11/ctime:
+
+/usr/include/c++/11/cstdint:
 
 /usr/include/aarch64-linux-gnu/bits/libm-simd-decl-stubs.h:
 
@@ -1215,10 +1222,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 /usr/include/c++/11/bits/erase_if.h:
 
 /usr/include/c++/11/future:
-
-/opt/ros/humble/include/rcpputils/rcpputils/thread_safety_annotations.hpp:
-
-/usr/include/aarch64-linux-gnu/bits/types/__fpos_t.h:
 
 /usr/include/c++/11/tr1/bessel_function.tcc:
 
@@ -1302,8 +1305,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /usr/include/c++/11/bits/basic_ios.h:
 
-/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__traits.hpp:
-
 /usr/include/c++/11/bits/stl_numeric.h:
 
 /usr/include/linux/close_range.h:
@@ -1332,6 +1333,14 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /usr/include/c++/11/bits/stl_heap.h:
 
+/usr/include/c++/11/ratio:
+
+/opt/ros/humble/include/rclcpp/rclcpp/generic_publisher.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/message_memory_strategy.hpp:
+
+/usr/include/c++/11/thread:
+
 /usr/include/aarch64-linux-gnu/sys/cdefs.h:
 
 /usr/include/c++/11/string_view:
@@ -1356,6 +1365,10 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /usr/include/c++/11/ext/numeric_traits.h:
 
+/usr/include/c++/11/condition_variable:
+
+/usr/include/c++/11/optional:
+
 /usr/include/c++/11/cwchar:
 
 /usr/include/ctype.h:
@@ -1365,6 +1378,12 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 /opt/ros/humble/include/rmw/rmw/types.h:
 
 /usr/include/aarch64-linux-gnu/bits/siginfo-consts-arch.h:
+
+/opt/ros/humble/include/rclcpp/rclcpp/wait_set_policies/static_storage.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/detail/node_interfaces_helpers.hpp:
+
+/usr/include/aarch64-linux-gnu/bits/stdio2.h:
 
 /usr/include/c++/11/tuple:
 
@@ -1384,6 +1403,8 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /usr/include/c++/11/bits/unordered_map.h:
 
+/usr/include/aarch64-linux-gnu/bits/stdlib-bsearch.h:
+
 /usr/include/aarch64-linux-gnu/bits/pthreadtypes.h:
 
 /usr/include/c++/11/bits/predefined_ops.h:
@@ -1391,6 +1412,14 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 /opt/ros/humble/include/statistics_msgs/statistics_msgs/msg/detail/statistic_data_point__traits.hpp:
 
 /opt/ros/humble/include/rmw/rmw/time.h:
+
+/usr/include/aarch64-linux-gnu/asm/bitsperlong.h:
+
+/opt/ros/humble/include/rmw/rmw/incompatible_qos_events_statuses.h:
+
+/usr/include/c++/11/limits:
+
+/usr/include/aarch64-linux-gnu/c++/11/bits/cpu_defines.h:
 
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter_value__traits.hpp:
 
@@ -1424,6 +1453,8 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /usr/include/asm-generic/posix_types.h:
 
+/usr/include/aarch64-linux-gnu/bits/wchar2.h:
+
 /usr/include/aarch64-linux-gnu/bits/floatn-common.h:
 
 /opt/ros/humble/include/rcl/rcl/log_level.h:
@@ -1431,18 +1462,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 /home/orangepi/scuderiaferrari/src/line_follower_control_cpp/src/controller_node.cpp:
 
 /usr/include/c++/11/ext/type_traits.h:
-
-/usr/include/c++/11/ratio:
-
-/usr/include/c++/11/optional:
-
-/usr/include/c++/11/condition_variable:
-
-/opt/ros/humble/include/rclcpp/rclcpp/generic_publisher.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/message_memory_strategy.hpp:
-
-/usr/include/c++/11/thread:
 
 /usr/include/aarch64-linux-gnu/bits/wchar.h:
 
@@ -1508,10 +1527,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /usr/include/c++/11/bits/stl_bvector.h:
 
-/usr/include/aarch64-linux-gnu/asm/bitsperlong.h:
-
-/opt/ros/humble/include/rmw/rmw/incompatible_qos_events_statuses.h:
-
 /usr/include/c++/11/bits/uses_allocator.h:
 
 /usr/include/c++/11/bits/unique_lock.h:
@@ -1536,9 +1551,21 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /usr/include/c++/11/bits/functexcept.h:
 
+/opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/get_node_base_interface.hpp:
+
+/opt/ros/humble/include/rcpputils/rcpputils/visibility_control.hpp:
+
+/usr/include/aarch64-linux-gnu/bits/select2.h:
+
 /usr/include/aarch64-linux-gnu/bits/mathcalls-helper-functions.h:
 
 /usr/include/aarch64-linux-gnu/bits/stdlib-float.h:
+
+/usr/include/aarch64-linux-gnu/bits/stdlib.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/sig_atomic_t.h:
+
+/usr/include/aarch64-linux-gnu/c++/11/bits/c++allocator.h:
 
 /usr/include/c++/11/pstl/execution_defs.h:
 
@@ -1557,6 +1584,10 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/list_parameters__type_support.hpp:
 
 /usr/include/aarch64-linux-gnu/bits/setjmp.h:
+
+/opt/ros/humble/include/rclcpp/rclcpp/clock.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/experimental/subscription_intra_process_buffer.hpp:
 
 /usr/include/c++/11/bits/stl_iterator.h:
 
@@ -1602,10 +1633,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /usr/include/c++/11/bits/functional_hash.h:
 
-/usr/include/aarch64-linux-gnu/c++/11/bits/cpu_defines.h:
-
-/usr/include/c++/11/limits:
-
 /opt/ros/humble/include/rclcpp/rclcpp/wait_set.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/executors/single_threaded_executor.hpp:
@@ -1618,11 +1645,11 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /usr/include/aarch64-linux-gnu/bits/types/clockid_t.h:
 
-/usr/include/aarch64-linux-gnu/bits/types/sig_atomic_t.h:
-
-/usr/include/aarch64-linux-gnu/c++/11/bits/c++allocator.h:
-
 /usr/include/c++/11/bits/stringfwd.h:
+
+/usr/include/c++/11/bits/allocator.h:
+
+/usr/include/aarch64-linux-gnu/bits/strings_fortified.h:
 
 /usr/include/c++/11/ext/alloc_traits.h:
 
@@ -1702,7 +1729,19 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /usr/include/c++/11/chrono:
 
-/usr/include/c++/11/cstdint:
+/opt/ros/humble/include/rcpputils/rcpputils/thread_safety_annotations.hpp:
+
+/usr/include/aarch64-linux-gnu/bits/types/__fpos_t.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/__fpos64_t.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/struct_FILE.h:
+
+/usr/include/aarch64-linux-gnu/bits/stdio_lim.h:
+
+/usr/include/c++/11/bits/stl_multiset.h:
+
+/usr/include/aarch64-linux-gnu/bits/stdio.h:
 
 /usr/include/c++/11/cerrno:
 
@@ -1942,6 +1981,10 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /opt/ros/humble/include/rmw/rmw/impl/cpp/demangle.hpp:
 
+/opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_time_source_interface.hpp:
+
+/usr/include/aarch64-linux-gnu/bits/string_fortified.h:
+
 /opt/ros/humble/include/rcutils/rcutils/time.h:
 
 /opt/ros/humble/include/rcutils/rcutils/types.h:
@@ -1979,8 +2022,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 /usr/include/c++/11/bits/list.tcc:
 
 /opt/ros/humble/include/rmw/rmw/events_statuses/events_statuses.h:
-
-/opt/ros/humble/include/rclcpp/rclcpp/timer.hpp:
 
 /opt/ros/humble/include/rmw/rmw/events_statuses/incompatible_qos.h:
 
@@ -2100,10 +2141,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 
 /opt/ros/humble/include/rclcpp/rclcpp/executor_options.hpp:
 
-/opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_base_interface.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/time.hpp:
-
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/set_parameters_atomically__struct.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/any_executable.hpp:
@@ -2125,8 +2162,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 /opt/ros/humble/include/rcl/rcl/arguments.h:
 
 /opt/ros/humble/include/rclcpp/rclcpp/logger.hpp:
-
-/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__type_support.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/utilities.hpp:
 
@@ -2153,8 +2188,6 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 /opt/ros/humble/include/rclcpp/rclcpp/logging.hpp:
 
 /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__builder.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/subscription_content_filter_options.hpp:
 
 /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/rosidl_generator_cpp__visibility_control.hpp:
 
@@ -2221,9 +2254,3 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/vector3__struct.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/intra_process_buffer_type.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/experimental/subscription_intra_process_buffer.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/clock.hpp:
-
-/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__struct.hpp:

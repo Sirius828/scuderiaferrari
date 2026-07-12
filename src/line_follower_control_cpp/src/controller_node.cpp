@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <csignal>
@@ -66,8 +67,11 @@ struct ControllerParameters
   bool enable_dynamic_speed{true};
   bool enable_dynamic_steering_limit{true};
   bool enable_curve_offset_allowance{true};
+  bool enable_curve_offset_relief{true};
+  bool enable_perception_stop_request{true};
   double straight_allowed_offset{0.05};
   double curve_allowed_offset{0.60};
+  double min_perception_confidence{0.50};
 };
 
 class LineFollowerControllerCpp : public rclcpp::Node
@@ -106,8 +110,11 @@ public:
     declare_parameter<bool>("enable_dynamic_speed", params_.enable_dynamic_speed);
     declare_parameter<bool>("enable_dynamic_steering_limit", params_.enable_dynamic_steering_limit);
     declare_parameter<bool>("enable_curve_offset_allowance", params_.enable_curve_offset_allowance);
+    declare_parameter<bool>("enable_curve_offset_relief", params_.enable_curve_offset_relief);
+    declare_parameter<bool>("enable_perception_stop_request", params_.enable_perception_stop_request);
     declare_parameter<double>("straight_allowed_offset", params_.straight_allowed_offset);
     declare_parameter<double>("curve_allowed_offset", params_.curve_allowed_offset);
+    declare_parameter<double>("min_perception_confidence", params_.min_perception_confidence);
     declare_parameter<double>("steering_sign", 1.0);
     declare_parameter<double>("control_frequency", 50.0);
     declare_parameter<bool>("autonomous_enabled_on_start", false);
@@ -115,6 +122,7 @@ public:
     declare_parameter<std::string>("lateral_offset_topic", "/segmentation/bottom_offset");
     declare_parameter<std::string>("heading_error_topic", "/segmentation/heading_error");
     declare_parameter<std::string>("curvature_topic", "/segmentation/curvature");
+    declare_parameter<std::string>("lane_state_topic", "/perception/lane_state");
     declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
 
     load_parameters();
@@ -144,6 +152,9 @@ public:
     emergency_subscription_ = create_subscription<std_msgs::msg::Bool>(
       "/race/emergency_stop", 10,
       std::bind(&LineFollowerControllerCpp::emergency_callback, this, std::placeholders::_1));
+    lane_state_subscription_ = create_subscription<std_msgs::msg::String>(
+      lane_state_topic_, 10,
+      std::bind(&LineFollowerControllerCpp::lane_state_callback, this, std::placeholders::_1));
 
     cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic_, 10);
     chassis_enable_publisher_ = create_publisher<std_msgs::msg::Int8>("/chassis/enable", 10);
@@ -225,8 +236,11 @@ private:
     params_.enable_dynamic_speed = get_parameter("enable_dynamic_speed").as_bool();
     params_.enable_dynamic_steering_limit = get_parameter("enable_dynamic_steering_limit").as_bool();
     params_.enable_curve_offset_allowance = get_parameter("enable_curve_offset_allowance").as_bool();
+    params_.enable_curve_offset_relief = get_parameter("enable_curve_offset_relief").as_bool();
+    params_.enable_perception_stop_request = get_parameter("enable_perception_stop_request").as_bool();
     params_.straight_allowed_offset = get_parameter("straight_allowed_offset").as_double();
     params_.curve_allowed_offset = get_parameter("curve_allowed_offset").as_double();
+    params_.min_perception_confidence = get_parameter("min_perception_confidence").as_double();
     steering_sign_ = get_parameter("steering_sign").as_double();
     control_frequency_ = get_parameter("control_frequency").as_double();
     autonomous_enabled_on_start_ = get_parameter("autonomous_enabled_on_start").as_bool();
@@ -234,6 +248,7 @@ private:
     lateral_offset_topic_ = get_parameter("lateral_offset_topic").as_string();
     heading_error_topic_ = get_parameter("heading_error_topic").as_string();
     curvature_topic_ = get_parameter("curvature_topic").as_string();
+    lane_state_topic_ = get_parameter("lane_state_topic").as_string();
     cmd_vel_topic_ = get_parameter("cmd_vel_topic").as_string();
   }
 
@@ -373,6 +388,11 @@ private:
     {
       return fail("curve_allowed_offset must be >= straight_allowed_offset and <= 1");
     }
+    if (!std::isfinite(parameters.min_perception_confidence) ||
+      parameters.min_perception_confidence < 0.0 || parameters.min_perception_confidence > 1.0)
+    {
+      return fail("min_perception_confidence must be in [0, 1]");
+    }
     return true;
   }
 
@@ -409,7 +429,7 @@ private:
       const auto & name = parameter.get_name();
       if (name == "control_frequency" || name == "offset_topic" ||
         name == "lateral_offset_topic" || name == "heading_error_topic" ||
-        name == "curvature_topic" || name == "cmd_vel_topic" ||
+        name == "curvature_topic" || name == "lane_state_topic" || name == "cmd_vel_topic" ||
         name == "autonomous_enabled_on_start")
       {
         return parameter_result(false, name + " is startup-only; restart the node to apply it");
@@ -473,10 +493,16 @@ private:
         pending.enable_dynamic_steering_limit = parameter.as_bool();
       } else if (name == "enable_curve_offset_allowance") {
         pending.enable_curve_offset_allowance = parameter.as_bool();
+      } else if (name == "enable_curve_offset_relief") {
+        pending.enable_curve_offset_relief = parameter.as_bool();
+      } else if (name == "enable_perception_stop_request") {
+        pending.enable_perception_stop_request = parameter.as_bool();
       } else if (name == "straight_allowed_offset") {
         pending.straight_allowed_offset = parameter.as_double();
       } else if (name == "curve_allowed_offset") {
         pending.curve_allowed_offset = parameter.as_double();
+      } else if (name == "min_perception_confidence") {
+        pending.min_perception_confidence = parameter.as_double();
       } else if (name == "steering_sign") {
         pending_steering_sign = parameter.as_double();
       }
@@ -494,6 +520,9 @@ private:
 
     params_ = pending;
     steering_sign_ = pending_steering_sign;
+    if (!params_.enable_perception_stop_request) {
+      stop_request_active_ = false;
+    }
     RCLCPP_INFO(
       get_logger(),
       "Updated controller parameters: Kp=%.3f Kd=%.3f speed=%.3fm/s min=%.3fm/s "
@@ -561,8 +590,12 @@ private:
 
   void stop_request_callback(const std_msgs::msg::Bool::SharedPtr msg)
   {
+    if (!params_.enable_perception_stop_request) {
+      stop_request_active_ = false;
+      return;
+    }
     stop_request_active_ = msg->data;
-    if (stop_request_active_) {
+    if (params_.enable_perception_stop_request && stop_request_active_) {
       lock_and_stop("perception_stop");
     }
   }
@@ -573,6 +606,90 @@ private:
     if (emergency_stop_active_) {
       lock_and_stop("emergency_stop");
     }
+  }
+
+  void lane_state_callback(const std_msgs::msg::String::SharedPtr msg)
+  {
+    double confidence = 0.0;
+    bool is_valid = false;
+    std::string road_state;
+    if (!extract_json_number(msg->data, "confidence", &confidence) ||
+      !extract_json_bool(msg->data, "is_valid", &is_valid) ||
+      !extract_json_string(msg->data, "road_state", &road_state))
+    {
+      has_lane_state_ = false;
+      return;
+    }
+    lane_confidence_ = std::clamp(confidence, 0.0, 1.0);
+    lane_state_valid_ = is_valid;
+    lane_road_state_ = road_state;
+    has_lane_state_ = true;
+    last_lane_state_time_ = std::chrono::steady_clock::now();
+  }
+
+  static bool extract_json_number(
+    const std::string & json, const std::string & key, double * value)
+  {
+    const std::string needle = "\"" + key + "\":";
+    const size_t start = json.find(needle);
+    if (start == std::string::npos) {
+      return false;
+    }
+    size_t value_start = start + needle.size();
+    while (value_start < json.size() && std::isspace(static_cast<unsigned char>(json[value_start]))) {
+      ++value_start;
+    }
+    try {
+      size_t consumed = 0;
+      const double parsed = std::stod(json.substr(value_start), &consumed);
+      if (consumed == 0 || !std::isfinite(parsed)) {
+        return false;
+      }
+      *value = parsed;
+      return true;
+    } catch (const std::exception &) {
+      return false;
+    }
+  }
+
+  static bool extract_json_bool(
+    const std::string & json, const std::string & key, bool * value)
+  {
+    const std::string needle = "\"" + key + "\":";
+    const size_t start = json.find(needle);
+    if (start == std::string::npos) {
+      return false;
+    }
+    size_t value_start = start + needle.size();
+    while (value_start < json.size() && std::isspace(static_cast<unsigned char>(json[value_start]))) {
+      ++value_start;
+    }
+    if (json.compare(value_start, 4, "true") == 0) {
+      *value = true;
+      return true;
+    }
+    if (json.compare(value_start, 5, "false") == 0) {
+      *value = false;
+      return true;
+    }
+    return false;
+  }
+
+  static bool extract_json_string(
+    const std::string & json, const std::string & key, std::string * value)
+  {
+    const std::string needle = "\"" + key + "\":\"";
+    const size_t start = json.find(needle);
+    if (start == std::string::npos) {
+      return false;
+    }
+    const size_t value_start = start + needle.size();
+    const size_t value_end = json.find('"', value_start);
+    if (value_end == std::string::npos) {
+      return false;
+    }
+    *value = json.substr(value_start, value_end - value_start);
+    return true;
   }
 
   bool start_ready(std::string * reason) const
@@ -602,13 +719,19 @@ private:
       }
       return false;
     }
+    if (!lane_state_ready(now)) {
+      if (reason) {
+        *reason = "lane state is invalid, low-confidence, or stale";
+      }
+      return false;
+    }
     if (!geometry_ready(now)) {
       if (reason) {
         *reason = "lane geometry feedback is missing or stale";
       }
       return false;
     }
-    if (stop_request_active_) {
+    if (params_.enable_perception_stop_request && stop_request_active_) {
       if (reason) {
         *reason = "perception stop request is active";
       }
@@ -747,7 +870,7 @@ private:
       previous_control_time_ = now;
       return;
     }
-    if (stop_request_active_) {
+    if (params_.enable_perception_stop_request && stop_request_active_) {
       lock_and_stop("perception_stop");
       last_mode_ = "perception_stop";
       publish_debug(now);
@@ -814,9 +937,18 @@ private:
   bool perception_ready(const std::chrono::steady_clock::time_point & now) const
   {
     return has_offset_ && has_valid_message_ && is_valid_ &&
+           lane_state_ready(now) &&
            offset_age_seconds(now) <= params_.offset_timeout &&
            valid_age_seconds(now) <= params_.offset_timeout &&
            geometry_ready(now);
+  }
+
+  bool lane_state_ready(const std::chrono::steady_clock::time_point & now) const
+  {
+    return has_lane_state_ && lane_state_valid_ &&
+           lane_confidence_ >= params_.min_perception_confidence &&
+           lane_road_state_ != "LOW_CONFIDENCE" &&
+           geometry_age_seconds(last_lane_state_time_, has_lane_state_, now) <= params_.offset_timeout;
   }
 
   bool geometry_ready(const std::chrono::steady_clock::time_point & now) const
@@ -889,7 +1021,8 @@ private:
   double compute_control_error() const
   {
     const double predictive_weight =
-      params_.lookahead_feedback_weight * compute_offset_relief();
+      params_.lookahead_feedback_weight *
+      (params_.enable_curve_offset_relief ? compute_offset_relief() : 1.0);
     return std::clamp(
       predictive_weight * current_offset_ +
       params_.lateral_feedback_weight * current_lateral_offset_ +
@@ -1012,6 +1145,14 @@ private:
          << " enabled=" << (auto_enabled_ ? "True" : "False")
          << " locked=" << (safety_locked_ ? "True" : "False")
          << " valid=" << (is_valid_ ? "True" : "False")
+         << " lane_valid=" << (lane_state_valid_ ? "True" : "False")
+         << " confidence=" << lane_confidence_
+         << " road_state=" << lane_road_state_
+         << " lane_age=" << geometry_age_seconds(last_lane_state_time_, has_lane_state_, now)
+         << " bottom_age=" << geometry_age_seconds(last_lateral_offset_time_, has_lateral_offset_, now)
+         << " heading_age=" << geometry_age_seconds(last_heading_error_time_, has_heading_error_, now)
+         << " curvature_age=" << geometry_age_seconds(last_curvature_time_, has_curvature_, now)
+         << " perception_ready=" << (perception_ready(now) ? "True" : "False")
          << " stop_request=" << (stop_request_active_ ? "True" : "False")
          << " emergency=" << (emergency_stop_active_ ? "True" : "False")
          << " offset=" << current_offset_
@@ -1052,6 +1193,7 @@ private:
   std::string lateral_offset_topic_{"/segmentation/bottom_offset"};
   std::string heading_error_topic_{"/segmentation/heading_error"};
   std::string curvature_topic_{"/segmentation/curvature"};
+  std::string lane_state_topic_{"/perception/lane_state"};
   std::string cmd_vel_topic_{"/cmd_vel"};
 
   bool auto_enabled_{false};
@@ -1061,13 +1203,16 @@ private:
   bool has_lateral_offset_{false};
   bool has_heading_error_{false};
   bool has_curvature_{false};
+  bool has_lane_state_{false};
   bool is_valid_{false};
+  bool lane_state_valid_{false};
   bool stop_request_active_{false};
   bool emergency_stop_active_{false};
   double current_offset_{0.0};
   double current_lateral_offset_{0.0};
   double current_heading_error_{0.0};
   double current_curvature_{0.0};
+  double lane_confidence_{0.0};
   double previous_offset_{0.0};
   double previous_control_error_{0.0};
   double filtered_derivative_{0.0};
@@ -1079,6 +1224,8 @@ private:
   std::chrono::steady_clock::time_point last_lateral_offset_time_;
   std::chrono::steady_clock::time_point last_heading_error_time_;
   std::chrono::steady_clock::time_point last_curvature_time_;
+  std::chrono::steady_clock::time_point last_lane_state_time_;
+  std::string lane_road_state_{"UNKNOWN"};
   std::chrono::steady_clock::time_point previous_control_time_;
   std::string last_mode_{"disabled"};
   std::string stop_reason_{"startup_disabled"};
@@ -1090,6 +1237,7 @@ private:
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr valid_subscription_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr stop_request_subscription_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr emergency_subscription_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr lane_state_subscription_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
   rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr chassis_enable_publisher_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr debug_publisher_;
