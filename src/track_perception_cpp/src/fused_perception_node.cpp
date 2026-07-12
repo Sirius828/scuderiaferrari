@@ -377,6 +377,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("offset_y07_ratio", 0.70);
     declare_parameter<double>("offset_y08_ratio", 0.80);
     declare_parameter<double>("offset_y09_ratio", 0.90);
+    declare_parameter<double>("heading_y_ratio", 0.75);
     declare_parameter<double>("max_offset_jump", 2.0);
     declare_parameter<double>("offset_smoothing_alpha", 0.35);
     declare_parameter<bool>("enable_left_boundary_template_line", false);
@@ -483,6 +484,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.offset_y07_ratio = static_cast<float>(get_parameter("offset_y07_ratio").as_double());
     lane_cfg.offset_y08_ratio = static_cast<float>(get_parameter("offset_y08_ratio").as_double());
     lane_cfg.offset_y09_ratio = static_cast<float>(get_parameter("offset_y09_ratio").as_double());
+    lane_cfg.heading_y_ratio = static_cast<float>(get_parameter("heading_y_ratio").as_double());
     lane_cfg.max_offset_jump = static_cast<float>(get_parameter("max_offset_jump").as_double());
     lane_cfg.offset_smoothing_alpha = static_cast<float>(get_parameter("offset_smoothing_alpha").as_double());
     lane_cfg.enable_left_boundary_template_line =

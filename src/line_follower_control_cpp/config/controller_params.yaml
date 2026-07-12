@@ -16,15 +16,15 @@
   ros__parameters:
     # ==================== 基础 PD 控制 ====================
     # 比例增益：增大后回中更快，但过大容易左右摆动。
-    Kp: 1.25
+    Kp: 1.13
     # 微分增益：抑制过冲、提前刹住转向；视觉噪声大时不要过大。
-    Kd: 0.35
+    Kd: 0.2
 
     # ==================== 速度与底盘标定 ====================
     # 直道目标最高速度，单位 m/s；低风险时加速到此速度。
-    linear_speed: 0.55
+    linear_speed: 0.56
     # 弯道动态降速的最低速度，单位 m/s；不是停车速度。
-    min_linear_speed: 0.10
+    min_linear_speed: 0.35
     # 车轮半径，单位 m，用于 m/s 到轮速 rps 的换算。
     wheel_radius: 0.032
     # 舵量的绝对安全上限，范围 [0, 1]。
@@ -49,7 +49,7 @@
     # 风险低于该值时保持 linear_speed。
     speed_offset_start: 0.05
     # 风险达到该值时降至 min_linear_speed。
-    speed_offset_full: 0.35
+    speed_offset_full: 0.70
     # 降速曲线指数；1.0 为线性，>1.0 在中等风险时更保守地保持速度。
     speed_curve_exponent: 1.0
     # 加速斜率，单位 m/s^2；限制突然冲刺。
@@ -61,9 +61,9 @@
 
     # ==================== 多位置 offset 反馈 ====================
     # 远处到近处的 offset 权重，控制器会按总和归一化。
-    offset_y07_weight: 0.20
-    offset_y08_weight: 0.30
-    offset_y09_weight: 0.50
+    offset_y07_weight: 0.25
+    offset_y08_weight: 0.4
+    offset_y09_weight: 0.35
     # 航向误差增益；用于提前修正车头方向，建议从 0.05 开始增加。
     heading_feedback_gain: 0.0
     # 弯道强度低于该值时，不放宽前瞻偏差的影响。
@@ -90,7 +90,7 @@
     # 微分项绝对限幅，单位 1/s；0 表示不限制。
     derivative_limit: 1.0
     # 微分低通滤波系数，范围 [0, 1]；越小越平滑但响应越慢。
-    derivative_filter_alpha: 1.0
+    derivative_filter_alpha: 0.4
     # 舵量变化率上限，单位 1/s；0 表示不限制。
     steering_slew_rate: 0.0
 

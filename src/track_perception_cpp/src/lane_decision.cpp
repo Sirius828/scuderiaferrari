@@ -164,6 +164,7 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.offset_y07_ratio = clampValue(cfg_.offset_y07_ratio, 0.0f, 1.0f);
   cfg_.offset_y08_ratio = clampValue(cfg_.offset_y08_ratio, 0.0f, 1.0f);
   cfg_.offset_y09_ratio = clampValue(cfg_.offset_y09_ratio, 0.0f, 1.0f);
+  cfg_.heading_y_ratio = clampValue(cfg_.heading_y_ratio, 0.0f, 1.0f);
   last_offsets_.fill(0.0);
   left_boundary_template_offsets_ = parseDoubleList(cfg_.left_boundary_template_offsets);
   right_boundary_template_offsets_ = parseDoubleList(cfg_.right_boundary_template_offsets);
@@ -972,16 +973,17 @@ bool LaneDecision::fitCenterlineAndComputeGeometry(const std::vector<cv::Point3f
   if (!weightedPolyfit(points, fit_order, coeffs)) {
     return false;
   }
-  const double geometry_y = h * cfg_.offset_y09_ratio;
+  const double heading_y = h * cfg_.heading_y_ratio;
+  const double curvature_y = h * cfg_.offset_y09_ratio;
   double heading = 0.0;
   double curv = 0.0;
   if (coeffs->size() > 1) {
     auto deriv = polyDeriv(*coeffs);
-    double dx_dy = evalPoly(deriv, geometry_y);
+    double dx_dy = evalPoly(deriv, heading_y);
     heading = std::atan(dx_dy) / (M_PI / 2.0);
     if (coeffs->size() > 2) {
       auto second = polyDeriv(*coeffs, 2);
-      curv = clampValue(evalPoly(second, geometry_y) * h, -1.0, 1.0);
+      curv = clampValue(evalPoly(second, curvature_y) * h, -1.0, 1.0);
     }
   }
   *heading_error = clampValue(heading, -1.0, 1.0);

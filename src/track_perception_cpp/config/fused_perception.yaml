@@ -110,6 +110,7 @@ fused_perception_node:
     offset_y07_ratio: 0.70
     offset_y08_ratio: 0.80
     offset_y09_ratio: 0.90
+    heading_y_ratio: 0.75
     max_offset_jump: 0.80
     offset_smoothing_alpha: 0.35
 

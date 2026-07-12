@@ -48,6 +48,7 @@ struct LaneDecisionConfig {
   float offset_y07_ratio{0.70f};
   float offset_y08_ratio{0.80f};
   float offset_y09_ratio{0.90f};
+  float heading_y_ratio{0.75f};
   float max_offset_jump{2.0f};
   float offset_smoothing_alpha{0.35f};
 
