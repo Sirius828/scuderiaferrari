@@ -78,7 +78,7 @@ fused_perception_node:
     # Band 扫描
     enable_segment_branch_logic: true
     band_count: 24
-    band_y_min_ratio: 0.60
+    band_y_min_ratio: 0.61
     band_y_max_ratio: 1.0
     band_height_ratio: 0.015
     min_segment_width_px: 60
@@ -86,12 +86,12 @@ fused_perception_node:
     min_pixels_per_band: 80
 
     # 岔路确认
-    branch_detect_min_bands: 2
-    branch_confirm_frames: 3
+    branch_detect_min_bands: 1
+    branch_confirm_frames: 2
     branch_detect_far_band_ratio: 0.7
     enable_encoder_branch_hold: true
     encoder_count_topic: "/chassis/encoder_count"
-    encoder_hold_counts: 5000
+    encoder_hold_counts: 9999
     encoder_feedback_timeout_sec: 0.30
 
     # 中心线拟合
@@ -101,7 +101,7 @@ fused_perception_node:
     enable_fit_point_jump_filter: false
     max_fit_point_dx_ratio: 0.22
     max_fit_point_dx_px: 140.0
-    enable_fit_point_trend_filter: false
+    enable_fit_point_trend_filter: true
     fit_point_trend_residual_ratio: 0.12
     fit_point_trend_residual_px: 80.0
     fit_point_trend_slope_delta: 0.65

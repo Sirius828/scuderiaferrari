@@ -16,15 +16,15 @@
   ros__parameters:
     # ==================== 基础 PD 控制 ====================
     # 比例增益：增大后回中更快，但过大容易左右摆动。
-    Kp: 1.13
+    Kp: 1.25
     # 微分增益：抑制过冲、提前刹住转向；视觉噪声大时不要过大。
     Kd: 0.2
 
     # ==================== 速度与底盘标定 ====================
     # 直道目标最高速度，单位 m/s；低风险时加速到此速度。
-    linear_speed: 0.56
+    linear_speed: 0.7
     # 弯道动态降速的最低速度，单位 m/s；不是停车速度。
-    min_linear_speed: 0.35
+    min_linear_speed: 0.6
     # 车轮半径，单位 m，用于 m/s 到轮速 rps 的换算。
     wheel_radius: 0.032
     # 舵量的绝对安全上限，范围 [0, 1]。
@@ -32,40 +32,38 @@
 
     # ==================== 动态舵量上限 ====================
     # 直道最大舵量；小舵量有助于高速直线稳定。
-    straight_max_steering: 0.85
+    straight_max_steering: 0.3
     # 弯道最大舵量；弯道允许更大修正。
-    curve_max_steering: 0.85
+    curve_max_steering: 0.75
     # 风险从该值开始放宽最大舵量。
-    steering_offset_start: 0.08
+    steering_offset_start: 0.20
     # 风险达到该值时放宽到 curve_max_steering。
-    steering_offset_full: 0.40
+    steering_offset_full: 0.75
     # false 时固定使用 max_steering，便于只调基础 PD。
     enable_dynamic_steering_limit: false
 
     # ==================== 动态速度 ====================
     # true：根据近场偏差、航向、曲率和前瞻偏差超量动态调速。
     # true：直道加速，弯道按风险连续降速。
-    enable_dynamic_speed: false
+    enable_dynamic_speed: true
     # 风险低于该值时保持 linear_speed。
-    speed_offset_start: 0.05
+    speed_offset_start: 0.20
     # 风险达到该值时降至 min_linear_speed。
-    speed_offset_full: 0.70
-    # 降速曲线指数；1.0 为线性，>1.0 在中等风险时更保守地保持速度。
-    speed_curve_exponent: 1.0
+    speed_offset_full: 0.80
     # 加速斜率，单位 m/s^2；限制突然冲刺。
     speed_accel_rate: 0.35
     # 减速斜率，单位 m/s^2；越大越快降速。
-    speed_decel_rate: 2.0
+    speed_decel_rate: 5.0
     # 曲率对速度风险的权重，范围 [0, 1]。
     curvature_speed_weight: 0.20
 
     # ==================== 多位置 offset 反馈 ====================
     # 远处到近处的 offset 权重，控制器会按总和归一化。
-    offset_y07_weight: 0.25
-    offset_y08_weight: 0.4
-    offset_y09_weight: 0.35
+    offset_y07_weight: 0.6
+    offset_y08_weight: 0.25
+    offset_y09_weight: 0.15
     # 航向误差增益；用于提前修正车头方向，建议从 0.05 开始增加。
-    heading_feedback_gain: 0.0
+    heading_feedback_gain: 0.1
     # 弯道强度低于该值时，不放宽前瞻偏差的影响。
     curve_offset_relief_start: 0.15
     # 弯道强度达到该值时，前瞻偏差不再直接作为风险来源。

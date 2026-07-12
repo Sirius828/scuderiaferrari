@@ -50,7 +50,6 @@ struct ControllerParameters
   double steering_offset_full{0.60};
   double speed_offset_start{0.05};
   double speed_offset_full{0.60};
-  double speed_curve_exponent{1.0};
   double speed_accel_rate{0.20};
   double speed_decel_rate{2.0};
   double derivative_limit{3.0};
@@ -94,7 +93,6 @@ public:
     declare_parameter<double>("steering_offset_full", params_.steering_offset_full);
     declare_parameter<double>("speed_offset_start", params_.speed_offset_start);
     declare_parameter<double>("speed_offset_full", params_.speed_offset_full);
-    declare_parameter<double>("speed_curve_exponent", params_.speed_curve_exponent);
     declare_parameter<double>("speed_accel_rate", params_.speed_accel_rate);
     declare_parameter<double>("speed_decel_rate", params_.speed_decel_rate);
     declare_parameter<double>("derivative_limit", params_.derivative_limit);
@@ -225,7 +223,6 @@ private:
     params_.steering_offset_full = get_parameter("steering_offset_full").as_double();
     params_.speed_offset_start = get_parameter("speed_offset_start").as_double();
     params_.speed_offset_full = get_parameter("speed_offset_full").as_double();
-    params_.speed_curve_exponent = get_parameter("speed_curve_exponent").as_double();
     params_.speed_accel_rate = get_parameter("speed_accel_rate").as_double();
     params_.speed_decel_rate = get_parameter("speed_decel_rate").as_double();
     params_.derivative_limit = get_parameter("derivative_limit").as_double();
@@ -326,9 +323,6 @@ private:
       parameters.speed_offset_full > 1.0)
     {
       return fail("speed_offset_full must be > start and <= 1");
-    }
-    if (!std::isfinite(parameters.speed_curve_exponent) || parameters.speed_curve_exponent <= 0.0) {
-      return fail("speed_curve_exponent must be > 0");
     }
     if (!std::isfinite(parameters.speed_accel_rate) || parameters.speed_accel_rate < 0.0) {
       return fail("speed_accel_rate must be >= 0");
@@ -467,8 +461,6 @@ private:
         pending.speed_offset_start = parameter.as_double();
       } else if (name == "speed_offset_full") {
         pending.speed_offset_full = parameter.as_double();
-      } else if (name == "speed_curve_exponent") {
-        pending.speed_curve_exponent = parameter.as_double();
       } else if (name == "speed_accel_rate") {
         pending.speed_accel_rate = parameter.as_double();
       } else if (name == "speed_decel_rate") {
@@ -1013,7 +1005,7 @@ private:
     const double ratio = std::clamp(
       (abs_offset - params_.speed_offset_start) /
       (params_.speed_offset_full - params_.speed_offset_start), 0.0, 1.0);
-    const double slowdown = std::pow(ratio, params_.speed_curve_exponent);
+    const double slowdown = ratio;
     const double speed_range = params_.linear_speed_mps - params_.min_linear_speed_mps;
     return params_.linear_speed_mps - speed_range * slowdown;
   }
