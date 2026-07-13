@@ -55,7 +55,9 @@ struct ControllerParameters
   double derivative_limit{3.0};
   double derivative_filter_alpha{0.35};
   double steering_slew_rate{4.0};
+  double steering_return_slew_rate{1.5};
   double offset_timeout{0.25};
+  double geometry_stall_timeout{0.20};
   double invalid_hold_speed_mps{0.25};
   double offset_y07_weight{0.20};
   double offset_y08_weight{0.30};
@@ -79,6 +81,7 @@ class LineFollowerControllerCpp : public rclcpp::Node
 public:
   LineFollowerControllerCpp()
   : Node("line_follower_controller_cpp"),
+    last_geometry_content_change_time_(std::chrono::steady_clock::now()),
     previous_control_time_(std::chrono::steady_clock::now())
   {
     declare_parameter<double>("Kp", params_.kp);
@@ -98,7 +101,9 @@ public:
     declare_parameter<double>("derivative_limit", params_.derivative_limit);
     declare_parameter<double>("derivative_filter_alpha", params_.derivative_filter_alpha);
     declare_parameter<double>("steering_slew_rate", params_.steering_slew_rate);
+    declare_parameter<double>("steering_return_slew_rate", params_.steering_return_slew_rate);
     declare_parameter<double>("offset_timeout", params_.offset_timeout);
+    declare_parameter<double>("geometry_stall_timeout", params_.geometry_stall_timeout);
     declare_parameter<double>("invalid_hold_speed", params_.invalid_hold_speed_mps);
     declare_parameter<double>("offset_y07_weight", params_.offset_y07_weight);
     declare_parameter<double>("offset_y08_weight", params_.offset_y08_weight);
@@ -228,7 +233,9 @@ private:
     params_.derivative_limit = get_parameter("derivative_limit").as_double();
     params_.derivative_filter_alpha = get_parameter("derivative_filter_alpha").as_double();
     params_.steering_slew_rate = get_parameter("steering_slew_rate").as_double();
+    params_.steering_return_slew_rate = get_parameter("steering_return_slew_rate").as_double();
     params_.offset_timeout = get_parameter("offset_timeout").as_double();
+    params_.geometry_stall_timeout = get_parameter("geometry_stall_timeout").as_double();
     params_.invalid_hold_speed_mps = get_parameter("invalid_hold_speed").as_double();
     params_.offset_y07_weight = get_parameter("offset_y07_weight").as_double();
     params_.offset_y08_weight = get_parameter("offset_y08_weight").as_double();
@@ -341,8 +348,18 @@ private:
     if (!std::isfinite(parameters.steering_slew_rate) || parameters.steering_slew_rate < 0.0) {
       return fail("steering_slew_rate must be >= 0");
     }
+    if (!std::isfinite(parameters.steering_return_slew_rate) ||
+      parameters.steering_return_slew_rate < 0.0)
+    {
+      return fail("steering_return_slew_rate must be >= 0");
+    }
     if (!std::isfinite(parameters.offset_timeout) || parameters.offset_timeout <= 0.0) {
       return fail("offset_timeout must be > 0");
+    }
+    if (!std::isfinite(parameters.geometry_stall_timeout) ||
+      parameters.geometry_stall_timeout < 0.0)
+    {
+      return fail("geometry_stall_timeout must be >= 0");
     }
     if (!std::isfinite(parameters.invalid_hold_speed_mps) ||
       parameters.invalid_hold_speed_mps < 0.0 ||
@@ -471,8 +488,12 @@ private:
         pending.derivative_filter_alpha = parameter.as_double();
       } else if (name == "steering_slew_rate") {
         pending.steering_slew_rate = parameter.as_double();
+      } else if (name == "steering_return_slew_rate") {
+        pending.steering_return_slew_rate = parameter.as_double();
       } else if (name == "offset_timeout") {
         pending.offset_timeout = parameter.as_double();
+      } else if (name == "geometry_stall_timeout") {
+        pending.geometry_stall_timeout = parameter.as_double();
       } else if (name == "invalid_hold_speed") {
         pending.invalid_hold_speed_mps = parameter.as_double();
       } else if (name == "offset_y07_weight") {
@@ -545,20 +566,38 @@ private:
 
   void offset_y07_callback(const std_msgs::msg::Float32::SharedPtr msg)
   {
-    update_geometry_value(
+    update_offset_value(
       msg->data, &current_offset_y07_, &has_offset_y07_, &last_offset_y07_time_);
   }
 
   void offset_y08_callback(const std_msgs::msg::Float32::SharedPtr msg)
   {
-    update_geometry_value(
+    update_offset_value(
       msg->data, &current_offset_y08_, &has_offset_y08_, &last_offset_y08_time_);
   }
 
   void offset_y09_callback(const std_msgs::msg::Float32::SharedPtr msg)
   {
-    update_geometry_value(
+    update_offset_value(
       msg->data, &current_offset_y09_, &has_offset_y09_, &last_offset_y09_time_);
+  }
+
+  void update_offset_value(
+    float value, double * target, bool * has_value,
+    std::chrono::steady_clock::time_point * timestamp)
+  {
+    if (!std::isfinite(value)) {
+      *has_value = false;
+      return;
+    }
+    const auto now = std::chrono::steady_clock::now();
+    const double clamped = std::clamp(static_cast<double>(value), -1.0, 1.0);
+    if (!*has_value || std::abs(clamped - *target) > 1e-6) {
+      last_geometry_content_change_time_ = now;
+    }
+    *target = clamped;
+    *has_value = true;
+    *timestamp = now;
   }
 
   void valid_callback(const std_msgs::msg::Bool::SharedPtr msg)
@@ -767,6 +806,7 @@ private:
     auto_start_pending_ = false;
     stop_reason_ = "running";
     invalid_since_.reset();
+    last_geometry_content_change_time_ = now;
     current_speed_mps_ = 0.0;
     current_steering_ = 0.0;
     previous_control_error_ = compute_control_error();
@@ -880,6 +920,14 @@ private:
       return;
     }
 
+    if (geometry_content_stalled(now)) {
+      lock_and_stop("geometry_stall");
+      last_mode_ = "geometry_stall";
+      publish_debug(now);
+      previous_control_time_ = now;
+      return;
+    }
+
     if (!perception_ready(now)) {
       if (!invalid_since_) {
         invalid_since_ = now;
@@ -923,8 +971,12 @@ private:
     desired_steering = std::clamp(
       desired_steering, -dynamic_max_steering, dynamic_max_steering);
     current_steering_ = apply_steering_slew(desired_steering, dt);
+    // The dynamic limit is a target limit.  Clamping to a rapidly shrinking
+    // dynamic limit here would bypass steering_slew_rate on curve exit and
+    // unload the servo abruptly.  Keep only the absolute safety clamp after
+    // the slew limiter so both steering attack and release remain continuous.
     current_steering_ = std::clamp(
-      current_steering_, -dynamic_max_steering, dynamic_max_steering);
+      current_steering_, -params_.max_steering, params_.max_steering);
 
     publish_chassis_enable(true);
     publish_motion_command(current_speed_mps_, current_steering_);
@@ -944,6 +996,15 @@ private:
            offset_age_seconds(last_offset_y09_time_, has_offset_y09_, now) <= params_.offset_timeout &&
            valid_age_seconds(now) <= params_.offset_timeout &&
            geometry_ready(now);
+  }
+
+  bool geometry_content_stalled(const std::chrono::steady_clock::time_point & now) const
+  {
+    if (params_.geometry_stall_timeout <= 0.0 || current_speed_mps_ < 0.30) {
+      return false;
+    }
+    return std::chrono::duration<double>(
+      now - last_geometry_content_change_time_).count() > params_.geometry_stall_timeout;
   }
 
   bool lane_state_ready(const std::chrono::steady_clock::time_point & now) const
@@ -1043,8 +1104,11 @@ private:
   double compute_control_error() const
   {
     const double weighted_offset = compute_weighted_offset();
+    // Image y grows downward.  A centerline bending toward positive x therefore
+    // has a negative dx/dy heading, so subtract heading to make both feedback
+    // terms request the same steering direction through a bend.
     return std::clamp(
-      weighted_offset +
+      weighted_offset -
       params_.heading_feedback_gain * current_heading_error_, -1.0, 1.0);
   }
 
@@ -1087,6 +1151,9 @@ private:
 
   double compute_offset_relief() const
   {
+    if (!params_.enable_curve_offset_relief) {
+      return 1.0;
+    }
     const double curve_strength = compute_curve_strength();
     if (curve_strength <= params_.curve_offset_relief_start) {
       return 1.0;
@@ -1099,8 +1166,11 @@ private:
 
   double apply_speed_slew(double target_speed, double dt)
   {
+    // Normal dynamic-speed targets are already bounded by min_linear_speed.
+    // Safety states such as invalid_hold intentionally request a lower speed,
+    // so do not raise those targets back to the normal driving floor here.
     target_speed = std::clamp(
-      target_speed, params_.min_linear_speed_mps, params_.linear_speed_mps);
+      target_speed, 0.0, params_.linear_speed_mps);
     if (target_speed > current_speed_mps_) {
       if (params_.speed_accel_rate <= 0.0) {
         return target_speed;
@@ -1121,7 +1191,13 @@ private:
     if (params_.steering_slew_rate <= 0.0) {
       return target_steering;
     }
-    const double max_delta = params_.steering_slew_rate * dt;
+    double slew_rate = params_.steering_slew_rate;
+    if (params_.steering_return_slew_rate > 0.0 &&
+      std::abs(target_steering) < std::abs(current_steering_))
+    {
+      slew_rate = params_.steering_return_slew_rate;
+    }
+    const double max_delta = slew_rate * dt;
     const double delta = std::clamp(
       target_steering - current_steering_, -max_delta, max_delta);
     return current_steering_ + delta;
@@ -1174,6 +1250,9 @@ private:
          << " offset_y09_age=" << geometry_age_seconds(last_offset_y09_time_, has_offset_y09_, now)
          << " heading_age=" << geometry_age_seconds(last_heading_error_time_, has_heading_error_, now)
          << " curvature_age=" << geometry_age_seconds(last_curvature_time_, has_curvature_, now)
+         << " geometry_content_age=" << std::chrono::duration<double>(
+      now - last_geometry_content_change_time_).count()
+         << " geometry_stalled=" << (geometry_content_stalled(now) ? "True" : "False")
          << " perception_ready=" << (perception_ready(now) ? "True" : "False")
          << " stop_request=" << (stop_request_active_ ? "True" : "False")
          << " emergency=" << (emergency_stop_active_ ? "True" : "False")
@@ -1251,6 +1330,7 @@ private:
   std::chrono::steady_clock::time_point last_heading_error_time_;
   std::chrono::steady_clock::time_point last_curvature_time_;
   std::chrono::steady_clock::time_point last_lane_state_time_;
+  std::chrono::steady_clock::time_point last_geometry_content_change_time_;
   std::string lane_road_state_{"UNKNOWN"};
   std::chrono::steady_clock::time_point previous_control_time_;
   std::string last_mode_{"disabled"};
