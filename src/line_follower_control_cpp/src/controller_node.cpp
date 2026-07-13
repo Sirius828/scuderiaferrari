@@ -42,20 +42,38 @@ struct ControllerParameters
   double kd{0.035};
   double linear_speed_mps{0.60};
   double min_linear_speed_mps{0.25};
+  double high_error_rescue_speed_mps{0.0};
+  double high_error_rescue_start{0.70};
+  double inner_side_min_linear_speed_mps{0.0};
+  double inner_side_offset_threshold{0.05};
   double wheel_radius{0.032};
   double max_steering{0.85};
   double straight_max_steering{0.30};
   double curve_max_steering{0.85};
   double steering_offset_start{0.05};
   double steering_offset_full{0.60};
+  double curve_entry_max_steering{0.0};
+  double curve_entry_error_start{0.45};
+  double curve_entry_error_override{0.85};
+  double curve_entry_heading_confirm{0.45};
   double speed_offset_start{0.05};
   double speed_offset_full{0.60};
+  double speed_slowdown_exponent{1.0};
+  double speed_error_rate_start{0.0};
+  double speed_error_rate_full{0.0};
   double speed_accel_rate{0.20};
   double speed_decel_rate{2.0};
+  double branch_max_speed_mps{0.0};
+  double branch_min_speed_mps{0.0};
   double derivative_limit{3.0};
   double derivative_filter_alpha{0.35};
+  double derivative_brake_gain{1.0};
   double steering_slew_rate{4.0};
   double steering_return_slew_rate{1.5};
+  double branch_max_steering{0.60};
+  double branch_exit_hold_time{0.80};
+  double branch_error_slew_rate{0.60};
+  double branch_error_recovery_rate{2.00};
   double offset_timeout{0.25};
   double geometry_stall_timeout{0.20};
   double invalid_hold_speed_mps{0.25};
@@ -63,6 +81,13 @@ struct ControllerParameters
   double offset_y08_weight{0.30};
   double offset_y09_weight{0.50};
   double heading_feedback_gain{0.35};
+  double lookahead_transition_gain{0.0};
+  double curve_outer_bias{0.0};
+  double curve_outer_bias_start{0.35};
+  double curve_outer_bias_full{0.70};
+  double curve_outer_bias_hold_time{0.0};
+  bool lock_branch_outer_bias{false};
+  double branch_outer_bias_release_time{0.0};
   double curvature_speed_weight{0.50};
   double curve_offset_relief_start{0.15};
   double curve_offset_relief_full{0.60};
@@ -88,20 +113,43 @@ public:
     declare_parameter<double>("Kd", params_.kd);
     declare_parameter<double>("linear_speed", params_.linear_speed_mps);
     declare_parameter<double>("min_linear_speed", params_.min_linear_speed_mps);
+    declare_parameter<double>(
+      "high_error_rescue_speed", params_.high_error_rescue_speed_mps);
+    declare_parameter<double>(
+      "high_error_rescue_start", params_.high_error_rescue_start);
+    declare_parameter<double>(
+      "inner_side_min_linear_speed", params_.inner_side_min_linear_speed_mps);
+    declare_parameter<double>(
+      "inner_side_offset_threshold", params_.inner_side_offset_threshold);
     declare_parameter<double>("wheel_radius", params_.wheel_radius);
     declare_parameter<double>("max_steering", params_.max_steering);
     declare_parameter<double>("straight_max_steering", params_.straight_max_steering);
     declare_parameter<double>("curve_max_steering", params_.curve_max_steering);
     declare_parameter<double>("steering_offset_start", params_.steering_offset_start);
     declare_parameter<double>("steering_offset_full", params_.steering_offset_full);
+    declare_parameter<double>("curve_entry_max_steering", params_.curve_entry_max_steering);
+    declare_parameter<double>("curve_entry_error_start", params_.curve_entry_error_start);
+    declare_parameter<double>("curve_entry_error_override", params_.curve_entry_error_override);
+    declare_parameter<double>(
+      "curve_entry_heading_confirm", params_.curve_entry_heading_confirm);
     declare_parameter<double>("speed_offset_start", params_.speed_offset_start);
     declare_parameter<double>("speed_offset_full", params_.speed_offset_full);
+    declare_parameter<double>("speed_slowdown_exponent", params_.speed_slowdown_exponent);
+    declare_parameter<double>("speed_error_rate_start", params_.speed_error_rate_start);
+    declare_parameter<double>("speed_error_rate_full", params_.speed_error_rate_full);
     declare_parameter<double>("speed_accel_rate", params_.speed_accel_rate);
     declare_parameter<double>("speed_decel_rate", params_.speed_decel_rate);
+    declare_parameter<double>("branch_max_speed", params_.branch_max_speed_mps);
+    declare_parameter<double>("branch_min_speed", params_.branch_min_speed_mps);
     declare_parameter<double>("derivative_limit", params_.derivative_limit);
     declare_parameter<double>("derivative_filter_alpha", params_.derivative_filter_alpha);
+    declare_parameter<double>("derivative_brake_gain", params_.derivative_brake_gain);
     declare_parameter<double>("steering_slew_rate", params_.steering_slew_rate);
     declare_parameter<double>("steering_return_slew_rate", params_.steering_return_slew_rate);
+    declare_parameter<double>("branch_max_steering", params_.branch_max_steering);
+    declare_parameter<double>("branch_exit_hold_time", params_.branch_exit_hold_time);
+    declare_parameter<double>("branch_error_slew_rate", params_.branch_error_slew_rate);
+    declare_parameter<double>("branch_error_recovery_rate", params_.branch_error_recovery_rate);
     declare_parameter<double>("offset_timeout", params_.offset_timeout);
     declare_parameter<double>("geometry_stall_timeout", params_.geometry_stall_timeout);
     declare_parameter<double>("invalid_hold_speed", params_.invalid_hold_speed_mps);
@@ -109,6 +157,14 @@ public:
     declare_parameter<double>("offset_y08_weight", params_.offset_y08_weight);
     declare_parameter<double>("offset_y09_weight", params_.offset_y09_weight);
     declare_parameter<double>("heading_feedback_gain", params_.heading_feedback_gain);
+    declare_parameter<double>("lookahead_transition_gain", params_.lookahead_transition_gain);
+    declare_parameter<double>("curve_outer_bias", params_.curve_outer_bias);
+    declare_parameter<double>("curve_outer_bias_start", params_.curve_outer_bias_start);
+    declare_parameter<double>("curve_outer_bias_full", params_.curve_outer_bias_full);
+    declare_parameter<double>("curve_outer_bias_hold_time", params_.curve_outer_bias_hold_time);
+    declare_parameter<bool>("lock_branch_outer_bias", params_.lock_branch_outer_bias);
+    declare_parameter<double>(
+      "branch_outer_bias_release_time", params_.branch_outer_bias_release_time);
     declare_parameter<double>("curvature_speed_weight", params_.curvature_speed_weight);
     declare_parameter<double>("curve_offset_relief_start", params_.curve_offset_relief_start);
     declare_parameter<double>("curve_offset_relief_full", params_.curve_offset_relief_full);
@@ -220,20 +276,43 @@ private:
     params_.kd = get_parameter("Kd").as_double();
     params_.linear_speed_mps = get_parameter("linear_speed").as_double();
     params_.min_linear_speed_mps = get_parameter("min_linear_speed").as_double();
+    params_.high_error_rescue_speed_mps =
+      get_parameter("high_error_rescue_speed").as_double();
+    params_.high_error_rescue_start =
+      get_parameter("high_error_rescue_start").as_double();
+    params_.inner_side_min_linear_speed_mps =
+      get_parameter("inner_side_min_linear_speed").as_double();
+    params_.inner_side_offset_threshold =
+      get_parameter("inner_side_offset_threshold").as_double();
     params_.wheel_radius = get_parameter("wheel_radius").as_double();
     params_.max_steering = get_parameter("max_steering").as_double();
     params_.straight_max_steering = get_parameter("straight_max_steering").as_double();
     params_.curve_max_steering = get_parameter("curve_max_steering").as_double();
     params_.steering_offset_start = get_parameter("steering_offset_start").as_double();
     params_.steering_offset_full = get_parameter("steering_offset_full").as_double();
+    params_.curve_entry_max_steering = get_parameter("curve_entry_max_steering").as_double();
+    params_.curve_entry_error_start = get_parameter("curve_entry_error_start").as_double();
+    params_.curve_entry_error_override = get_parameter("curve_entry_error_override").as_double();
+    params_.curve_entry_heading_confirm =
+      get_parameter("curve_entry_heading_confirm").as_double();
     params_.speed_offset_start = get_parameter("speed_offset_start").as_double();
     params_.speed_offset_full = get_parameter("speed_offset_full").as_double();
+    params_.speed_slowdown_exponent = get_parameter("speed_slowdown_exponent").as_double();
+    params_.speed_error_rate_start = get_parameter("speed_error_rate_start").as_double();
+    params_.speed_error_rate_full = get_parameter("speed_error_rate_full").as_double();
     params_.speed_accel_rate = get_parameter("speed_accel_rate").as_double();
     params_.speed_decel_rate = get_parameter("speed_decel_rate").as_double();
+    params_.branch_max_speed_mps = get_parameter("branch_max_speed").as_double();
+    params_.branch_min_speed_mps = get_parameter("branch_min_speed").as_double();
     params_.derivative_limit = get_parameter("derivative_limit").as_double();
     params_.derivative_filter_alpha = get_parameter("derivative_filter_alpha").as_double();
+    params_.derivative_brake_gain = get_parameter("derivative_brake_gain").as_double();
     params_.steering_slew_rate = get_parameter("steering_slew_rate").as_double();
     params_.steering_return_slew_rate = get_parameter("steering_return_slew_rate").as_double();
+    params_.branch_max_steering = get_parameter("branch_max_steering").as_double();
+    params_.branch_exit_hold_time = get_parameter("branch_exit_hold_time").as_double();
+    params_.branch_error_slew_rate = get_parameter("branch_error_slew_rate").as_double();
+    params_.branch_error_recovery_rate = get_parameter("branch_error_recovery_rate").as_double();
     params_.offset_timeout = get_parameter("offset_timeout").as_double();
     params_.geometry_stall_timeout = get_parameter("geometry_stall_timeout").as_double();
     params_.invalid_hold_speed_mps = get_parameter("invalid_hold_speed").as_double();
@@ -241,6 +320,14 @@ private:
     params_.offset_y08_weight = get_parameter("offset_y08_weight").as_double();
     params_.offset_y09_weight = get_parameter("offset_y09_weight").as_double();
     params_.heading_feedback_gain = get_parameter("heading_feedback_gain").as_double();
+    params_.lookahead_transition_gain = get_parameter("lookahead_transition_gain").as_double();
+    params_.curve_outer_bias = get_parameter("curve_outer_bias").as_double();
+    params_.curve_outer_bias_start = get_parameter("curve_outer_bias_start").as_double();
+    params_.curve_outer_bias_full = get_parameter("curve_outer_bias_full").as_double();
+    params_.curve_outer_bias_hold_time = get_parameter("curve_outer_bias_hold_time").as_double();
+    params_.lock_branch_outer_bias = get_parameter("lock_branch_outer_bias").as_bool();
+    params_.branch_outer_bias_release_time =
+      get_parameter("branch_outer_bias_release_time").as_double();
     params_.curvature_speed_weight = get_parameter("curvature_speed_weight").as_double();
     params_.curve_offset_relief_start = get_parameter("curve_offset_relief_start").as_double();
     params_.curve_offset_relief_full = get_parameter("curve_offset_relief_full").as_double();
@@ -289,6 +376,33 @@ private:
     {
       return fail("min_linear_speed must be >= 0 and <= linear_speed");
     }
+    if (!std::isfinite(parameters.high_error_rescue_speed_mps) ||
+      parameters.high_error_rescue_speed_mps < 0.0 ||
+      parameters.high_error_rescue_speed_mps > parameters.linear_speed_mps)
+    {
+      return fail("high_error_rescue_speed must be in [0, linear_speed]");
+    }
+    if (!std::isfinite(parameters.high_error_rescue_start) ||
+      parameters.high_error_rescue_start < 0.0 ||
+      parameters.high_error_rescue_start >= parameters.curve_entry_error_override)
+    {
+      return fail("high_error_rescue_start must be in [0, curve_entry_error_override)");
+    }
+    if (!std::isfinite(parameters.inner_side_min_linear_speed_mps) ||
+      parameters.inner_side_min_linear_speed_mps < 0.0 ||
+      parameters.inner_side_min_linear_speed_mps > parameters.linear_speed_mps ||
+      (parameters.inner_side_min_linear_speed_mps > 0.0 &&
+      parameters.inner_side_min_linear_speed_mps < parameters.min_linear_speed_mps))
+    {
+      return fail(
+        "inner_side_min_linear_speed must be 0 or in [min_linear_speed, linear_speed]");
+    }
+    if (!std::isfinite(parameters.inner_side_offset_threshold) ||
+      parameters.inner_side_offset_threshold < 0.0 ||
+      parameters.inner_side_offset_threshold > 1.0)
+    {
+      return fail("inner_side_offset_threshold must be in [0, 1]");
+    }
     if (!std::isfinite(parameters.wheel_radius) || parameters.wheel_radius < 0.0) {
       return fail("wheel_radius must be finite and >= 0");
     }
@@ -320,6 +434,30 @@ private:
     {
       return fail("steering_offset_full must be > start and <= 1");
     }
+    if (!std::isfinite(parameters.curve_entry_max_steering) ||
+      parameters.curve_entry_max_steering < 0.0 ||
+      parameters.curve_entry_max_steering > parameters.max_steering)
+    {
+      return fail("curve_entry_max_steering must be in [0, max_steering]");
+    }
+    if (!std::isfinite(parameters.curve_entry_error_start) ||
+      parameters.curve_entry_error_start < 0.0 ||
+      parameters.curve_entry_error_start >= 1.0)
+    {
+      return fail("curve_entry_error_start must be in [0, 1)");
+    }
+    if (!std::isfinite(parameters.curve_entry_error_override) ||
+      parameters.curve_entry_error_override <= parameters.curve_entry_error_start ||
+      parameters.curve_entry_error_override > 1.0)
+    {
+      return fail("curve_entry_error_override must be > error_start and <= 1");
+    }
+    if (!std::isfinite(parameters.curve_entry_heading_confirm) ||
+      parameters.curve_entry_heading_confirm <= 0.0 ||
+      parameters.curve_entry_heading_confirm > 1.0)
+    {
+      return fail("curve_entry_heading_confirm must be in (0, 1]");
+    }
     if (!std::isfinite(parameters.speed_offset_start) ||
       parameters.speed_offset_start < 0.0 || parameters.speed_offset_start >= 1.0)
     {
@@ -331,19 +469,59 @@ private:
     {
       return fail("speed_offset_full must be > start and <= 1");
     }
+    if (!std::isfinite(parameters.speed_slowdown_exponent) ||
+      parameters.speed_slowdown_exponent < 0.5 || parameters.speed_slowdown_exponent > 4.0)
+    {
+      return fail("speed_slowdown_exponent must be in [0.5, 4]");
+    }
+    if (!std::isfinite(parameters.speed_error_rate_start) ||
+      !std::isfinite(parameters.speed_error_rate_full) ||
+      parameters.speed_error_rate_start < 0.0 ||
+      parameters.speed_error_rate_full < 0.0 ||
+      (parameters.speed_error_rate_full > 0.0 &&
+      parameters.speed_error_rate_full <= parameters.speed_error_rate_start))
+    {
+      return fail(
+        "speed_error_rate_start/full must be >= 0, with full > start when enabled");
+    }
     if (!std::isfinite(parameters.speed_accel_rate) || parameters.speed_accel_rate < 0.0) {
       return fail("speed_accel_rate must be >= 0");
     }
     if (!std::isfinite(parameters.speed_decel_rate) || parameters.speed_decel_rate < 0.0) {
       return fail("speed_decel_rate must be >= 0");
     }
+    if (!std::isfinite(parameters.branch_max_speed_mps) ||
+      parameters.branch_max_speed_mps < 0.0 ||
+      parameters.branch_max_speed_mps > parameters.linear_speed_mps)
+    {
+      return fail("branch_max_speed must be 0 or in (0, linear_speed]");
+    }
+    if (!std::isfinite(parameters.branch_min_speed_mps) ||
+      parameters.branch_min_speed_mps < 0.0 ||
+      parameters.branch_min_speed_mps > parameters.linear_speed_mps ||
+      (parameters.branch_min_speed_mps > 0.0 && parameters.branch_max_speed_mps > 0.0 &&
+      parameters.branch_min_speed_mps > parameters.branch_max_speed_mps))
+    {
+      return fail("branch_min_speed must be 0 or <= branch_max_speed and linear_speed");
+    }
     if (!std::isfinite(parameters.derivative_limit) || parameters.derivative_limit < 0.0) {
       return fail("derivative_limit must be >= 0");
+    }
+    if (!std::isfinite(parameters.lookahead_transition_gain) ||
+      parameters.lookahead_transition_gain < 0.0 ||
+      parameters.lookahead_transition_gain > 1.0)
+    {
+      return fail("lookahead_transition_gain must be in [0, 1]");
     }
     if (!std::isfinite(parameters.derivative_filter_alpha) ||
       parameters.derivative_filter_alpha < 0.0 || parameters.derivative_filter_alpha > 1.0)
     {
       return fail("derivative_filter_alpha must be in [0, 1]");
+    }
+    if (!std::isfinite(parameters.derivative_brake_gain) ||
+      parameters.derivative_brake_gain < 1.0 || parameters.derivative_brake_gain > 3.0)
+    {
+      return fail("derivative_brake_gain must be in [1, 3]");
     }
     if (!std::isfinite(parameters.steering_slew_rate) || parameters.steering_slew_rate < 0.0) {
       return fail("steering_slew_rate must be >= 0");
@@ -352,6 +530,27 @@ private:
       parameters.steering_return_slew_rate < 0.0)
     {
       return fail("steering_return_slew_rate must be >= 0");
+    }
+    if (!std::isfinite(parameters.branch_max_steering) ||
+      parameters.branch_max_steering < 0.0 ||
+      parameters.branch_max_steering > parameters.max_steering)
+    {
+      return fail("branch_max_steering must be in [0, max_steering]");
+    }
+    if (!std::isfinite(parameters.branch_exit_hold_time) ||
+      parameters.branch_exit_hold_time < 0.0)
+    {
+      return fail("branch_exit_hold_time must be >= 0");
+    }
+    if (!std::isfinite(parameters.branch_error_slew_rate) ||
+      parameters.branch_error_slew_rate < 0.0)
+    {
+      return fail("branch_error_slew_rate must be >= 0");
+    }
+    if (!std::isfinite(parameters.branch_error_recovery_rate) ||
+      parameters.branch_error_recovery_rate < 0.0)
+    {
+      return fail("branch_error_recovery_rate must be >= 0");
     }
     if (!std::isfinite(parameters.offset_timeout) || parameters.offset_timeout <= 0.0) {
       return fail("offset_timeout must be > 0");
@@ -380,6 +579,33 @@ private:
     }
     if (!std::isfinite(parameters.heading_feedback_gain) || parameters.heading_feedback_gain < 0.0) {
       return fail("heading_feedback_gain must be >= 0");
+    }
+    if (!std::isfinite(parameters.curve_outer_bias) ||
+      std::abs(parameters.curve_outer_bias) > 0.5)
+    {
+      return fail("curve_outer_bias must be in [-0.5, 0.5] (negative targets curve inside)");
+    }
+    if (!std::isfinite(parameters.curve_outer_bias_start) ||
+      parameters.curve_outer_bias_start < 0.0 || parameters.curve_outer_bias_start >= 1.0)
+    {
+      return fail("curve_outer_bias_start must be in [0, 1)");
+    }
+    if (!std::isfinite(parameters.curve_outer_bias_full) ||
+      parameters.curve_outer_bias_full <= parameters.curve_outer_bias_start ||
+      parameters.curve_outer_bias_full > 1.0)
+    {
+      return fail("curve_outer_bias_full must be > start and <= 1");
+    }
+    if (!std::isfinite(parameters.curve_outer_bias_hold_time) ||
+      parameters.curve_outer_bias_hold_time < 0.0)
+    {
+      return fail("curve_outer_bias_hold_time must be >= 0");
+    }
+    if (!std::isfinite(parameters.branch_outer_bias_release_time) ||
+      parameters.branch_outer_bias_release_time < 0.0 ||
+      parameters.branch_outer_bias_release_time > 5.0)
+    {
+      return fail("branch_outer_bias_release_time must be in [0, 5]");
     }
     if (!std::isfinite(parameters.curvature_speed_weight) ||
       parameters.curvature_speed_weight < 0.0 || parameters.curvature_speed_weight > 1.0)
@@ -462,6 +688,14 @@ private:
         pending.linear_speed_mps = parameter.as_double();
       } else if (name == "min_linear_speed") {
         pending.min_linear_speed_mps = parameter.as_double();
+      } else if (name == "high_error_rescue_speed") {
+        pending.high_error_rescue_speed_mps = parameter.as_double();
+      } else if (name == "high_error_rescue_start") {
+        pending.high_error_rescue_start = parameter.as_double();
+      } else if (name == "inner_side_min_linear_speed") {
+        pending.inner_side_min_linear_speed_mps = parameter.as_double();
+      } else if (name == "inner_side_offset_threshold") {
+        pending.inner_side_offset_threshold = parameter.as_double();
       } else if (name == "wheel_radius") {
         pending.wheel_radius = parameter.as_double();
       } else if (name == "max_steering") {
@@ -478,18 +712,46 @@ private:
         pending.speed_offset_start = parameter.as_double();
       } else if (name == "speed_offset_full") {
         pending.speed_offset_full = parameter.as_double();
+      } else if (name == "speed_slowdown_exponent") {
+        pending.speed_slowdown_exponent = parameter.as_double();
+      } else if (name == "speed_error_rate_start") {
+        pending.speed_error_rate_start = parameter.as_double();
+      } else if (name == "speed_error_rate_full") {
+        pending.speed_error_rate_full = parameter.as_double();
       } else if (name == "speed_accel_rate") {
         pending.speed_accel_rate = parameter.as_double();
       } else if (name == "speed_decel_rate") {
         pending.speed_decel_rate = parameter.as_double();
+      } else if (name == "branch_max_speed") {
+        pending.branch_max_speed_mps = parameter.as_double();
+      } else if (name == "branch_min_speed") {
+        pending.branch_min_speed_mps = parameter.as_double();
       } else if (name == "derivative_limit") {
         pending.derivative_limit = parameter.as_double();
       } else if (name == "derivative_filter_alpha") {
         pending.derivative_filter_alpha = parameter.as_double();
+      } else if (name == "derivative_brake_gain") {
+        pending.derivative_brake_gain = parameter.as_double();
       } else if (name == "steering_slew_rate") {
         pending.steering_slew_rate = parameter.as_double();
       } else if (name == "steering_return_slew_rate") {
         pending.steering_return_slew_rate = parameter.as_double();
+      } else if (name == "curve_entry_max_steering") {
+        pending.curve_entry_max_steering = parameter.as_double();
+      } else if (name == "curve_entry_error_start") {
+        pending.curve_entry_error_start = parameter.as_double();
+      } else if (name == "curve_entry_error_override") {
+        pending.curve_entry_error_override = parameter.as_double();
+      } else if (name == "curve_entry_heading_confirm") {
+        pending.curve_entry_heading_confirm = parameter.as_double();
+      } else if (name == "branch_max_steering") {
+        pending.branch_max_steering = parameter.as_double();
+      } else if (name == "branch_exit_hold_time") {
+        pending.branch_exit_hold_time = parameter.as_double();
+      } else if (name == "branch_error_slew_rate") {
+        pending.branch_error_slew_rate = parameter.as_double();
+      } else if (name == "branch_error_recovery_rate") {
+        pending.branch_error_recovery_rate = parameter.as_double();
       } else if (name == "offset_timeout") {
         pending.offset_timeout = parameter.as_double();
       } else if (name == "geometry_stall_timeout") {
@@ -504,6 +766,20 @@ private:
         pending.offset_y09_weight = parameter.as_double();
       } else if (name == "heading_feedback_gain") {
         pending.heading_feedback_gain = parameter.as_double();
+      } else if (name == "lookahead_transition_gain") {
+        pending.lookahead_transition_gain = parameter.as_double();
+      } else if (name == "curve_outer_bias") {
+        pending.curve_outer_bias = parameter.as_double();
+      } else if (name == "curve_outer_bias_start") {
+        pending.curve_outer_bias_start = parameter.as_double();
+      } else if (name == "curve_outer_bias_full") {
+        pending.curve_outer_bias_full = parameter.as_double();
+      } else if (name == "curve_outer_bias_hold_time") {
+        pending.curve_outer_bias_hold_time = parameter.as_double();
+      } else if (name == "lock_branch_outer_bias") {
+        pending.lock_branch_outer_bias = parameter.as_bool();
+      } else if (name == "branch_outer_bias_release_time") {
+        pending.branch_outer_bias_release_time = parameter.as_double();
       } else if (name == "curvature_speed_weight") {
         pending.curvature_speed_weight = parameter.as_double();
       } else if (name == "curve_offset_relief_start") {
@@ -610,6 +886,15 @@ private:
   void heading_error_callback(const std_msgs::msg::Float32::SharedPtr msg)
   {
     update_geometry_value(msg->data, &current_heading_error_, &has_heading_error_, &last_heading_error_time_);
+    if (!std::isfinite(msg->data)) {
+      return;
+    }
+    const double heading = std::clamp(static_cast<double>(msg->data), -1.0, 1.0);
+    if (std::abs(heading) >= params_.curve_outer_bias_full) {
+      last_strong_curve_turn_sign_ = heading < 0.0 ? 1.0 : -1.0;
+      last_strong_curve_time_ = std::chrono::steady_clock::now();
+      has_strong_curve_memory_ = true;
+    }
   }
 
   void curvature_callback(const std_msgs::msg::Float32::SharedPtr msg)
@@ -662,11 +947,23 @@ private:
       has_lane_state_ = false;
       return;
     }
+    const auto now = std::chrono::steady_clock::now();
+    const bool entering_branch = road_state == "BRANCH" && lane_road_state_ != "BRANCH";
+    if (entering_branch && params_.lock_branch_outer_bias) {
+      const double candidate_bias = compute_curve_outer_bias();
+      latched_branch_outer_bias_ =
+        std::abs(candidate_bias) >= 0.5 * std::abs(params_.curve_outer_bias) ?
+        candidate_bias : 0.0;
+    }
     lane_confidence_ = std::clamp(confidence, 0.0, 1.0);
     lane_state_valid_ = is_valid;
     lane_road_state_ = road_state;
     has_lane_state_ = true;
-    last_lane_state_time_ = std::chrono::steady_clock::now();
+    last_lane_state_time_ = now;
+    if (road_state == "BRANCH") {
+      last_branch_seen_time_ = now;
+      has_seen_branch_ = true;
+    }
   }
 
   static bool extract_json_number(
@@ -809,7 +1106,9 @@ private:
     last_geometry_content_change_time_ = now;
     current_speed_mps_ = 0.0;
     current_steering_ = 0.0;
-    previous_control_error_ = compute_control_error();
+    limited_control_error_ = compute_control_error();
+    previous_control_error_ = limited_control_error_;
+    branch_error_limiter_engaged_ = false;
     filtered_derivative_ = 0.0;
     previous_control_time_ = now;
     publish_motion_command(0.0, 0.0);
@@ -828,7 +1127,9 @@ private:
     current_speed_mps_ = 0.0;
     current_steering_ = 0.0;
     filtered_derivative_ = 0.0;
-    previous_control_error_ = compute_control_error();
+    limited_control_error_ = compute_control_error();
+    previous_control_error_ = limited_control_error_;
+    branch_error_limiter_engaged_ = false;
     previous_control_time_ = std::chrono::steady_clock::now();
     publish_stop_state();
   }
@@ -900,7 +1201,9 @@ private:
       }
       publish_debug(now);
       previous_control_time_ = now;
-      previous_control_error_ = compute_control_error();
+      limited_control_error_ = compute_control_error();
+      previous_control_error_ = limited_control_error_;
+      branch_error_limiter_engaged_ = false;
       filtered_derivative_ = 0.0;
       return;
     }
@@ -943,6 +1246,10 @@ private:
 
       current_speed_mps_ = apply_speed_slew(
         std::min(current_speed_mps_, params_.invalid_hold_speed_mps), dt);
+      // Do not keep a large stale steering command while perception is invalid.
+      // Decelerate and unwind the servo together; if perception recovers, the
+      // normal attack slew can safely build the required steering again.
+      current_steering_ = apply_steering_slew(0.0, dt);
       publish_chassis_enable(true);
       publish_motion_command(current_speed_mps_, current_steering_);
       last_mode_ = "invalid_hold";
@@ -953,12 +1260,18 @@ private:
     }
 
     invalid_since_.reset();
-    const double control_error = compute_control_error();
-    const double curve_risk = compute_curve_risk();
-    const double target_speed = compute_target_speed(curve_risk);
-    current_speed_mps_ = apply_speed_slew(target_speed, dt);
-    const double dynamic_max_steering = compute_dynamic_max_steering(curve_risk);
+    const double raw_control_error = compute_control_error();
+    const double control_error = apply_branch_error_slew(raw_control_error, dt, now);
     const double raw_derivative = (control_error - previous_control_error_) / dt;
+    current_error_rate_speed_risk_ = compute_error_rate_speed_risk(raw_derivative);
+    const double curve_risk = compute_curve_risk();
+    const double normal_target_speed = compute_effective_target_speed(curve_risk, now);
+    const double target_speed = compute_high_error_rescue_target(
+      normal_target_speed, raw_control_error);
+    current_speed_mps_ = apply_speed_slew(target_speed, dt);
+    const double base_dynamic_max_steering = compute_effective_max_steering(curve_risk, now);
+    const double dynamic_max_steering = compute_curve_entry_max_steering(
+      base_dynamic_max_steering, control_error);
     double derivative = raw_derivative;
     if (params_.derivative_limit > 0.0) {
       derivative = std::clamp(derivative, -params_.derivative_limit, params_.derivative_limit);
@@ -966,8 +1279,9 @@ private:
     filtered_derivative_ = params_.derivative_filter_alpha * derivative +
       (1.0 - params_.derivative_filter_alpha) * filtered_derivative_;
 
+    const double derivative_gain = compute_derivative_gain(control_error);
     double desired_steering = steering_sign_ *
-      (params_.kp * control_error + params_.kd * filtered_derivative_);
+      (params_.kp * control_error + derivative_gain * filtered_derivative_);
     desired_steering = std::clamp(
       desired_steering, -dynamic_max_steering, dynamic_max_steering);
     current_steering_ = apply_steering_slew(desired_steering, dt);
@@ -1054,7 +1368,7 @@ private:
     return std::chrono::duration<double>(now - last_valid_time_).count();
   }
 
-  double compute_target_speed(double risk) const
+  double compute_target_speed(double risk, double minimum_speed) const
   {
     if (!params_.enable_dynamic_speed) {
       return params_.linear_speed_mps;
@@ -1066,9 +1380,54 @@ private:
     const double ratio = std::clamp(
       (abs_offset - params_.speed_offset_start) /
       (params_.speed_offset_full - params_.speed_offset_start), 0.0, 1.0);
-    const double slowdown = ratio;
-    const double speed_range = params_.linear_speed_mps - params_.min_linear_speed_mps;
+    const double slowdown = std::pow(ratio, params_.speed_slowdown_exponent);
+    const double speed_range = params_.linear_speed_mps - minimum_speed;
     return params_.linear_speed_mps - speed_range * slowdown;
+  }
+
+  double compute_target_speed(double risk) const
+  {
+    return compute_target_speed(risk, params_.min_linear_speed_mps);
+  }
+
+  double compute_effective_minimum_speed() const
+  {
+    if (params_.inner_side_min_linear_speed_mps > 0.0 &&
+      current_offset_y09_ <= -params_.inner_side_offset_threshold)
+    {
+      return std::max(
+        params_.min_linear_speed_mps, params_.inner_side_min_linear_speed_mps);
+    }
+    return params_.min_linear_speed_mps;
+  }
+
+  double compute_effective_target_speed(
+    double risk, const std::chrono::steady_clock::time_point & now) const
+  {
+    const bool in_branch = branch_guard_active(now);
+    const double minimum_speed = in_branch && params_.branch_min_speed_mps > 0.0 ?
+      params_.branch_min_speed_mps : compute_effective_minimum_speed();
+    double target_speed = compute_target_speed(risk, minimum_speed);
+    if (in_branch && params_.branch_max_speed_mps > 0.0) {
+      target_speed = std::min(target_speed, params_.branch_max_speed_mps);
+    }
+    return target_speed;
+  }
+
+  double compute_high_error_rescue_target(double normal_target, double raw_error) const
+  {
+    const double abs_error = std::abs(raw_error);
+    if (params_.high_error_rescue_speed_mps <= 0.0 ||
+      abs_error <= params_.high_error_rescue_start) {
+      return normal_target;
+    }
+
+    const double rescue_target = std::min(normal_target, params_.high_error_rescue_speed_mps);
+    const double rescue_ratio = std::clamp(
+      (abs_error - params_.high_error_rescue_start) /
+      (params_.curve_entry_error_override - params_.high_error_rescue_start),
+      0.0, 1.0);
+    return normal_target + rescue_ratio * (rescue_target - normal_target);
   }
 
   double compute_dynamic_max_steering(double risk) const
@@ -1085,6 +1444,117 @@ private:
       (params_.steering_offset_full - params_.steering_offset_start), 0.0, 1.0);
     return params_.straight_max_steering +
       (params_.curve_max_steering - params_.straight_max_steering) * ratio;
+  }
+
+  bool curve_entry_guard_active(double control_error) const
+  {
+    if (params_.curve_entry_max_steering <= 0.0) {
+      return false;
+    }
+    const double abs_error = std::abs(control_error);
+    if (abs_error < params_.curve_entry_error_start ||
+      abs_error >= params_.curve_entry_error_override)
+    {
+      return false;
+    }
+    const double abs_heading = std::abs(current_heading_error_);
+    if (abs_heading >= params_.curve_entry_heading_confirm) {
+      return false;
+    }
+    // With a confirmed image-space bend, heading and steering/error have
+    // opposite signs.  Near-zero heading is also unconfirmed and guarded.
+    return abs_heading <= 0.05 || control_error * current_heading_error_ < 0.0;
+  }
+
+  double compute_curve_entry_max_steering(double base_limit, double control_error) const
+  {
+    if (!curve_entry_guard_active(control_error)) {
+      return base_limit;
+    }
+    return std::min(base_limit, params_.curve_entry_max_steering);
+  }
+
+  bool branch_guard_active(const std::chrono::steady_clock::time_point & now) const
+  {
+    if (lane_road_state_ == "BRANCH") {
+      return true;
+    }
+    if (!has_seen_branch_ || params_.branch_exit_hold_time <= 0.0) {
+      return false;
+    }
+    return std::chrono::duration<double>(now - last_branch_seen_time_).count() <=
+           params_.branch_exit_hold_time;
+  }
+
+  double branch_outer_bias_blend(const std::chrono::steady_clock::time_point & now) const
+  {
+    if (!params_.lock_branch_outer_bias || !has_seen_branch_ ||
+      std::abs(latched_branch_outer_bias_) <= 1e-6)
+    {
+      return 0.0;
+    }
+    if (lane_road_state_ == "BRANCH") {
+      return 1.0;
+    }
+    if (params_.branch_outer_bias_release_time <= 0.0) {
+      return branch_guard_active(now) ? 1.0 : 0.0;
+    }
+    const double age = std::chrono::duration<double>(now - last_branch_seen_time_).count();
+    return std::clamp(1.0 - age / params_.branch_outer_bias_release_time, 0.0, 1.0);
+  }
+
+  double compute_effective_max_steering(
+    double risk, const std::chrono::steady_clock::time_point & now) const
+  {
+    double limit = compute_dynamic_max_steering(risk);
+    if (branch_guard_active(now) && params_.branch_max_steering > 0.0) {
+      limit = std::min(limit, params_.branch_max_steering);
+    }
+    return limit;
+  }
+
+  double apply_branch_error_slew(
+    double target_error, double dt, const std::chrono::steady_clock::time_point & now)
+  {
+    double rate = params_.branch_error_slew_rate;
+    if (branch_guard_active(now)) {
+      branch_error_limiter_engaged_ = true;
+    } else if (branch_error_limiter_engaged_) {
+      rate = params_.branch_error_recovery_rate;
+    } else {
+      limited_control_error_ = target_error;
+      return limited_control_error_;
+    }
+
+    if (rate <= 0.0) {
+      limited_control_error_ = target_error;
+      branch_error_limiter_engaged_ = false;
+      return limited_control_error_;
+    }
+
+    // The branch limiter must never hide a genuine near-edge error from the
+    // curve-entry rescue override.  Keep smoothing ordinary template jumps,
+    // but immediately expose a severe growing (or sign-reversing) raw error so
+    // full steering authority remains available.
+    if (std::abs(target_error) >= params_.curve_entry_error_override &&
+      (target_error * limited_control_error_ <= 0.0 ||
+      std::abs(target_error) > std::abs(limited_control_error_)))
+    {
+      limited_control_error_ = target_error;
+      return limited_control_error_;
+    }
+
+    const double max_delta = rate * dt;
+    const double delta = target_error - limited_control_error_;
+    if (std::abs(delta) <= max_delta) {
+      limited_control_error_ = target_error;
+      if (!branch_guard_active(now)) {
+        branch_error_limiter_engaged_ = false;
+      }
+    } else {
+      limited_control_error_ += std::copysign(max_delta, delta);
+    }
+    return limited_control_error_;
   }
 
   double compute_weighted_offset() const
@@ -1104,12 +1574,67 @@ private:
   double compute_control_error() const
   {
     const double weighted_offset = compute_weighted_offset();
+    const double lookahead_transition = params_.lookahead_transition_gain *
+      (current_offset_y07_ - current_offset_y09_);
     // Image y grows downward.  A centerline bending toward positive x therefore
     // has a negative dx/dy heading, so subtract heading to make both feedback
     // terms request the same steering direction through a bend.
     return std::clamp(
       weighted_offset -
-      params_.heading_feedback_gain * current_heading_error_, -1.0, 1.0);
+      params_.heading_feedback_gain * current_heading_error_ -
+      compute_curve_outer_bias() + lookahead_transition, -1.0, 1.0);
+  }
+
+  double compute_derivative_gain(double control_error) const
+  {
+    // When the filtered derivative opposes the proportional term, the error
+    // magnitude is already falling.  Extra gain here brakes steering before
+    // the error crosses zero without amplifying the initial turn-in command.
+    if (control_error * filtered_derivative_ < 0.0) {
+      return params_.kd * params_.derivative_brake_gain;
+    }
+    return params_.kd;
+  }
+
+  double compute_curve_outer_bias() const
+  {
+    if (std::abs(params_.curve_outer_bias) <= 1e-9) {
+      return 0.0;
+    }
+    const auto now = std::chrono::steady_clock::now();
+    const double abs_heading = std::abs(current_heading_error_);
+    double instant_bias = 0.0;
+    double current_turn_sign = 0.0;
+    if (abs_heading > params_.curve_outer_bias_start) {
+      const double ratio = std::clamp(
+        (abs_heading - params_.curve_outer_bias_start) /
+        (params_.curve_outer_bias_full - params_.curve_outer_bias_start), 0.0, 1.0);
+      // Heading and steering have opposite signs in a normal image-space bend.
+      // This signed bias is subtracted from the control error: positive targets
+      // the outside of the bend, while negative targets the inside.
+      current_turn_sign = current_heading_error_ < 0.0 ? 1.0 : -1.0;
+      instant_bias = params_.curve_outer_bias * ratio * current_turn_sign;
+    }
+
+    double normal_bias = instant_bias;
+    if (has_strong_curve_memory_ && params_.curve_outer_bias_hold_time > 0.0 &&
+      (current_turn_sign == 0.0 || current_turn_sign == last_strong_curve_turn_sign_))
+    {
+      const double memory_age = std::chrono::duration<double>(
+        now - last_strong_curve_time_).count();
+      if (memory_age < params_.curve_outer_bias_hold_time) {
+        const double held_ratio = std::clamp(
+          1.0 - memory_age / params_.curve_outer_bias_hold_time, 0.0, 1.0);
+        const double held_bias =
+          params_.curve_outer_bias * held_ratio * last_strong_curve_turn_sign_;
+        if (std::abs(held_bias) > std::abs(normal_bias)) {
+          normal_bias = held_bias;
+        }
+      }
+    }
+
+    const double branch_blend = branch_outer_bias_blend(now);
+    return normal_bias + branch_blend * (latched_branch_outer_bias_ - normal_bias);
   }
 
   double compute_curve_risk() const
@@ -1119,7 +1644,18 @@ private:
     const double curvature_risk = params_.curvature_speed_weight * std::abs(current_curvature_);
     const double predictive_risk = compute_predictive_offset_risk();
     return std::clamp(
-      std::max({lateral_risk, heading_risk, curvature_risk, predictive_risk}), 0.0, 1.0);
+      std::max({lateral_risk, heading_risk, curvature_risk, predictive_risk,
+        current_error_rate_speed_risk_}), 0.0, 1.0);
+  }
+
+  double compute_error_rate_speed_risk(double error_rate) const
+  {
+    if (params_.speed_error_rate_full <= params_.speed_error_rate_start) {
+      return 0.0;
+    }
+    return std::clamp(
+      (std::abs(error_rate) - params_.speed_error_rate_start) /
+      (params_.speed_error_rate_full - params_.speed_error_rate_start), 0.0, 1.0);
   }
 
   double compute_allowed_offset() const
@@ -1228,14 +1764,26 @@ private:
   {
     std_msgs::msg::String message;
     std::ostringstream text;
-    const double control_error = compute_control_error();
+    const double raw_control_error = compute_control_error();
+    const double control_error = auto_enabled_ ? limited_control_error_ : raw_control_error;
+    const double curve_outer_bias = compute_curve_outer_bias();
     const double curve_risk = compute_curve_risk();
     const double curve_strength = compute_curve_strength();
     const double offset_relief = compute_offset_relief();
     const double allowed_offset = compute_allowed_offset();
     const double weighted_offset = compute_weighted_offset();
     const double offset_excess = std::max(0.0, std::abs(weighted_offset) - allowed_offset);
-    const double dynamic_max = compute_dynamic_max_steering(curve_risk);
+    const bool branch_guard = branch_guard_active(now);
+    const double speed_minimum = branch_guard && params_.branch_min_speed_mps > 0.0 ?
+      params_.branch_min_speed_mps : compute_effective_minimum_speed();
+    const double dynamic_target_speed = compute_target_speed(curve_risk, speed_minimum);
+    const double normal_target_speed = compute_effective_target_speed(curve_risk, now);
+    const double target_speed = compute_high_error_rescue_target(
+      normal_target_speed, raw_control_error);
+    const bool branch_speed_limited = normal_target_speed + 1e-6 < dynamic_target_speed;
+    const double base_dynamic_max = compute_effective_max_steering(curve_risk, now);
+    const bool curve_entry_guard = curve_entry_guard_active(control_error);
+    const double dynamic_max = compute_curve_entry_max_steering(base_dynamic_max, control_error);
     text << std::fixed << std::setprecision(3)
          << "mode=" << last_mode_
          << " enabled=" << (auto_enabled_ ? "True" : "False")
@@ -1244,6 +1792,7 @@ private:
          << " lane_valid=" << (lane_state_valid_ ? "True" : "False")
          << " confidence=" << lane_confidence_
          << " road_state=" << lane_road_state_
+         << " branch_guard=" << (branch_guard ? "True" : "False")
          << " lane_age=" << geometry_age_seconds(last_lane_state_time_, has_lane_state_, now)
          << " offset_y07_age=" << geometry_age_seconds(last_offset_y07_time_, has_offset_y07_, now)
          << " offset_y08_age=" << geometry_age_seconds(last_offset_y08_time_, has_offset_y08_, now)
@@ -1262,12 +1811,31 @@ private:
          << " weighted_offset=" << weighted_offset
          << " heading_error=" << current_heading_error_
          << " curvature=" << current_curvature_
+         << " raw_control_error=" << raw_control_error
          << " control_error=" << control_error
+         << " branch_error_limiter=" << (branch_error_limiter_engaged_ ? "True" : "False")
+         << " curve_outer_bias=" << curve_outer_bias
+         << " branch_outer_bias=" << latched_branch_outer_bias_
+         << " branch_outer_bias_locked=" <<
+      (branch_outer_bias_blend(now) > 1e-6 ? "True" : "False")
          << " curve_strength=" << curve_strength
          << " offset_relief=" << offset_relief
          << " allowed_offset=" << allowed_offset
          << " offset_excess=" << offset_excess
          << " curve_risk=" << curve_risk
+         << " error_rate_risk=" << current_error_rate_speed_risk_
+         << " curve_entry_guard=" << (curve_entry_guard ? "True" : "False")
+         << " filtered_derivative=" << filtered_derivative_
+         << " proportional_term=" << params_.kp * control_error
+         << " derivative_braking=" <<
+      (control_error * filtered_derivative_ < 0.0 ? "True" : "False")
+         << " effective_kd=" << compute_derivative_gain(control_error)
+         << " derivative_term=" << compute_derivative_gain(control_error) * filtered_derivative_
+         << " base_max_steer=" << base_dynamic_max
+         << " target_speed=" << target_speed
+         << " high_error_rescue=" <<
+      (target_speed + 1e-6 < normal_target_speed ? "True" : "False")
+         << " branch_speed_limited=" << (branch_speed_limited ? "True" : "False")
          << " speed_mps=" << current_speed_mps_
          << " wheel_rps=" << speed_to_wheel_rps(current_speed_mps_)
          << " steering_cmd=" << current_steering_
@@ -1317,8 +1885,10 @@ private:
   double current_offset_y09_{0.0};
   double current_heading_error_{0.0};
   double current_curvature_{0.0};
+  double current_error_rate_speed_risk_{0.0};
   double lane_confidence_{0.0};
   double previous_control_error_{0.0};
+  double limited_control_error_{0.0};
   double filtered_derivative_{0.0};
   double current_speed_mps_{0.0};
   double current_steering_{0.0};
@@ -1330,8 +1900,15 @@ private:
   std::chrono::steady_clock::time_point last_heading_error_time_;
   std::chrono::steady_clock::time_point last_curvature_time_;
   std::chrono::steady_clock::time_point last_lane_state_time_;
+  std::chrono::steady_clock::time_point last_branch_seen_time_;
   std::chrono::steady_clock::time_point last_geometry_content_change_time_;
   std::string lane_road_state_{"UNKNOWN"};
+  bool has_seen_branch_{false};
+  bool branch_error_limiter_engaged_{false};
+  bool has_strong_curve_memory_{false};
+  double last_strong_curve_turn_sign_{0.0};
+  double latched_branch_outer_bias_{0.0};
+  std::chrono::steady_clock::time_point last_strong_curve_time_;
   std::chrono::steady_clock::time_point previous_control_time_;
   std::string last_mode_{"disabled"};
   std::string stop_reason_{"startup_disabled"};

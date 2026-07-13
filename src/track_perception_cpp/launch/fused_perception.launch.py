@@ -23,7 +23,7 @@ def generate_launch_description():
     )
     show_window_arg = DeclareLaunchArgument(
         'show_window',
-        default_value='true',
+        default_value='false',
         description='Show OpenCV fused perception preview window',
     )
     enable_debug_screenshots_arg = DeclareLaunchArgument(

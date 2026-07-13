@@ -17,7 +17,7 @@ fused_perception_node:
     perf_interval: 2.0
 
     # 画面显示：只影响 OpenCV 预览窗口，不影响终端日志
-    show_window: true
+    show_window: false
     blend_alpha: 0.5
     show_branch_debug: true
     enable_debug_screenshots: false
@@ -68,7 +68,7 @@ fused_perception_node:
     guideboard_branch: "right"
     guideboard_detect_y0_ratio: 0.2
     guideboard_detect_y1_ratio: 0.7
-    enable_guideboard_ocr: true
+    enable_guideboard_ocr: false
     ocr_det_model_path: "model/ppocrv4_det.rknn"
     ocr_rec_model_path: "model/ppocrv4_rec.rknn"
     ocr_min_score: 0.75
@@ -91,7 +91,7 @@ fused_perception_node:
     branch_detect_far_band_ratio: 0.7
     enable_encoder_branch_hold: true
     encoder_count_topic: "/chassis/encoder_count"
-    encoder_hold_counts: 9999
+    encoder_hold_counts: 9000
     encoder_feedback_timeout_sec: 0.30
 
     # 中心线拟合
@@ -117,10 +117,11 @@ fused_perception_node:
     # 左边界模板线：检测到岔路且目标为 left 时，使用 current_left_boundary + template_offset 作为全部拟合点
     enable_left_boundary_template_line: true
     left_boundary_template_side: "left"
-    left_boundary_template_offsets: "22.0,25.7,29.5,33.2,39.4,43.7,48.4,54.2,62.4,69.1,75.4,83.6,91.3,99.6,105.3,110.1,116.3,123.5,131.8,140.0"
+    # 基准左模板（0 px 修正）。后续若需内移，应按透视逐渐增加近端修正，避免远端窄路过度偏移。
+    left_boundary_template_offsets: "22.0,25.7,29.5,33.2,39.4,43.7,48.4,54.2,62.4,69.1,75.4,83.6,91.3,99.6,105.3,110.1,116.3,123.5,131.8,140.0,148.0,156.0,164.0,172.0"
     left_boundary_template_min_points: 6
     left_boundary_template_weight: 1.0
-    right_boundary_template_offsets: "0.0,0.0,0.0,0.0,0.0,0.0,106.0,109.0,140.0,141.0,140.0,140.0,140.0,141.0,143.0,147.0,152.0,158.0,165.0,172.0"
+    right_boundary_template_offsets: "0.0,0.0,0.0,0.0,0.0,0.0,106.0,109.0,140.0,141.0,140.0,140.0,140.0,141.0,143.0,147.0,152.0,158.0,165.0,172.0,179.0,186.0,193.0,200.0"
     right_boundary_template_min_points: 6
     right_boundary_template_weight: 1.0
 
