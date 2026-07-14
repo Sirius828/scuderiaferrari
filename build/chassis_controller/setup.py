@@ -1,1 +1,0 @@
-/home/orangepi/scuderiaferrari/src/chassis_controller/setup.py

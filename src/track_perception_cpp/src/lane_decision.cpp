@@ -169,6 +169,15 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.car_boundary_smoothing_alpha = clampValue(cfg_.car_boundary_smoothing_alpha, 0.0f, 1.0f);
   cfg_.car_boundary_lost_frames = std::max(1, cfg_.car_boundary_lost_frames);
   cfg_.car_fit_hold_timeout_sec = std::max(0.0, cfg_.car_fit_hold_timeout_sec);
+  cfg_.human_left_expand_px = std::max(0.0f, cfg_.human_left_expand_px);
+  cfg_.human_left_expand_width_ratio = std::max(0.0f, cfg_.human_left_expand_width_ratio);
+  cfg_.human_line_margin_px = std::max(0.0f, cfg_.human_line_margin_px);
+  cfg_.human_line_sample_count = std::max(2, cfg_.human_line_sample_count);
+  cfg_.human_line_sample_start_ratio = clampValue(cfg_.human_line_sample_start_ratio, 0.0f, 1.0f);
+  cfg_.human_stop_effective_area_ratio =
+      clampValue(cfg_.human_stop_effective_area_ratio, 0.0f, 1.0f);
+  cfg_.human_stop_confirm_frames = std::max(1, cfg_.human_stop_confirm_frames);
+  cfg_.human_clear_confirm_frames = std::max(1, cfg_.human_clear_confirm_frames);
   if (cfg_.guideboard_unknown_branch != "left" && cfg_.guideboard_unknown_branch != "right") {
     cfg_.guideboard_unknown_branch = cfg_.outer_side;
   }
@@ -196,6 +205,11 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   last_valid_fit_confidence_ = 0.0;
   last_valid_fit_time_ = 0.0;
   last_valid_road_state_ = "NORMAL";
+  human_left_seen_latched_ = false;
+  human_stop_active_ = false;
+  human_state_ = "NONE";
+  human_right_clear_confirm_count_ = 0;
+  human_stop_confirm_count_ = 0;
 }
 
 void LaneDecision::setGuideboardBranchHint(const std::string& branch, bool valid) {
@@ -460,7 +474,7 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
   }
 
   updateFinishStopState(detections, h);
-  updateObstacleStopState(detections, h);
+  updateHumanStopState(detections, w, h, fit_coeffs, is_valid);
 
   state.offset_y07 = static_cast<float>(offsets[0]);
   state.offset_y08 = static_cast<float>(offsets[1]);
@@ -514,6 +528,11 @@ std::vector<LaneDecision::ObstacleZone> LaneDecision::getActiveObstacleZones(
   std::vector<ObstacleZone> zones;
   double min_bottom_y = image_height * clampValue(cfg_.obstacle_min_bottom_y_ratio, 0.0f, 1.0f);
   for (const auto& det : detections) {
+    // Human is handled after fitting by the side-memory state machine. It must
+    // never remove road-mask segments or fit points through the legacy path.
+    if (det.class_name == "Human") {
+      continue;
+    }
     if (!cfg_.obstacle_labels.count(det.class_name) || det.confidence < cfg_.obstacle_min_confidence) {
       continue;
     }
@@ -1224,57 +1243,199 @@ void LaneDecision::updateFinishStopState(const std::vector<Detection>& detection
   }
 }
 
-void LaneDecision::updateObstacleStopState(const std::vector<Detection>& detections, int image_height) {
-  if (!cfg_.enable_obstacle_stop) {
-    obstacle_stop_active_ = false;
-    obstacle_stop_state_ = "CLEAR";
-    obstacle_stop_confirm_count_ = 0;
-    obstacle_stop_lost_count_ = 0;
+void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections,
+                                         int image_width, int image_height,
+                                         const std::vector<double>& fit_coeffs,
+                                         bool fit_valid) {
+  debug_info_.humans.clear();
+  debug_info_.human_left_seen_latched = human_left_seen_latched_;
+  debug_info_.human_passable = false;
+  debug_info_.human_right_clear_confirming = false;
+  debug_info_.human_stop_candidate = false;
+  debug_info_.human_effective_left_x = -1.0f;
+  debug_info_.human_fit_line_limit_x = -1.0f;
+  debug_info_.human_effective_area_ratio = 0.0f;
+  debug_info_.human_state = human_state_;
+  debug_info_.human_right_clear_confirm_count = human_right_clear_confirm_count_;
+  debug_info_.human_stop_confirm_count = human_stop_confirm_count_;
+
+  if (!cfg_.enable_human_obstacle_stop || image_width <= 0 || image_height <= 0) {
+    human_left_seen_latched_ = false;
+    human_stop_active_ = false;
+    human_state_ = "NONE";
+    human_right_clear_confirm_count_ = 0;
+    human_stop_confirm_count_ = 0;
+    debug_info_.human_left_seen_latched = false;
+    debug_info_.human_state = human_state_;
     return;
   }
 
-  double stop_y = image_height * clampValue(cfg_.obstacle_stop_bottom_y_ratio, 0.0f, 1.0f);
-  bool obstacle_reached = false;
+  const bool fit_available = fit_valid && fit_coeffs.size() >= 2;
+  const int sample_count = std::max(2, cfg_.human_line_sample_count);
+  const double sample_start = clampValue(
+      static_cast<double>(cfg_.human_line_sample_start_ratio), 0.0, 1.0);
+  const double area_threshold = clampValue(
+      static_cast<double>(cfg_.human_stop_effective_area_ratio), 0.0, 1.0);
+  const double image_area = static_cast<double>(image_width) * image_height;
+
+  bool has_valid_human = false;
+  bool all_current_humans_passable = true;
+  bool any_nonpassable_human = false;
+  bool any_stop_candidate = false;
+  bool any_no_fit_human = false;
+  bool have_focus = false;
+  double focus_gap = std::numeric_limits<double>::infinity();
+
   for (const auto& det : detections) {
-    if (!cfg_.obstacle_stop_labels.count(det.class_name) || det.confidence < cfg_.obstacle_min_confidence) {
+    if (det.class_name != "Human" ||
+        det.confidence < cfg_.obstacle_min_confidence ||
+        det.bbox.width <= 0.0f || det.bbox.height <= 0.0f) {
       continue;
     }
-    if (det.bbox.y + det.bbox.height >= stop_y) {
-      obstacle_reached = true;
-      break;
+
+    const double expand_px = std::max(
+        static_cast<double>(cfg_.human_left_expand_px),
+        static_cast<double>(det.bbox.width) * cfg_.human_left_expand_width_ratio);
+    const double raw_left = det.bbox.x;
+    const double raw_top = det.bbox.y;
+    const double raw_right = det.bbox.x + det.bbox.width;
+    const double raw_bottom = det.bbox.y + det.bbox.height;
+    const double effective_left = clampValue(raw_left - expand_px, 0.0,
+                                             static_cast<double>(image_width));
+    const double effective_right = clampValue(raw_right, 0.0,
+                                              static_cast<double>(image_width));
+    const double effective_top = clampValue(raw_top, 0.0,
+                                             static_cast<double>(image_height));
+    const double effective_bottom = clampValue(raw_bottom, 0.0,
+                                               static_cast<double>(image_height));
+    if (effective_right <= effective_left || effective_bottom <= effective_top) {
+      continue;
+    }
+
+    has_valid_human = true;
+    const double effective_width = effective_right - effective_left;
+    const double effective_height = effective_bottom - effective_top;
+    const double effective_area_ratio = image_area > 0.0
+                                            ? effective_width * effective_height / image_area
+                                            : 0.0;
+
+    LaneHumanDebug human_debug;
+    human_debug.raw_bbox = det.bbox;
+    human_debug.effective_bbox = cv::Rect2f(
+        static_cast<float>(effective_left), static_cast<float>(effective_top),
+        static_cast<float>(effective_width), static_cast<float>(effective_height));
+    human_debug.effective_area_ratio = static_cast<float>(effective_area_ratio);
+    human_debug.fit_available = fit_available;
+
+    double line_limit_x = -std::numeric_limits<double>::infinity();
+    bool line_samples_valid = fit_available;
+    if (fit_available) {
+      for (int i = 0; i < sample_count; ++i) {
+        const double sample_ratio = sample_count == 1
+                                        ? 1.0
+                                        : static_cast<double>(i) / (sample_count - 1);
+        const double y = effective_top + effective_height *
+                         (sample_start + (1.0 - sample_start) * sample_ratio);
+        const double line_x = evalPoly(fit_coeffs, y);
+        if (!std::isfinite(line_x)) {
+          line_samples_valid = false;
+          break;
+        }
+        line_limit_x = std::max(line_limit_x, line_x);
+      }
+    }
+    human_debug.fit_available = line_samples_valid;
+    human_debug.fit_line_limit_x = line_samples_valid
+                                       ? static_cast<float>(line_limit_x)
+                                       : -1.0f;
+
+    const bool passable = line_samples_valid &&
+                          effective_left > line_limit_x + cfg_.human_line_margin_px;
+    const bool stop_candidate = !passable && effective_area_ratio >= area_threshold;
+    human_debug.passable = passable;
+    human_debug.stop_candidate = stop_candidate;
+    debug_info_.humans.push_back(human_debug);
+
+    all_current_humans_passable = all_current_humans_passable && passable;
+    any_nonpassable_human = any_nonpassable_human || !passable;
+    any_stop_candidate = any_stop_candidate || stop_candidate;
+    any_no_fit_human = any_no_fit_human || !line_samples_valid;
+
+    const double gap = line_samples_valid
+                           ? effective_left - line_limit_x
+                           : -std::numeric_limits<double>::infinity();
+    if (!have_focus || gap < focus_gap) {
+      have_focus = true;
+      focus_gap = gap;
+      debug_info_.human_effective_left_x = static_cast<float>(effective_left);
+      debug_info_.human_fit_line_limit_x = line_samples_valid
+                                               ? static_cast<float>(line_limit_x)
+                                               : -1.0f;
+      debug_info_.human_effective_area_ratio = static_cast<float>(effective_area_ratio);
     }
   }
 
-  if (obstacle_reached) {
-    obstacle_stop_confirm_count_++;
-    obstacle_stop_lost_count_ = 0;
+  if (any_nonpassable_human) {
+    human_left_seen_latched_ = true;
+    human_right_clear_confirm_count_ = 0;
+  } else if (has_valid_human && all_current_humans_passable) {
+    if (human_left_seen_latched_) {
+      ++human_right_clear_confirm_count_;
+      if (human_right_clear_confirm_count_ >= cfg_.human_clear_confirm_frames) {
+        human_left_seen_latched_ = false;
+        human_right_clear_confirm_count_ = 0;
+      }
+    }
   } else {
-    obstacle_stop_confirm_count_ = 0;
-    if (obstacle_stop_active_) {
-      obstacle_stop_lost_count_++;
-    }
+    // No detection is never evidence that a previously left-side Human is safe.
+    human_right_clear_confirm_count_ = 0;
   }
 
-  if (!obstacle_stop_active_ &&
-      obstacle_stop_confirm_count_ >= std::max(1, cfg_.obstacle_stop_confirm_frames)) {
-    obstacle_stop_active_ = true;
-    obstacle_stop_state_ = "OBSTACLE_STOP";
+  if (any_stop_candidate) {
+    ++human_stop_confirm_count_;
+  } else if (!human_stop_active_) {
+    human_stop_confirm_count_ = 0;
+  }
+  if (!human_stop_active_ &&
+      human_stop_confirm_count_ >= cfg_.human_stop_confirm_frames) {
+    human_stop_active_ = true;
   }
 
-  if (obstacle_stop_active_ &&
-      obstacle_stop_lost_count_ >= std::max(1, cfg_.obstacle_stop_lost_frames)) {
-    obstacle_stop_active_ = false;
-    obstacle_stop_state_ = "CLEAR";
-    obstacle_stop_lost_count_ = 0;
+  // A stop can only be released by stable right-side visual evidence. A lost
+  // detection, including a lost detection after stopping, never releases it.
+  if (human_stop_active_ && !human_left_seen_latched_ && has_valid_human &&
+      all_current_humans_passable) {
+    human_stop_active_ = false;
+    human_stop_confirm_count_ = 0;
   }
 
+  if (human_stop_active_) {
+    human_state_ = "OBSTACLE_STOP";
+  } else if (human_left_seen_latched_) {
+    human_state_ = any_no_fit_human ? "NO_FIT_LATCHED" : "LEFT_LATCHED_WAIT_AREA";
+  } else if (has_valid_human && all_current_humans_passable) {
+    human_state_ = "PASSABLE";
+  } else {
+    human_state_ = "NONE";
+  }
+
+  debug_info_.human_left_seen_latched = human_left_seen_latched_;
+  debug_info_.human_passable = has_valid_human && all_current_humans_passable &&
+                               !human_left_seen_latched_;
+  debug_info_.human_right_clear_confirming = human_left_seen_latched_ &&
+                                             has_valid_human &&
+                                             all_current_humans_passable;
+  debug_info_.human_stop_candidate = any_stop_candidate;
+  debug_info_.human_state = human_state_;
+  debug_info_.human_right_clear_confirm_count = human_right_clear_confirm_count_;
+  debug_info_.human_stop_confirm_count = human_stop_confirm_count_;
 }
 
 std::string LaneDecision::taskState() const {
   if (finish_stop_active_) {
     return "FINISH_STOP";
   }
-  if (obstacle_stop_active_) {
+  if (human_stop_active_) {
     return "OBSTACLE_STOP";
   }
   return "CLEAR";

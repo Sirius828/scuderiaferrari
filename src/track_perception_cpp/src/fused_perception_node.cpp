@@ -182,6 +182,17 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"car_left_x\":" << debug_info.car_left_x << ","
      << "\"car_filtered_point_count\":" << debug_info.car_filtered_point_count << ","
      << "\"car_boundary_lost_count\":" << debug_info.car_boundary_lost_count << ","
+     << "\"human_left_seen_latched\":" << (debug_info.human_left_seen_latched ? "true" : "false") << ","
+     << "\"human_passable\":" << (debug_info.human_passable ? "true" : "false") << ","
+     << "\"human_right_clear_confirming\":"
+     << (debug_info.human_right_clear_confirming ? "true" : "false") << ","
+     << "\"human_stop_candidate\":" << (debug_info.human_stop_candidate ? "true" : "false") << ","
+     << "\"human_effective_left_x\":" << debug_info.human_effective_left_x << ","
+     << "\"human_fit_line_limit_x\":" << debug_info.human_fit_line_limit_x << ","
+     << "\"human_effective_area_ratio\":" << debug_info.human_effective_area_ratio << ","
+     << "\"human_state\":\"" << jsonEscape(debug_info.human_state) << "\","
+     << "\"human_right_clear_confirm_count\":" << debug_info.human_right_clear_confirm_count << ","
+     << "\"human_stop_confirm_count\":" << debug_info.human_stop_confirm_count << ","
      << "\"fit_hold_active\":" << (debug_info.fit_hold_active ? "true" : "false") << ","
      << "\"fit_hold_age\":" << debug_info.fit_hold_age << ","
      << "\"fit_order\":" << debug_info.fit_order << ","
@@ -258,6 +269,25 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
       ss << ",";
     }
     ss << debug_info.fit_coeffs[i];
+  }
+  ss << "],\"humans\":[";
+  for (size_t i = 0; i < debug_info.humans.size(); ++i) {
+    if (i > 0) {
+      ss << ",";
+    }
+    const auto& human = debug_info.humans[i];
+    ss << "{\"raw_bbox\":["
+       << human.raw_bbox.x << "," << human.raw_bbox.y << ","
+       << human.raw_bbox.width << "," << human.raw_bbox.height << "],"
+       << "\"effective_bbox\":["
+       << human.effective_bbox.x << "," << human.effective_bbox.y << ","
+       << human.effective_bbox.width << "," << human.effective_bbox.height << "],"
+       << "\"fit_line_limit_x\":" << human.fit_line_limit_x << ","
+       << "\"effective_area_ratio\":" << human.effective_area_ratio << ","
+       << "\"fit_available\":" << (human.fit_available ? "true" : "false") << ","
+       << "\"passable\":" << (human.passable ? "true" : "false") << ","
+       << "\"stop_candidate\":" << (human.stop_candidate ? "true" : "false")
+       << "}";
   }
   ss << "]"
      << "}";
@@ -396,17 +426,21 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<int>("fit_point_trend_min_points", 6);
     declare_parameter<double>("fit_point_trend_min_keep_ratio", 0.75);
     declare_parameter<bool>("enable_obstacle_avoidance", false);
-    declare_parameter<std::string>("obstacle_labels", "Human,Car");
-    declare_parameter<std::string>("obstacle_stop_labels", "Human");
+    declare_parameter<std::string>("obstacle_labels", "Car");
     declare_parameter<double>("obstacle_min_confidence", 0.45);
     declare_parameter<double>("obstacle_x_margin_px", 25.0);
     declare_parameter<double>("obstacle_y_margin_px", 20.0);
     declare_parameter<double>("obstacle_max_age", 0.3);
     declare_parameter<double>("obstacle_min_bottom_y_ratio", 0.30);
-    declare_parameter<bool>("enable_obstacle_stop", true);
-    declare_parameter<double>("obstacle_stop_bottom_y_ratio", 0.82);
-    declare_parameter<int>("obstacle_stop_confirm_frames", 2);
-    declare_parameter<int>("obstacle_stop_lost_frames", 3);
+    declare_parameter<bool>("enable_human_obstacle_stop", true);
+    declare_parameter<double>("human_left_expand_px", 25.0);
+    declare_parameter<double>("human_left_expand_width_ratio", 0.50);
+    declare_parameter<double>("human_line_margin_px", 5.0);
+    declare_parameter<int>("human_line_sample_count", 5);
+    declare_parameter<double>("human_line_sample_start_ratio", 0.60);
+    declare_parameter<double>("human_stop_effective_area_ratio", 0.020);
+    declare_parameter<int>("human_stop_confirm_frames", 2);
+    declare_parameter<int>("human_clear_confirm_frames", 3);
     declare_parameter<bool>("enable_car_right_boundary_filter", true);
     declare_parameter<double>("car_boundary_x_margin_px", 0.0);
     declare_parameter<double>("car_boundary_y_margin_px", 0.0);
@@ -590,15 +624,23 @@ class FusedPerceptionNode : public rclcpp::Node {
         static_cast<float>(get_parameter("right_boundary_template_weight").as_double());
     lane_cfg.enable_obstacle_avoidance = get_parameter("enable_obstacle_avoidance").as_bool();
     lane_cfg.obstacle_labels = parseLabelSet(get_parameter("obstacle_labels").as_string());
-    lane_cfg.obstacle_stop_labels = parseLabelSet(get_parameter("obstacle_stop_labels").as_string());
     lane_cfg.obstacle_min_confidence = static_cast<float>(get_parameter("obstacle_min_confidence").as_double());
     lane_cfg.obstacle_x_margin_px = static_cast<float>(get_parameter("obstacle_x_margin_px").as_double());
     lane_cfg.obstacle_y_margin_px = static_cast<float>(get_parameter("obstacle_y_margin_px").as_double());
     lane_cfg.obstacle_min_bottom_y_ratio = static_cast<float>(get_parameter("obstacle_min_bottom_y_ratio").as_double());
-    lane_cfg.enable_obstacle_stop = get_parameter("enable_obstacle_stop").as_bool();
-    lane_cfg.obstacle_stop_bottom_y_ratio = static_cast<float>(get_parameter("obstacle_stop_bottom_y_ratio").as_double());
-    lane_cfg.obstacle_stop_confirm_frames = static_cast<int>(get_parameter("obstacle_stop_confirm_frames").as_int());
-    lane_cfg.obstacle_stop_lost_frames = static_cast<int>(get_parameter("obstacle_stop_lost_frames").as_int());
+    lane_cfg.enable_human_obstacle_stop = get_parameter("enable_human_obstacle_stop").as_bool();
+    lane_cfg.human_left_expand_px = static_cast<float>(get_parameter("human_left_expand_px").as_double());
+    lane_cfg.human_left_expand_width_ratio =
+        static_cast<float>(get_parameter("human_left_expand_width_ratio").as_double());
+    lane_cfg.human_line_margin_px = static_cast<float>(get_parameter("human_line_margin_px").as_double());
+    lane_cfg.human_line_sample_count = static_cast<int>(get_parameter("human_line_sample_count").as_int());
+    lane_cfg.human_line_sample_start_ratio =
+        static_cast<float>(get_parameter("human_line_sample_start_ratio").as_double());
+    lane_cfg.human_stop_effective_area_ratio =
+        static_cast<float>(get_parameter("human_stop_effective_area_ratio").as_double());
+    lane_cfg.human_stop_confirm_frames = static_cast<int>(get_parameter("human_stop_confirm_frames").as_int());
+    lane_cfg.human_clear_confirm_frames =
+        static_cast<int>(get_parameter("human_clear_confirm_frames").as_int());
     lane_cfg.enable_car_right_boundary_filter =
         get_parameter("enable_car_right_boundary_filter").as_bool();
     lane_cfg.car_boundary_x_margin_px =
@@ -1393,6 +1435,20 @@ class FusedPerceptionNode : public rclcpp::Node {
                << " age=" << debug_info.fit_hold_age;
     cv::putText(vis, car_status.str(), cv::Point(12, 52), cv::FONT_HERSHEY_SIMPLEX, 0.55,
                 cv::Scalar(255, 255, 0), 2, cv::LINE_AA);
+    std::ostringstream human_status;
+    human_status << "HUMAN state=" << debug_info.human_state
+                 << " pass=" << (debug_info.human_passable ? 1 : 0)
+                 << " latched=" << (debug_info.human_left_seen_latched ? 1 : 0)
+                 << " right=" << debug_info.human_right_clear_confirm_count
+                 << " stop=" << debug_info.human_stop_confirm_count
+                 << " area=" << debug_info.human_effective_area_ratio;
+    const cv::Scalar human_status_color = debug_info.human_state == "OBSTACLE_STOP"
+                                              ? cv::Scalar(0, 0, 255)
+                                              : (debug_info.human_left_seen_latched
+                                                     ? cv::Scalar(0, 165, 255)
+                                                     : cv::Scalar(0, 255, 0));
+    cv::putText(vis, human_status.str(), cv::Point(12, 76), cv::FONT_HERSHEY_SIMPLEX,
+                0.55, human_status_color, 2, cv::LINE_AA);
     if (show_window_) {
       cv::imshow("fused_perception", vis);
       int key = cv::waitKey(1) & 0xff;
@@ -1452,6 +1508,22 @@ class FusedPerceptionNode : public rclcpp::Node {
                                    0, std::max(0, vis.cols - 1));
       cv::line(vis, cv::Point(car_x, 0), cv::Point(car_x, vis.rows - 1),
                cv::Scalar(255, 255, 0), 2, cv::LINE_AA);
+    }
+    for (const auto& human : debug_info.humans) {
+      const cv::Scalar color = human.stop_candidate
+                                   ? cv::Scalar(0, 0, 255)
+                                   : (human.passable ? cv::Scalar(0, 200, 0)
+                                                     : cv::Scalar(0, 165, 255));
+      cv::rectangle(vis, human.effective_bbox, color, 2, cv::LINE_AA);
+      if (human.fit_available && human.fit_line_limit_x >= 0.0f) {
+        const int x = std::clamp(static_cast<int>(std::round(human.fit_line_limit_x)),
+                                 0, std::max(0, vis.cols - 1));
+        const int y = std::clamp(static_cast<int>(std::round(
+            human.effective_bbox.y + human.effective_bbox.height)),
+            0, std::max(0, vis.rows - 1));
+        cv::drawMarker(vis, cv::Point(x, y), cv::Scalar(255, 0, 255),
+                       cv::MARKER_CROSS, 9, 2, cv::LINE_AA);
+      }
     }
     for (const auto& band : debug_info.bands) {
       int y0 = std::clamp(band.y0, 0, std::max(0, vis.rows - 1));

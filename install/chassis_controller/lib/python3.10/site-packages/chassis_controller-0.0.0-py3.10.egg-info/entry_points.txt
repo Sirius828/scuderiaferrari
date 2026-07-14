@@ -1,0 +1,3 @@
+[console_scripts]
+chassis_controller_node = chassis_controller.chassis_controller_node:main
+

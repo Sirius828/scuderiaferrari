@@ -66,16 +66,20 @@ struct LaneDecisionConfig {
   float right_boundary_template_weight{1.0f};
 
   bool enable_obstacle_avoidance{false};
-  std::unordered_set<std::string> obstacle_labels{"Human", "Car"};
-  std::unordered_set<std::string> obstacle_stop_labels{"Human"};
+  std::unordered_set<std::string> obstacle_labels{"Car"};
   float obstacle_min_confidence{0.45f};
   float obstacle_x_margin_px{25.0f};
   float obstacle_y_margin_px{20.0f};
   float obstacle_min_bottom_y_ratio{0.30f};
-  bool enable_obstacle_stop{true};
-  float obstacle_stop_bottom_y_ratio{0.82f};
-  int obstacle_stop_confirm_frames{2};
-  int obstacle_stop_lost_frames{3};
+  bool enable_human_obstacle_stop{true};
+  float human_left_expand_px{25.0f};
+  float human_left_expand_width_ratio{0.50f};
+  float human_line_margin_px{5.0f};
+  int human_line_sample_count{5};
+  float human_line_sample_start_ratio{0.60f};
+  float human_stop_effective_area_ratio{0.020f};
+  int human_stop_confirm_frames{2};
+  int human_clear_confirm_frames{3};
 
   bool enable_car_right_boundary_filter{true};
   float car_boundary_x_margin_px{0.0f};
@@ -113,6 +117,16 @@ struct LaneObstacleDebug {
   std::string label;
 };
 
+struct LaneHumanDebug {
+  cv::Rect2f raw_bbox;
+  cv::Rect2f effective_bbox;
+  float fit_line_limit_x{-1.0f};
+  float effective_area_ratio{0.0f};
+  bool fit_available{false};
+  bool passable{false};
+  bool stop_candidate{false};
+};
+
 struct LaneDebugInfo {
   std::vector<LaneBandDebug> bands;
   std::vector<LaneObstacleDebug> obstacle_zones;
@@ -120,6 +134,17 @@ struct LaneDebugInfo {
   std::vector<cv::Point3f> fit_points;
   std::vector<cv::Point3f> removed_fit_points;
   std::vector<double> fit_coeffs;
+  std::vector<LaneHumanDebug> humans;
+  bool human_left_seen_latched{false};
+  bool human_passable{false};
+  bool human_right_clear_confirming{false};
+  bool human_stop_candidate{false};
+  float human_effective_left_x{-1.0f};
+  float human_fit_line_limit_x{-1.0f};
+  float human_effective_area_ratio{0.0f};
+  std::string human_state{"NONE"};
+  int human_right_clear_confirm_count{0};
+  int human_stop_confirm_count{0};
   bool car_boundary_active{false};
   float car_left_x{-1.0f};
   int car_filtered_point_count{0};
@@ -242,7 +267,9 @@ class LaneDecision {
   double fallbackCenterOffset(const cv::Mat& seg_map) const;
   bool checkGuideboardInFarRoi(const std::vector<Detection>& detections, int h) const;
   void updateFinishStopState(const std::vector<Detection>& detections, int image_height);
-  void updateObstacleStopState(const std::vector<Detection>& detections, int image_height);
+  void updateHumanStopState(const std::vector<Detection>& detections, int image_width,
+                            int image_height, const std::vector<double>& fit_coeffs,
+                            bool fit_valid);
   std::string taskState() const;
   void populateDebugInfo(const std::vector<Band>& bands, const std::vector<ObstacleZone>& zones,
                          const std::vector<cv::Point3f>& raw_points,
@@ -272,12 +299,13 @@ class LaneDecision {
   std::vector<double> left_boundary_template_offsets_;
   std::vector<double> right_boundary_template_offsets_;
   bool finish_stop_active_{false};
-  bool obstacle_stop_active_{false};
+  bool human_left_seen_latched_{false};
+  bool human_stop_active_{false};
   std::string finish_stop_state_{"CLEAR"};
-  std::string obstacle_stop_state_{"CLEAR"};
+  std::string human_state_{"NONE"};
   int finish_stop_lost_count_{0};
-  int obstacle_stop_confirm_count_{0};
-  int obstacle_stop_lost_count_{0};
+  int human_right_clear_confirm_count_{0};
+  int human_stop_confirm_count_{0};
 
   bool car_boundary_active_{false};
   double car_left_x_{-1.0};
