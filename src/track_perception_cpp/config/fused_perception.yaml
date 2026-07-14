@@ -1,7 +1,7 @@
 # C++ fused_perception_node 参数 - V2 baseline
 # 说明：
-# - V1: 巡线、岔路、GuideBoard、红灯/终点停车。
-# - V2: 在 V1 基础上启用障碍区域扣除和近距离障碍停车；控制器需要响应 /perception/stop_request。
+# - V1: 巡线、岔路、GuideBoard、终点停车。
+# - V2: Car 使用右边界约束参与二阶拟合；Human/终点仍通过保护状态停车。
 
 fused_perception_node:
   ros__parameters:
@@ -123,7 +123,7 @@ fused_perception_node:
     enable_fit_point_jump_filter: false
     max_fit_point_dx_ratio: 0.22
     max_fit_point_dx_px: 140.0
-    enable_fit_point_trend_filter: true
+    enable_fit_point_trend_filter: false
     fit_point_trend_residual_ratio: 0.12
     fit_point_trend_residual_px: 80.0
     fit_point_trend_slope_delta: 0.65
@@ -149,11 +149,10 @@ fused_perception_node:
     right_boundary_template_min_points: 6
     right_boundary_template_weight: 1.0
 
-    # 障碍避让 V2：
-    # - obstacle_labels: 从 band segment 中扣除这些障碍区域，仍输出可通行 offset
-    # - obstacle_stop_labels: 只有这些类别靠太近才发布 /perception/stop_request=true
-    # Car 固定在赛道一侧，只绕开不停车；Rock 和 GuideBoard 同时出现时走 right 岔路，默认不纳入避障。
-    enable_obstacle_avoidance: true
+    # 障碍保护与 Car 右边界拟合：
+    # - enable_obstacle_avoidance 是旧 band 区域扣除路径，默认关闭，保留便于回滚
+    # - Car 只作为图像右侧边界约束，不进入停车标签；Human 仍由 obstacle_stop_labels 触发停车
+    enable_obstacle_avoidance: false
     obstacle_labels: ""
     obstacle_stop_labels: "Human"
     obstacle_min_confidence: 0.45
@@ -165,33 +164,12 @@ fused_perception_node:
     obstacle_stop_bottom_y_ratio: 0.75
     obstacle_stop_confirm_frames: 1
     obstacle_stop_lost_frames: 3
-
-    # 检测标签补充拟合点：弹射起步启用后，Go/Gate 阶段不走 PID，默认关闭 Go 拟合补点
-    enable_label_fit_points: false
-    fit_point_labels: "Go"
-    fit_point_min_confidence: 0.45
-    fit_point_y0_ratio: 0.45
-    fit_point_y1_ratio: 1.0
-    fit_point_weight: 1.0
-
-    # 弹射起步触发：只有同一帧同时检测到 Go 和 Gate 才输出 task_state=START_BOOST；
-    # Go/Gate 连续丢失若干帧后恢复 CLEAR，且本次运行不再重复触发。
-    enable_start_boost_trigger: false
-    start_boost_labels: "Go,Gate"
-    start_boost_min_confidence: 0.45
-    start_boost_y0_ratio: 0.0
-    start_boost_y1_ratio: 1.0
-    start_boost_lost_frames: 3
-
-    # 红绿灯停车：red_light + Zebra 到线才 TRAFFIC_STOP
-    # 6.27日 红绿灯都是15s,黄灯2.5s
-    enable_traffic_light_stop: false
-    traffic_light_min_confidence: 0.45
-    zebra_min_confidence: 0.45
-    zebra_stop_y_ratio: 0.70
-    traffic_light_max_age: 0.5
-    green_light_confirm_frames: 1
-    red_light_confirm_frames: 1
+    enable_car_right_boundary_filter: true
+    car_boundary_x_margin_px: 0.0
+    car_boundary_y_margin_px: 0.0
+    car_boundary_smoothing_alpha: 0.5
+    car_boundary_lost_frames: 3
+    car_fit_hold_timeout_sec: 0.20
 
     # 终点停车：Stop bbox 底部达到阈值才 FINISH_STOP
     enable_finish_stop: true

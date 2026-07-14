@@ -6,15 +6,15 @@ Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
 [----------] Global test environment set-up.
 [----------] 3 tests from LaneGuideboardWaitTest
 [ RUN      ] LaneGuideboardWaitTest.WaitsForHintThenFallsBackStraight
-[       OK ] LaneGuideboardWaitTest.WaitsForHintThenFallsBackStraight (31 ms)
+[       OK ] LaneGuideboardWaitTest.WaitsForHintThenFallsBackStraight (30 ms)
 [ RUN      ] LaneGuideboardWaitTest.StableHintLocksImmediately
 [       OK ] LaneGuideboardWaitTest.StableHintLocksImmediately (0 ms)
 [ RUN      ] LaneGuideboardWaitTest.UsesLateHintAfterGuideboardLeavesRoi
 [       OK ] LaneGuideboardWaitTest.UsesLateHintAfterGuideboardLeavesRoi (0 ms)
-[----------] 3 tests from LaneGuideboardWaitTest (32 ms total)
+[----------] 3 tests from LaneGuideboardWaitTest (30 ms total)
 
 [----------] Global test environment tear-down
-[==========] 3 tests from 1 test suite ran. (32 ms total)
+[==========] 3 tests from 1 test suite ran. (30 ms total)
 [  PASSED  ] 3 tests.
 
 

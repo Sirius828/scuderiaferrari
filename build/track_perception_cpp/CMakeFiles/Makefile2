@@ -66,6 +66,7 @@ CMAKE_BINARY_DIR = /home/orangepi/scuderiaferrari/build/track_perception_cpp
 all: CMakeFiles/fused_perception_node.dir/all
 all: CMakeFiles/test_guideboard_recognizer.dir/all
 all: CMakeFiles/test_lane_guideboard_wait.dir/all
+all: CMakeFiles/test_lane_decision_car_boundary.dir/all
 all: gtest/all
 .PHONY : all
 
@@ -79,6 +80,7 @@ clean: CMakeFiles/track_perception_cpp_uninstall.dir/clean
 clean: CMakeFiles/fused_perception_node.dir/clean
 clean: CMakeFiles/test_guideboard_recognizer.dir/clean
 clean: CMakeFiles/test_lane_guideboard_wait.dir/clean
+clean: CMakeFiles/test_lane_decision_car_boundary.dir/clean
 clean: gtest/clean
 .PHONY : clean
 
@@ -211,7 +213,7 @@ CMakeFiles/test_lane_guideboard_wait.dir/all: gtest/CMakeFiles/gtest.dir/all
 CMakeFiles/test_lane_guideboard_wait.dir/all: gtest/CMakeFiles/gtest_main.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_guideboard_wait.dir/build.make CMakeFiles/test_lane_guideboard_wait.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_guideboard_wait.dir/build.make CMakeFiles/test_lane_guideboard_wait.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=23,24,25 "Built target test_lane_guideboard_wait"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=26,27,28 "Built target test_lane_guideboard_wait"
 .PHONY : CMakeFiles/test_lane_guideboard_wait.dir/all
 
 # Build rule for subdir invocation for target.
@@ -229,6 +231,33 @@ test_lane_guideboard_wait: CMakeFiles/test_lane_guideboard_wait.dir/rule
 CMakeFiles/test_lane_guideboard_wait.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_guideboard_wait.dir/build.make CMakeFiles/test_lane_guideboard_wait.dir/clean
 .PHONY : CMakeFiles/test_lane_guideboard_wait.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/test_lane_decision_car_boundary.dir
+
+# All Build rule for target.
+CMakeFiles/test_lane_decision_car_boundary.dir/all: gtest/CMakeFiles/gtest.dir/all
+CMakeFiles/test_lane_decision_car_boundary.dir/all: gtest/CMakeFiles/gtest_main.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_decision_car_boundary.dir/build.make CMakeFiles/test_lane_decision_car_boundary.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_decision_car_boundary.dir/build.make CMakeFiles/test_lane_decision_car_boundary.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=23,24,25 "Built target test_lane_decision_car_boundary"
+.PHONY : CMakeFiles/test_lane_decision_car_boundary.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/test_lane_decision_car_boundary.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles 7
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_lane_decision_car_boundary.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles 0
+.PHONY : CMakeFiles/test_lane_decision_car_boundary.dir/rule
+
+# Convenience name for target.
+test_lane_decision_car_boundary: CMakeFiles/test_lane_decision_car_boundary.dir/rule
+.PHONY : test_lane_decision_car_boundary
+
+# clean rule for target.
+CMakeFiles/test_lane_decision_car_boundary.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_decision_car_boundary.dir/build.make CMakeFiles/test_lane_decision_car_boundary.dir/clean
+.PHONY : CMakeFiles/test_lane_decision_car_boundary.dir/clean
 
 #=============================================================================
 # Target rules for target gtest/CMakeFiles/gtest.dir

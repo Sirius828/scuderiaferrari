@@ -99,6 +99,13 @@ if(BUILD_TESTING)
   )
   target_include_directories(test_lane_guideboard_wait PRIVATE include)
   target_link_libraries(test_lane_guideboard_wait ${OpenCV_LIBS})
+
+  ament_add_gtest(test_lane_decision_car_boundary
+    test/test_lane_decision_car_boundary.cpp
+    src/lane_decision.cpp
+  )
+  target_include_directories(test_lane_decision_car_boundary PRIVATE include)
+  target_link_libraries(test_lane_decision_car_boundary ${OpenCV_LIBS})
 endif()
 
 ament_package()

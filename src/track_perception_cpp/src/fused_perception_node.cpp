@@ -178,6 +178,13 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"raw_points\":" << debug_info.raw_point_count << ","
      << "\"fit_points\":" << debug_info.fit_point_count << ","
      << "\"segments\":" << debug_info.segment_count << ","
+     << "\"car_boundary_active\":" << (debug_info.car_boundary_active ? "true" : "false") << ","
+     << "\"car_left_x\":" << debug_info.car_left_x << ","
+     << "\"car_filtered_point_count\":" << debug_info.car_filtered_point_count << ","
+     << "\"car_boundary_lost_count\":" << debug_info.car_boundary_lost_count << ","
+     << "\"fit_hold_active\":" << (debug_info.fit_hold_active ? "true" : "false") << ","
+     << "\"fit_hold_age\":" << debug_info.fit_hold_age << ","
+     << "\"fit_order\":" << debug_info.fit_order << ","
      << "\"branch_detected\":" << (debug_info.branch_detected ? "true" : "false") << ","
      << "\"branch_score\":" << debug_info.branch_score << ","
      << "\"guideboard_hint_valid\":" << (debug_info.guideboard_hint_valid ? "true" : "false") << ","
@@ -235,6 +242,14 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
       ss << ",";
     }
     const auto& point = debug_info.fit_points[i];
+    ss << "[" << point.x << "," << point.y << "," << point.z << "]";
+  }
+  ss << "],\"removed_fit_points\":[";
+  for (size_t i = 0; i < debug_info.removed_fit_points.size(); ++i) {
+    if (i > 0) {
+      ss << ",";
+    }
+    const auto& point = debug_info.removed_fit_points[i];
     ss << "[" << point.x << "," << point.y << "," << point.z << "]";
   }
   ss << "],\"fit_coeffs\":[";
@@ -371,10 +386,10 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<int>("fit_min_points", 5);
     declare_parameter<int>("fit_order", 2);
     declare_parameter<int>("branch_fit_order", 2);
-    declare_parameter<bool>("enable_fit_point_jump_filter", true);
+    declare_parameter<bool>("enable_fit_point_jump_filter", false);
     declare_parameter<double>("max_fit_point_dx_ratio", 0.22);
     declare_parameter<double>("max_fit_point_dx_px", 140.0);
-    declare_parameter<bool>("enable_fit_point_trend_filter", true);
+    declare_parameter<bool>("enable_fit_point_trend_filter", false);
     declare_parameter<double>("fit_point_trend_residual_ratio", 0.12);
     declare_parameter<double>("fit_point_trend_residual_px", 80.0);
     declare_parameter<double>("fit_point_trend_slope_delta", 0.65);
@@ -392,25 +407,12 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("obstacle_stop_bottom_y_ratio", 0.82);
     declare_parameter<int>("obstacle_stop_confirm_frames", 2);
     declare_parameter<int>("obstacle_stop_lost_frames", 3);
-    declare_parameter<bool>("enable_label_fit_points", true);
-    declare_parameter<std::string>("fit_point_labels", "Go");
-    declare_parameter<double>("fit_point_min_confidence", 0.45);
-    declare_parameter<double>("fit_point_y0_ratio", 0.45);
-    declare_parameter<double>("fit_point_y1_ratio", 1.0);
-    declare_parameter<double>("fit_point_weight", 1.0);
-    declare_parameter<bool>("enable_start_boost_trigger", true);
-    declare_parameter<std::string>("start_boost_labels", "Go,Gate");
-    declare_parameter<double>("start_boost_min_confidence", 0.45);
-    declare_parameter<double>("start_boost_y0_ratio", 0.0);
-    declare_parameter<double>("start_boost_y1_ratio", 1.0);
-    declare_parameter<int>("start_boost_lost_frames", 3);
-    declare_parameter<bool>("enable_traffic_light_stop", true);
-    declare_parameter<double>("traffic_light_min_confidence", 0.45);
-    declare_parameter<double>("zebra_min_confidence", 0.45);
-    declare_parameter<double>("zebra_stop_y_ratio", 0.70);
-    declare_parameter<double>("traffic_light_max_age", 0.5);
-    declare_parameter<int>("green_light_confirm_frames", 1);
-    declare_parameter<int>("red_light_confirm_frames", 1);
+    declare_parameter<bool>("enable_car_right_boundary_filter", true);
+    declare_parameter<double>("car_boundary_x_margin_px", 0.0);
+    declare_parameter<double>("car_boundary_y_margin_px", 0.0);
+    declare_parameter<double>("car_boundary_smoothing_alpha", 0.5);
+    declare_parameter<int>("car_boundary_lost_frames", 3);
+    declare_parameter<double>("car_fit_hold_timeout_sec", 0.20);
     declare_parameter<bool>("enable_finish_stop", true);
     declare_parameter<double>("finish_stop_min_confidence", 0.45);
     declare_parameter<double>("finish_stop_arm_y_ratio", 0.70);
@@ -597,24 +599,17 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.obstacle_stop_bottom_y_ratio = static_cast<float>(get_parameter("obstacle_stop_bottom_y_ratio").as_double());
     lane_cfg.obstacle_stop_confirm_frames = static_cast<int>(get_parameter("obstacle_stop_confirm_frames").as_int());
     lane_cfg.obstacle_stop_lost_frames = static_cast<int>(get_parameter("obstacle_stop_lost_frames").as_int());
-    lane_cfg.enable_label_fit_points = get_parameter("enable_label_fit_points").as_bool();
-    lane_cfg.fit_point_labels = parseLabelSet(get_parameter("fit_point_labels").as_string());
-    lane_cfg.fit_point_min_confidence = static_cast<float>(get_parameter("fit_point_min_confidence").as_double());
-    lane_cfg.fit_point_y0_ratio = static_cast<float>(get_parameter("fit_point_y0_ratio").as_double());
-    lane_cfg.fit_point_y1_ratio = static_cast<float>(get_parameter("fit_point_y1_ratio").as_double());
-    lane_cfg.fit_point_weight = static_cast<float>(get_parameter("fit_point_weight").as_double());
-    lane_cfg.enable_start_boost_trigger = get_parameter("enable_start_boost_trigger").as_bool();
-    lane_cfg.start_boost_labels = parseLabelSet(get_parameter("start_boost_labels").as_string());
-    lane_cfg.start_boost_min_confidence = static_cast<float>(get_parameter("start_boost_min_confidence").as_double());
-    lane_cfg.start_boost_y0_ratio = static_cast<float>(get_parameter("start_boost_y0_ratio").as_double());
-    lane_cfg.start_boost_y1_ratio = static_cast<float>(get_parameter("start_boost_y1_ratio").as_double());
-    lane_cfg.start_boost_lost_frames = static_cast<int>(get_parameter("start_boost_lost_frames").as_int());
-    lane_cfg.enable_traffic_light_stop = get_parameter("enable_traffic_light_stop").as_bool();
-    lane_cfg.traffic_light_min_confidence = static_cast<float>(get_parameter("traffic_light_min_confidence").as_double());
-    lane_cfg.zebra_min_confidence = static_cast<float>(get_parameter("zebra_min_confidence").as_double());
-    lane_cfg.zebra_stop_y_ratio = static_cast<float>(get_parameter("zebra_stop_y_ratio").as_double());
-    lane_cfg.green_light_confirm_frames = static_cast<int>(get_parameter("green_light_confirm_frames").as_int());
-    lane_cfg.red_light_confirm_frames = static_cast<int>(get_parameter("red_light_confirm_frames").as_int());
+    lane_cfg.enable_car_right_boundary_filter =
+        get_parameter("enable_car_right_boundary_filter").as_bool();
+    lane_cfg.car_boundary_x_margin_px =
+        static_cast<float>(get_parameter("car_boundary_x_margin_px").as_double());
+    lane_cfg.car_boundary_y_margin_px =
+        static_cast<float>(get_parameter("car_boundary_y_margin_px").as_double());
+    lane_cfg.car_boundary_smoothing_alpha =
+        static_cast<float>(get_parameter("car_boundary_smoothing_alpha").as_double());
+    lane_cfg.car_boundary_lost_frames =
+        static_cast<int>(get_parameter("car_boundary_lost_frames").as_int());
+    lane_cfg.car_fit_hold_timeout_sec = get_parameter("car_fit_hold_timeout_sec").as_double();
     lane_cfg.enable_finish_stop = get_parameter("enable_finish_stop").as_bool();
     lane_cfg.finish_stop_min_confidence = static_cast<float>(get_parameter("finish_stop_min_confidence").as_double());
     lane_cfg.finish_stop_arm_y_ratio = static_cast<float>(get_parameter("finish_stop_arm_y_ratio").as_double());
@@ -1381,9 +1376,23 @@ class FusedPerceptionNode : public rclcpp::Node {
            << " enc_delta=" << debug_info.encoder_hold_delta
            << " lb_tpl=" << (debug_info.left_boundary_template_active ? 1 : 0)
            << " tpl=" << debug_info.boundary_template_side
+           << " car_filter=" << (debug_info.car_boundary_active ? 1 : 0)
+           << " car_x=" << debug_info.car_left_x
+           << " car_rm=" << debug_info.car_filtered_point_count
+           << " car_lost=" << debug_info.car_boundary_lost_count
+           << " fit_hold=" << (debug_info.fit_hold_active ? 1 : 0)
            << " alpha=" << std::clamp(blend_alpha_, 0.0f, 1.0f);
     cv::putText(vis, status.str(), cv::Point(12, 28), cv::FONT_HERSHEY_SIMPLEX, 0.65,
                 cv::Scalar(255, 255, 255), 2, cv::LINE_AA);
+    std::ostringstream car_status;
+    car_status << "CAR boundary=" << (debug_info.car_boundary_active ? 1 : 0)
+               << " left_x=" << debug_info.car_left_x
+               << " removed=" << debug_info.car_filtered_point_count
+               << " lost=" << debug_info.car_boundary_lost_count
+               << " hold=" << (debug_info.fit_hold_active ? 1 : 0)
+               << " age=" << debug_info.fit_hold_age;
+    cv::putText(vis, car_status.str(), cv::Point(12, 52), cv::FONT_HERSHEY_SIMPLEX, 0.55,
+                cv::Scalar(255, 255, 0), 2, cv::LINE_AA);
     if (show_window_) {
       cv::imshow("fused_perception", vis);
       int key = cv::waitKey(1) & 0xff;
@@ -1430,13 +1439,7 @@ class FusedPerceptionNode : public rclcpp::Node {
         {"Car", cv::Scalar(0, 0, 255)},
         {"Stop", cv::Scalar(0, 165, 255)},
         {"Gold", cv::Scalar(0, 255, 255)},
-        {"Go", cv::Scalar(255, 255, 0)},
-        {"Gate", cv::Scalar(255, 0, 255)},
         {"GuideBoard", cv::Scalar(255, 255, 255)},
-        {"red_light", cv::Scalar(0, 0, 255)},
-        {"yellow_light", cv::Scalar(0, 255, 255)},
-        {"green_light", cv::Scalar(0, 255, 0)},
-        {"Zebra", cv::Scalar(255, 255, 255)},
     };
     auto it = colors.find(class_name);
     return it == colors.end() ? cv::Scalar(255, 255, 255) : it->second;
@@ -1444,6 +1447,12 @@ class FusedPerceptionNode : public rclcpp::Node {
 
   void drawLaneDebug(cv::Mat& vis, const LaneDebugInfo& debug_info) const {
     bool template_active = debug_info.left_boundary_template_active;
+    if (debug_info.car_boundary_active && debug_info.car_left_x >= 0.0f) {
+      const int car_x = std::clamp(static_cast<int>(std::round(debug_info.car_left_x)),
+                                   0, std::max(0, vis.cols - 1));
+      cv::line(vis, cv::Point(car_x, 0), cv::Point(car_x, vis.rows - 1),
+               cv::Scalar(255, 255, 0), 2, cv::LINE_AA);
+    }
     for (const auto& band : debug_info.bands) {
       int y0 = std::clamp(band.y0, 0, std::max(0, vis.rows - 1));
       int y1 = std::clamp(band.y1, y0 + 1, vis.rows);
@@ -1473,6 +1482,13 @@ class FusedPerceptionNode : public rclcpp::Node {
         cv::circle(vis, cv::Point(std::clamp(band.selected_center_x, 0, std::max(0, vis.cols - 1)), cy),
                    template_active ? 4 : 2, cv::Scalar(0, 255, 0), -1, cv::LINE_AA);
       }
+    }
+
+    for (const auto& point : debug_info.removed_fit_points) {
+      const cv::Point center(static_cast<int>(std::round(point.x)),
+                             static_cast<int>(std::round(point.y)));
+      cv::drawMarker(vis, center, cv::Scalar(255, 0, 255), cv::MARKER_TILTED_CROSS,
+                     9, 2, cv::LINE_AA);
     }
 
     const auto& points = debug_info.fit_points;

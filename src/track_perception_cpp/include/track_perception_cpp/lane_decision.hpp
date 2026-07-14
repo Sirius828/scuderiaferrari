@@ -40,10 +40,10 @@ struct LaneDecisionConfig {
   int fit_min_points{5};
   int fit_order{2};
   int branch_fit_order{2};
-  bool enable_fit_point_jump_filter{true};
+  bool enable_fit_point_jump_filter{false};
   float max_fit_point_dx_ratio{0.22f};
   float max_fit_point_dx_px{140.0f};
-  bool enable_fit_point_trend_filter{true};
+  bool enable_fit_point_trend_filter{false};
   float fit_point_trend_residual_ratio{0.12f};
   float fit_point_trend_residual_px{80.0f};
   float fit_point_trend_slope_delta{0.65f};
@@ -77,26 +77,12 @@ struct LaneDecisionConfig {
   int obstacle_stop_confirm_frames{2};
   int obstacle_stop_lost_frames{3};
 
-  bool enable_label_fit_points{true};
-  std::unordered_set<std::string> fit_point_labels{"Go"};
-  float fit_point_min_confidence{0.45f};
-  float fit_point_y0_ratio{0.45f};
-  float fit_point_y1_ratio{1.0f};
-  float fit_point_weight{1.0f};
-
-  bool enable_start_boost_trigger{true};
-  std::unordered_set<std::string> start_boost_labels{"Go", "Gate"};
-  float start_boost_min_confidence{0.45f};
-  float start_boost_y0_ratio{0.0f};
-  float start_boost_y1_ratio{1.0f};
-  int start_boost_lost_frames{3};
-
-  bool enable_traffic_light_stop{true};
-  float traffic_light_min_confidence{0.45f};
-  float zebra_min_confidence{0.45f};
-  float zebra_stop_y_ratio{0.70f};
-  int green_light_confirm_frames{1};
-  int red_light_confirm_frames{1};
+  bool enable_car_right_boundary_filter{true};
+  float car_boundary_x_margin_px{0.0f};
+  float car_boundary_y_margin_px{0.0f};
+  float car_boundary_smoothing_alpha{0.5f};
+  int car_boundary_lost_frames{3};
+  double car_fit_hold_timeout_sec{0.20};
 
   bool enable_finish_stop{true};
   float finish_stop_min_confidence{0.45f};
@@ -132,7 +118,15 @@ struct LaneDebugInfo {
   std::vector<LaneObstacleDebug> obstacle_zones;
   std::vector<cv::Point3f> raw_points;
   std::vector<cv::Point3f> fit_points;
+  std::vector<cv::Point3f> removed_fit_points;
   std::vector<double> fit_coeffs;
+  bool car_boundary_active{false};
+  float car_left_x{-1.0f};
+  int car_filtered_point_count{0};
+  int car_boundary_lost_count{0};
+  bool fit_hold_active{false};
+  double fit_hold_age{0.0};
+  int fit_order{0};
   bool branch_detected{false};
   int branch_score{0};
   bool guideboard_seen{false};
@@ -236,9 +230,10 @@ class LaneDecision {
   std::vector<cv::Point3f> filterCenterlinePoints(const std::vector<cv::Point3f>& points,
                                                   int image_width,
                                                   std::optional<double> last_center_x) const;
-  void appendDetectionFitPoints(std::vector<cv::Point3f>& points,
-                                const std::vector<Detection>& detections,
-                                int image_height) const;
+  void updateCarBoundaryState(const std::vector<Detection>& detections, int image_height);
+  std::vector<cv::Point3f> filterCarRightBoundaryPoints(
+      const std::vector<cv::Point3f>& points,
+      std::vector<cv::Point3f>* removed_points) const;
   bool fitCenterlineAndComputeGeometry(const std::vector<cv::Point3f>& points, int h,
                                        int fit_order, std::vector<double>* coeffs,
                                        double* heading_error, double* curvature) const;
@@ -246,14 +241,13 @@ class LaneDecision {
   double smoothOffset(double raw_offset, size_t index);
   double fallbackCenterOffset(const cv::Mat& seg_map) const;
   bool checkGuideboardInFarRoi(const std::vector<Detection>& detections, int h) const;
-  void updateTrafficLightStopState(const std::vector<Detection>& detections, int image_height);
   void updateFinishStopState(const std::vector<Detection>& detections, int image_height);
   void updateObstacleStopState(const std::vector<Detection>& detections, int image_height);
-  void updateStartBoostState(const std::vector<Detection>& detections, int image_height);
   std::string taskState() const;
   void populateDebugInfo(const std::vector<Band>& bands, const std::vector<ObstacleZone>& zones,
                          const std::vector<cv::Point3f>& raw_points,
                          const std::vector<cv::Point3f>& fit_points,
+                         const std::vector<cv::Point3f>& removed_fit_points,
                          const std::vector<double>& fit_coeffs);
 
   LaneDecisionConfig cfg_;
@@ -277,21 +271,29 @@ class LaneDecision {
   int64_t encoder_hold_target_{0};
   std::vector<double> left_boundary_template_offsets_;
   std::vector<double> right_boundary_template_offsets_;
-  bool traffic_stop_active_{false};
   bool finish_stop_active_{false};
   bool obstacle_stop_active_{false};
-  bool start_boost_active_{false};
-  bool start_boost_used_{false};
-  bool stop_request_active_{false};
-  std::string traffic_light_state_{"CLEAR"};
   std::string finish_stop_state_{"CLEAR"};
   std::string obstacle_stop_state_{"CLEAR"};
   int finish_stop_lost_count_{0};
   int obstacle_stop_confirm_count_{0};
   int obstacle_stop_lost_count_{0};
-  int start_boost_lost_count_{0};
-  int red_light_confirm_count_{0};
-  int green_light_confirm_count_{0};
+
+  bool car_boundary_active_{false};
+  double car_left_x_{-1.0};
+  double car_bottom_y_{0.0};
+  int car_boundary_lost_count_{0};
+  bool fit_hold_active_{false};
+  double fit_hold_age_{0.0};
+  bool has_last_valid_fit_{false};
+  std::vector<double> last_valid_fit_coeffs_;
+  std::array<double, 3> last_valid_offsets_{{0.0, 0.0, 0.0}};
+  std::array<double, 3> last_valid_raw_offsets_{{0.0, 0.0, 0.0}};
+  double last_valid_fit_heading_{0.0};
+  double last_valid_fit_curvature_{0.0};
+  double last_valid_fit_confidence_{0.0};
+  double last_valid_fit_time_{0.0};
+  std::string last_valid_road_state_{"NORMAL"};
 };
 
 }  // namespace track_perception_cpp

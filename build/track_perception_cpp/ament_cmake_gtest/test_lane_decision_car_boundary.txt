@@ -1,0 +1,31 @@
+-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/track_perception_cpp':
+ - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_decision_car_boundary --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml
+
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 7 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 7 tests from LaneDecisionCarBoundaryTest
+[ RUN      ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit
+[       OK ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit (2 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RemovesCarSideFarPointsAndKeepsNearLeftPoints
+[       OK ] LaneDecisionCarBoundaryTest.RemovesCarSideFarPointsAndKeepsNearLeftPoints (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.AppliesLeftEdgeRuleEvenWhenCarIsInImageLeftHalf
+[       OK ] LaneDecisionCarBoundaryTest.AppliesLeftEdgeRuleEvenWhenCarIsInImageLeftHalf (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.SmoothsBoundaryAndKeepsItAcrossTwoLostFrames
+[       OK ] LaneDecisionCarBoundaryTest.SmoothsBoundaryAndKeepsItAcrossTwoLostFrames (4 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence
+[       OK ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence (23 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.HumanStillTriggersObstacleStopWhileCarDoesNot
+[       OK ] LaneDecisionCarBoundaryTest.HumanStillTriggersObstacleStopWhileCarDoesNot (2 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive
+[       OK ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive (4 ms)
+[----------] 7 tests from LaneDecisionCarBoundaryTest (37 ms total)
+
+[----------] Global test environment tear-down
+[==========] 7 tests from 1 test suite ran. (37 ms total)
+[  PASSED  ] 7 tests.
+
+
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml'
