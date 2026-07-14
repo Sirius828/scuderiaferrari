@@ -133,6 +133,30 @@ bool decodeBox(const float* box, int input_width, int input_height, SegCandidate
   return candidate.x1 > candidate.x0 && candidate.y1 > candidate.y0;
 }
 
+// Ultralytics-style decoded segmentation output stores boxes as xywh
+// (center-x, center-y, width, height), unlike the raw-head path above which
+// decodes DFL logits.  Keep this explicit instead of relying on the xyxy/xywh
+// heuristic in decodeBox: a small xywh box can also satisfy x1 > x0 and
+// y1 > y0, making that heuristic ambiguous.
+bool decodeBoxXYWH(const float* box, int input_width, int input_height, SegCandidate& candidate) {
+  float cx = box[0];
+  float cy = box[1];
+  float bw = box[2];
+  float bh = box[3];
+  float coord_abs_max = std::max({std::abs(cx), std::abs(cy), std::abs(bw), std::abs(bh)});
+  if (coord_abs_max <= 2.0f) {
+    cx *= static_cast<float>(input_width);
+    bw *= static_cast<float>(input_width);
+    cy *= static_cast<float>(input_height);
+    bh *= static_cast<float>(input_height);
+  }
+  candidate.x0 = std::clamp(cx - bw * 0.5f, 0.0f, static_cast<float>(input_width));
+  candidate.y0 = std::clamp(cy - bh * 0.5f, 0.0f, static_cast<float>(input_height));
+  candidate.x1 = std::clamp(cx + bw * 0.5f, 0.0f, static_cast<float>(input_width));
+  candidate.y1 = std::clamp(cy + bh * 0.5f, 0.0f, static_cast<float>(input_height));
+  return candidate.x1 > candidate.x0 && candidate.y1 > candidate.y0;
+}
+
 float boxIou(const SegCandidate& a, const SegCandidate& b) {
   float ix0 = std::max(a.x0, b.x0);
   float iy0 = std::max(a.y0, b.y0);
@@ -272,7 +296,10 @@ bool YoloSeg::postprocess(const std::vector<TensorData>& outputs, const Preproce
   std::vector<const TensorData*> raw_heads;
 
   for (const auto& output : outputs) {
-    if (raw_output_ && output.dims.size() == 4 && output.dims[0] == 1 && output.dims[1] > 64) {
+    // Detect raw YOLO11-seg heads by shape.  This keeps the node compatible
+    // with both the raw4 model (three [1,97,H,W] heads) and decoded export
+    // models without requiring the YAML bool to be changed in lockstep.
+    if (output.dims.size() == 4 && output.dims[0] == 1 && output.dims[1] > 64) {
       raw_heads.push_back(&output);
       continue;
     }
@@ -300,7 +327,7 @@ bool YoloSeg::postprocess(const std::vector<TensorData>& outputs, const Preproce
     return false;
   }
 
-  if (raw_output_) {
+  if (!raw_heads.empty()) {
     for (const TensorData* head : raw_heads) {
       if (head == nullptr || head->dims.size() != 4 || head->dims[0] != 1) {
         continue;
@@ -366,47 +393,119 @@ bool YoloSeg::postprocess(const std::vector<TensorData>& outputs, const Preproce
       }
     }
   } else {
+    // Some YOLO11-seg exports combine xywh, class scores and mask
+    // coefficients into one [1, 4 + num_classes + mask_dim, N] tensor.  After
+    // asMatrix() this is [N, 4 + num_classes + mask_dim].  Handle that format
+    // before the legacy path where boxes/scores/coeffs are separate tensors.
+    MatrixView combined;
     for (const auto& tensor : tensors) {
-      if (tensor.cols == 4 && boxes.rows == 0) {
-        boxes = tensor;
-      } else if (tensor.cols == mask_dim && coeffs.rows == 0) {
-        coeffs = tensor;
-      } else if (scores.rows == 0) {
-        scores = tensor;
+      if (tensor.cols >= 4 + mask_dim + 1) {
+        combined = tensor;
+        break;
       }
-    }
-    if (boxes.rows == 0 || scores.rows == 0 || coeffs.rows == 0 || boxes.rows != scores.rows ||
-        boxes.rows != coeffs.rows) {
-      seg_map = cv::Mat(meta.orig_h, meta.orig_w, CV_8UC1, cv::Scalar(0));
-      return false;
     }
 
-    candidates.reserve(boxes.rows);
-    for (int i = 0; i < scores.rows; ++i) {
-      const float* row = scores.data.data() + static_cast<size_t>(i) * scores.cols;
-      float max_score = row[0];
-      int class_id = 0;
-      for (int c = 1; c < scores.cols; ++c) {
-        if (row[c] > max_score) {
-          max_score = row[c];
-          class_id = c;
+    if (combined.rows > 0) {
+      int class_count = combined.cols - 4 - mask_dim;
+      candidates.reserve(combined.rows);
+      for (int i = 0; i < combined.rows; ++i) {
+        const float* row = combined.data.data() + static_cast<size_t>(i) * combined.cols;
+        int class_id = 0;
+        float max_score = row[4];
+        for (int c = 1; c < class_count; ++c) {
+          float score = row[4 + c];
+          if (score > max_score) {
+            max_score = score;
+            class_id = c;
+          }
         }
-      }
-      if (max_score > 1.0f || max_score < 0.0f) {
-        max_score = sigmoid(max_score);
-      }
-      if (max_score >= conf_thresh_) {
+        if (max_score > 1.0f || max_score < 0.0f) {
+          max_score = sigmoid(max_score);
+        }
+        if (max_score < conf_thresh_) {
+          continue;
+        }
+
         SegCandidate candidate;
         candidate.index = i;
         candidate.class_id = class_id;
         candidate.score = max_score;
-        const float* box = boxes.data.data() + static_cast<size_t>(i) * boxes.cols;
-        if (decodeBox(box, input_width_, input_height_, candidate)) {
-          candidates.push_back(candidate);
+        if (!decodeBoxXYWH(row, input_width_, input_height_, candidate)) {
+          continue;
+        }
+        int coeff_offset = 4 + class_count;
+        candidate.coeff.resize(mask_dim);
+        for (int m = 0; m < mask_dim; ++m) {
+          candidate.coeff[m] = row[coeff_offset + m];
+        }
+        candidates.push_back(std::move(candidate));
+      }
+    } else {
+      for (const auto& tensor : tensors) {
+        if (tensor.cols == 4 && boxes.rows == 0) {
+          boxes = tensor;
+        } else if (tensor.cols == mask_dim && coeffs.rows == 0) {
+          coeffs = tensor;
+        } else if (scores.rows == 0) {
+          scores = tensor;
+        }
+      }
+      if (boxes.rows == 0 || scores.rows == 0 || coeffs.rows == 0 || boxes.rows != scores.rows ||
+          boxes.rows != coeffs.rows) {
+        seg_map = cv::Mat(meta.orig_h, meta.orig_w, CV_8UC1, cv::Scalar(0));
+        return false;
+      }
+
+      candidates.reserve(boxes.rows);
+      for (int i = 0; i < scores.rows; ++i) {
+        const float* row = scores.data.data() + static_cast<size_t>(i) * scores.cols;
+        float max_score = row[0];
+        int class_id = 0;
+        for (int c = 1; c < scores.cols; ++c) {
+          if (row[c] > max_score) {
+            max_score = row[c];
+            class_id = c;
+          }
+        }
+        if (max_score > 1.0f || max_score < 0.0f) {
+          max_score = sigmoid(max_score);
+        }
+        if (max_score >= conf_thresh_) {
+          SegCandidate candidate;
+          candidate.index = i;
+          candidate.class_id = class_id;
+          candidate.score = max_score;
+          const float* box = boxes.data.data() + static_cast<size_t>(i) * boxes.cols;
+          if (decodeBox(box, input_width_, input_height_, candidate)) {
+            candidates.push_back(candidate);
+          }
         }
       }
     }
   }
+  // The model input contains letterbox padding around the cropped image.  A
+  // candidate that extends into that padding must not be allowed to map back
+  // into the part of the original frame that was never fed to the model.
+  // Clip before NMS as well, otherwise padding-only/partly-padded boxes can
+  // survive NMS and later produce boxes above the crop boundary.
+  const float valid_x0 = static_cast<float>(meta.pad_x);
+  const float valid_y0 = static_cast<float>(meta.pad_y);
+  const float valid_x1 = valid_x0 + static_cast<float>(meta.resize_w);
+  const float valid_y1 = valid_y0 + static_cast<float>(meta.resize_h);
+  candidates.erase(
+      std::remove_if(candidates.begin(), candidates.end(), [&](SegCandidate& candidate) {
+        if (candidate.x1 <= valid_x0 || candidate.x0 >= valid_x1 ||
+            candidate.y1 <= valid_y0 || candidate.y0 >= valid_y1) {
+          return true;
+        }
+        candidate.x0 = std::clamp(candidate.x0, valid_x0, valid_x1);
+        candidate.y0 = std::clamp(candidate.y0, valid_y0, valid_y1);
+        candidate.x1 = std::clamp(candidate.x1, valid_x0, valid_x1);
+        candidate.y1 = std::clamp(candidate.y1, valid_y0, valid_y1);
+        return candidate.x1 <= candidate.x0 || candidate.y1 <= candidate.y0;
+      }),
+      candidates.end());
+
   if (candidates.empty()) {
     seg_map = cv::Mat(meta.orig_h, meta.orig_w, CV_8UC1, cv::Scalar(0));
     return true;
