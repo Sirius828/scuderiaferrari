@@ -332,6 +332,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<bool>("enable_encoder_branch_hold", true);
     declare_parameter<std::string>("encoder_count_topic", "/chassis/encoder_count");
     declare_parameter<int64_t>("encoder_hold_counts", 5000);
+    declare_parameter<int64_t>("encoder_hold_right_counts", 20000);
     declare_parameter<double>("encoder_feedback_timeout_sec", 0.30);
     declare_parameter<bool>("enable_guideboard_branch_selection", true);
     declare_parameter<std::string>("guideboard_branch", "right");
@@ -430,8 +431,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<int>("right_boundary_template_min_points", 6);
     declare_parameter<double>("right_boundary_template_weight", 1.0);
     declare_parameter<std::string>("outer_side", "left");
-    declare_parameter<bool>("enable_status_log", false);
-    declare_parameter<bool>("enable_branch_event_log", false);
+    declare_parameter<bool>("enable_result_log", true);
+    declare_parameter<bool>("enable_data_log", false);
     declare_parameter<bool>("publish_lane_state", true);
   }
 
@@ -451,8 +452,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     debug_screenshot_dir_ = get_parameter("debug_screenshot_dir").as_string();
     publish_detections_ = get_parameter("publish_detections").as_bool();
     publish_lane_state_ = get_parameter("publish_lane_state").as_bool();
-    enable_status_log_ = get_parameter("enable_status_log").as_bool();
-    enable_branch_event_log_ = get_parameter("enable_branch_event_log").as_bool();
+    enable_result_log_ = get_parameter("enable_result_log").as_bool();
+    enable_data_log_ = get_parameter("enable_data_log").as_bool();
     enable_guideboard_ocr_ = get_parameter("enable_guideboard_ocr").as_bool();
     ocr_det_model_path_ = resolveOwnPackagePath(get_parameter("ocr_det_model_path").as_string());
     ocr_rec_model_path_ = resolveOwnPackagePath(get_parameter("ocr_rec_model_path").as_string());
@@ -541,6 +542,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.branch_detect_far_band_ratio = static_cast<float>(get_parameter("branch_detect_far_band_ratio").as_double());
     lane_cfg.enable_encoder_branch_hold = get_parameter("enable_encoder_branch_hold").as_bool();
     lane_cfg.encoder_hold_counts = get_parameter("encoder_hold_counts").as_int();
+    lane_cfg.encoder_hold_right_counts = get_parameter("encoder_hold_right_counts").as_int();
     lane_cfg.encoder_feedback_timeout_sec = get_parameter("encoder_feedback_timeout_sec").as_double();
     encoder_count_topic_ = get_parameter("encoder_count_topic").as_string();
     lane_cfg.outer_side = get_parameter("outer_side").as_string();
@@ -617,7 +619,6 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.finish_stop_min_confidence = static_cast<float>(get_parameter("finish_stop_min_confidence").as_double());
     lane_cfg.finish_stop_arm_y_ratio = static_cast<float>(get_parameter("finish_stop_arm_y_ratio").as_double());
     lane_cfg.finish_stop_lost_frames = static_cast<int>(get_parameter("finish_stop_lost_frames").as_int());
-    lane_cfg.enable_branch_event_log = get_parameter("enable_branch_event_log").as_bool();
     lane_decision_.configure(lane_cfg);
   }
 
@@ -679,6 +680,27 @@ class FusedPerceptionNode : public rclcpp::Node {
     return maneuver == "right" ? "right" : "left";
   }
 
+  const char* ocrControlMode() const {
+    return ocr_apply_to_control_ ? "ocr" : "shadow";
+  }
+
+  void logGuideboardResult(const std::string& event, uint64_t track_id,
+                           const std::string& sign, const std::string& action,
+                           const std::string& branch, const std::string& reason,
+                           double model_score, double evidence, double margin,
+                           double latency_ms) {
+    if (!enable_result_log_) {
+      return;
+    }
+    RCLCPP_INFO(get_logger(),
+                "OCR_RESULT event=%s track=%lu sign=%s action=%s branch=%s "
+                "model=%.3f evidence=%.3f margin=%.3f latency_ms=%.1f "
+                "control=%s reason=%s",
+                event.c_str(), static_cast<unsigned long>(track_id), sign.c_str(),
+                action.c_str(), branch.c_str(), model_score, evidence, margin,
+                latency_ms, ocrControlMode(), reason.c_str());
+  }
+
   void resetGuideboardTrack(bool invalidate_pending = true) {
     if (invalidate_pending) {
       ++guideboard_track_id_;
@@ -689,6 +711,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     guideboard_uncertain_count_ = 0;
     guideboard_fallback_used_ = false;
     stable_guideboard_branch_.clear();
+    stable_result_logged_track_id_ = 0;
     guideboard_decision_start_sec_ = 0.0;
     stable_decision_latency_ms_ = -1.0;
     last_guideboard_ocr_sec_ = 0.0;
@@ -701,6 +724,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     has_guideboard_track_ = true;
     tracked_guideboard_bbox_ = bbox;
     guideboard_last_seen_sec_ = now;
+    logGuideboardResult("track_new", guideboard_track_id_, "unknown", "unknown", "pending",
+                        "guideboard_detected", -1.0, 0.0, 0.0, -1.0);
   }
 
   void updateGuideboardTrack(const cv::Rect2f& bbox, double now) {
@@ -929,15 +954,23 @@ class FusedPerceptionNode : public rclcpp::Node {
         ++ocr_decision_count_;
         ocr_decision_latencies_ms_.push_back(stable_decision_latency_ms_);
       }
+      if (stable_result_logged_track_id_ != task.track_id) {
+        stable_result_logged_track_id_ = task.track_id;
+        logGuideboardResult(
+            "stable", task.track_id, last_guideboard_match_.best_id,
+            last_guideboard_match_.maneuver, "pending", last_guideboard_match_.reason,
+            result.ocr_score, last_guideboard_match_.best_score,
+            last_guideboard_match_.margin, stable_decision_latency_ms_);
+      }
     }
 
     std_msgs::msg::String recognition_msg;
     recognition_msg.data = guideboardRecognitionJson(task, last_guideboard_match_);
     guideboard_recognition_pub_->publish(recognition_msg);
 
-    if (enable_branch_event_log_) {
-      RCLCPP_INFO_THROTTLE(
-          get_logger(), *get_clock(), 500,
+    if (enable_data_log_) {
+      RCLCPP_INFO(
+          get_logger(),
           "GuideBoard OCR track=%lu pipeline=%s ret=%d text=%s model=%.2f sign=%s "
           "maneuver=%s eligible=%d stable=%d best=%.2f margin=%.2f reason=%s "
           "time=%.1fms crop=%dx%d fallback=%s error=%s",
@@ -975,6 +1008,12 @@ class FusedPerceptionNode : public rclcpp::Node {
     const double now = nowSeconds();
     if (guideboard == nullptr) {
       if (has_guideboard_track_ && now - guideboard_last_seen_sec_ > 0.25) {
+        logGuideboardResult(
+            "track_lost", guideboard_track_id_,
+            last_guideboard_match_.best_id.empty() ? "unknown" : last_guideboard_match_.best_id,
+            last_guideboard_match_.stable ? last_guideboard_match_.maneuver : "unknown", "pending",
+            "guideboard_missing_0.25s", last_ocr_score_, last_guideboard_match_.best_score,
+            last_guideboard_match_.margin, stable_decision_latency_ms_);
         resetGuideboardTrack(true);
       }
       applyGuideboardHint();
@@ -1003,6 +1042,9 @@ class FusedPerceptionNode : public rclcpp::Node {
       pipeline = "det_rec";
       guideboard_fallback_used_ = true;
       fallback_reason = "rec_uncertain_" + std::to_string(guideboard_uncertain_count_);
+      logGuideboardResult("fallback", guideboard_track_id_, "unknown", "unknown", "pending",
+                          fallback_reason, last_ocr_score_, last_guideboard_match_.best_score,
+                          last_guideboard_match_.margin, -1.0);
     }
 
     cv::Mat crop;
@@ -1488,13 +1530,40 @@ class FusedPerceptionNode : public rclcpp::Node {
     debug_screenshot_interval_sec_ = get_parameter("debug_screenshot_interval_sec").as_double();
     debug_screenshot_branch_only_ = get_parameter("debug_screenshot_branch_only").as_bool();
     debug_screenshot_dir_ = get_parameter("debug_screenshot_dir").as_string();
-    enable_status_log_ = get_parameter("enable_status_log").as_bool();
-    enable_branch_event_log_ = get_parameter("enable_branch_event_log").as_bool();
+    enable_result_log_ = get_parameter("enable_result_log").as_bool();
+    enable_data_log_ = get_parameter("enable_data_log").as_bool();
     enable_perf_stats_ = get_parameter("enable_perf_stats").as_bool();
   }
 
   void logDecisionStatus(const LaneState& lane_state, const LaneDebugInfo& debug_info) {
-    if (enable_branch_event_log_) {
+    const bool branch_changed = lane_state.branch_side != last_branch_side_;
+    const bool wait_timeout_event = last_guideboard_waiting_for_hint_ &&
+                                    !debug_info.guideboard_waiting_for_hint &&
+                                    ocr_apply_to_control_ &&
+                                    !last_guideboard_match_.stable &&
+                                    lane_state.branch_side.empty();
+    if (enable_result_log_ && wait_timeout_event) {
+      logGuideboardResult(
+          "unknown_timeout", guideboard_track_id_, "unknown", "straight", "pending",
+          "ocr_wait_timeout", last_ocr_score_, last_guideboard_match_.best_score,
+          last_guideboard_match_.margin, stable_decision_latency_ms_);
+    }
+    if (enable_result_log_ && branch_changed && !lane_state.branch_side.empty()) {
+      const bool stable = last_guideboard_match_.stable;
+      const std::string sign = last_guideboard_match_.best_id.empty()
+                                   ? "unknown"
+                                   : last_guideboard_match_.best_id;
+      const std::string action = stable ? last_guideboard_match_.maneuver : "unknown";
+      const std::string reason = !ocr_apply_to_control_
+                                     ? "legacy_config"
+                                     : (stable ? "ocr_stable" : "unknown_timeout");
+      logGuideboardResult(
+          "branch_lock", guideboard_track_id_, sign, action, lane_state.branch_side, reason,
+          last_ocr_score_, last_guideboard_match_.best_score,
+          last_guideboard_match_.margin, stable_decision_latency_ms_);
+    }
+
+    if (enable_data_log_) {
       if (debug_info.guideboard_seen && !last_guideboard_seen_) {
         RCLCPP_INFO(get_logger(),
                     "GuideBoard usable: roi_count=%d total=%d best_conf=%.2f center=(%.1f,%.1f); "
@@ -1538,15 +1607,18 @@ class FusedPerceptionNode : public rclcpp::Node {
                     lane_state.task_state.c_str(), lane_state.task_state != "CLEAR");
       }
 
-      last_guideboard_seen_ = debug_info.guideboard_seen;
-      last_branch_detected_ = debug_info.branch_detected;
-      last_branch_score_ = debug_info.branch_score;
-      last_road_state_ = lane_state.road_state;
-      last_branch_side_ = lane_state.branch_side;
-      last_task_state_ = lane_state.task_state;
     }
 
-    if (!enable_status_log_) {
+    // Keep transition memory independent of either terminal log switch.
+    last_guideboard_seen_ = debug_info.guideboard_seen;
+    last_branch_detected_ = debug_info.branch_detected;
+    last_branch_score_ = debug_info.branch_score;
+    last_road_state_ = lane_state.road_state;
+    last_branch_side_ = lane_state.branch_side;
+    last_task_state_ = lane_state.task_state;
+    last_guideboard_waiting_for_hint_ = debug_info.guideboard_waiting_for_hint;
+
+    if (!enable_data_log_) {
       return;
     }
     double now = nowSeconds();
@@ -1662,8 +1734,8 @@ class FusedPerceptionNode : public rclcpp::Node {
   uint64_t debug_screenshot_count_{0};
   bool publish_detections_{true};
   bool publish_lane_state_{true};
-  bool enable_status_log_{false};
-  bool enable_branch_event_log_{false};
+  bool enable_result_log_{true};
+  bool enable_data_log_{false};
 
   std::string det_model_path_;
   std::string label_list_path_;
@@ -1737,6 +1809,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   float last_seg_model_conf_max_{0.0f};
   double last_status_log_sec_{0.0};
   bool last_guideboard_seen_{false};
+  bool last_guideboard_waiting_for_hint_{false};
   bool last_branch_detected_{false};
   int last_branch_score_{-1};
   std::string last_road_state_;
@@ -1769,6 +1842,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   int guideboard_uncertain_count_{0};
   bool guideboard_fallback_used_{false};
   std::string stable_guideboard_branch_;
+  uint64_t stable_result_logged_track_id_{0};
   double guideboard_decision_start_sec_{0.0};
   double stable_decision_latency_ms_{-1.0};
   double last_guideboard_ocr_sec_{0.0};

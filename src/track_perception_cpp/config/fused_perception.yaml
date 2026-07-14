@@ -13,11 +13,11 @@ fused_perception_node:
     model_input_format: "RGB"
 
     # 性能日志：只看 FPS、RKNN 推理耗时、后处理耗时、发布耗时
-    enable_perf_stats: true
+    enable_perf_stats: false
     perf_interval: 2.0
 
     # 画面显示：只影响 OpenCV 预览窗口，不影响终端日志
-    show_window: false
+    show_window: true
     blend_alpha: 0.5
     show_branch_debug: true
     enable_debug_screenshots: false
@@ -25,11 +25,10 @@ fused_perception_node:
     debug_screenshot_branch_only: false
     debug_screenshot_dir: "/tmp/fused_perception_screenshots"
 
-    # 决策日志：
-    # - enable_status_log: 每 0.5s 打印一次当前 road_state/branch/GuideBoard/点数等状态
-    # - enable_branch_event_log: 只在 GuideBoard、岔路、任务状态变化时打印
-    enable_status_log: false
-    enable_branch_event_log: false
+    # 结果日志：只打印稳定识别、回退、轨迹和最终分支事件
+    enable_result_log: true
+    # 数据日志：终端逐次 OCR、车道几何和周期状态；详细 JSON 始终发布到 ROS 话题
+    enable_data_log: false
 
     # 目标检测模型
     det_model_path: "model/yolo11n_det_zhang_320x320_raw3_sim.rknn"
@@ -46,11 +45,11 @@ fused_perception_node:
 
     # 实例分割模型
     seg_model_dir: "/home/orangepi/scuderiaferrari/src/track_perception/model"
-    seg_model_filename: "yolo11_seg_zhang_320x128_raw4_sim.rknn"
+    seg_model_filename: "yolo11_seg_zhang_320x320_raw4_sim.rknn"
     seg_core_ids: "1,2"
     seg_input_width: 320 #384
-    seg_input_height: 128 #160
-    seg_crop_y0_ratio: 0.47
+    seg_input_height: 320 #160
+    seg_crop_y0_ratio: 0.50
     seg_crop_y1_ratio: 1.0
     seg_pad_value: 114
     seg_conf_threshold: 0.20
@@ -74,7 +73,7 @@ fused_perception_node:
     # rec_only: 固定两行直接识别；det_rec: 文字检测+识别；rec_then_det: Rec优先，必要时回退
     ocr_pipeline_mode: "rec_then_det"
     # 影子模式先只发布识别结果；动态验证通过后改为 true 接管岔路方向
-    ocr_apply_to_control: false
+    ocr_apply_to_control: true
     ocr_rec_interval_sec: 0.05
     ocr_fallback_uncertain_count: 2
     ocr_min_text_score: 0.35
@@ -113,6 +112,8 @@ fused_perception_node:
     enable_encoder_branch_hold: true
     encoder_count_topic: "/chassis/encoder_count"
     encoder_hold_counts: 9000
+    # 右岔路单独保持距离；左岔路继续使用 encoder_hold_counts
+    encoder_hold_right_counts: 20000
     encoder_feedback_timeout_sec: 0.30
 
     # 中心线拟合
@@ -142,7 +143,9 @@ fused_perception_node:
     left_boundary_template_offsets: "22.0,25.7,29.5,33.2,39.4,43.7,48.4,54.2,62.4,69.1,75.4,83.6,91.3,99.6,105.3,110.1,116.3,123.5,131.8,140.0,148.0,156.0,164.0,172.0"
     left_boundary_template_min_points: 6
     left_boundary_template_weight: 1.0
-    right_boundary_template_offsets: "0.0,0.0,0.0,0.0,0.0,0.0,106.0,109.0,140.0,141.0,140.0,140.0,140.0,141.0,143.0,147.0,152.0,158.0,165.0,172.0,179.0,186.0,193.0,200.0"
+    # 右分支模板向当前右边界内侧的修正。原近端 200 px 会把拟合点拉到赛道中心甚至左侧；
+    # 整体减小约 100 px 后，近端点右移，同时保留远端渐进变化，避免曲线出现折角。
+    right_boundary_template_offsets: "0.0,0.0,0.0,0.0,0.0,0.0,6.0,9.0,40.0,41.0,40.0,40.0,40.0,41.0,43.0,47.0,52.0,58.0,65.0,72.0,79.0,86.0,93.0,100.0"
     right_boundary_template_min_points: 6
     right_boundary_template_weight: 1.0
 

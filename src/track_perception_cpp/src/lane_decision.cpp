@@ -160,6 +160,7 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.right_boundary_template_min_points = std::max(1, cfg_.right_boundary_template_min_points);
   cfg_.right_boundary_template_weight = std::max(0.01f, cfg_.right_boundary_template_weight);
   cfg_.encoder_hold_counts = std::max<int64_t>(0, cfg_.encoder_hold_counts);
+  cfg_.encoder_hold_right_counts = std::max<int64_t>(0, cfg_.encoder_hold_right_counts);
   cfg_.encoder_feedback_timeout_sec = std::max(0.0, cfg_.encoder_feedback_timeout_sec);
   cfg_.guideboard_hint_wait_timeout_sec =
       std::max(0.0, cfg_.guideboard_hint_wait_timeout_sec);
@@ -174,6 +175,7 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   left_boundary_template_offsets_ = parseDoubleList(cfg_.left_boundary_template_offsets);
   right_boundary_template_offsets_ = parseDoubleList(cfg_.right_boundary_template_offsets);
   locked_branch_side_ = cfg_.outer_side;
+  encoder_hold_target_ = cfg_.encoder_hold_counts;
 }
 
 void LaneDecision::setGuideboardBranchHint(const std::string& branch, bool valid) {
@@ -290,6 +292,9 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
 
           branch_locked_ = cfg_.enable_encoder_branch_hold;
           locked_branch_side_ = target_branch;
+          encoder_hold_target_ = target_branch == "right"
+                                     ? cfg_.encoder_hold_right_counts
+                                     : cfg_.encoder_hold_counts;
           lock_start_time_ = current_time;
           branch_confirm_count_ = 0;
           encoder_hold_active_ = branch_locked_;
@@ -313,7 +318,7 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
       }
       if (has_encoder_count_ && encoder_hold_baseline_valid_) {
         encoder_hold_delta_ = latest_encoder_count_ - encoder_hold_start_count_;
-        if (encoder_hold_delta_ >= cfg_.encoder_hold_counts) {
+        if (encoder_hold_delta_ >= encoder_hold_target_) {
           branch_locked_ = false;
           encoder_hold_active_ = false;
           encoder_hold_baseline_valid_ = false;
@@ -1312,7 +1317,7 @@ void LaneDecision::populateDebugInfo(const std::vector<Band>& bands,
   debug_info_.encoder_hold_side = debug_info_.encoder_hold ? locked_branch_side_ : "";
   debug_info_.encoder_count = latest_encoder_count_;
   debug_info_.encoder_hold_delta = encoder_hold_delta_;
-  debug_info_.encoder_hold_target = cfg_.encoder_hold_counts;
+  debug_info_.encoder_hold_target = encoder_hold_target_;
   debug_info_.encoder_feedback_valid = has_encoder_count_ &&
       (nowSeconds() - last_encoder_update_sec_) <= cfg_.encoder_feedback_timeout_sec;
   debug_info_.encoder_feedback_age = has_encoder_count_

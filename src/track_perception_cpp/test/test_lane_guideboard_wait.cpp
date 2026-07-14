@@ -27,6 +27,8 @@ LaneDecisionConfig makeConfig() {
   config.guideboard_require_hint = true;
   config.guideboard_unknown_branch = "left";
   config.guideboard_hint_wait_timeout_sec = 0.02;
+  config.encoder_hold_counts = 9000;
+  config.encoder_hold_right_counts = 20000;
   config.fit_min_points = 1;
   return config;
 }
@@ -71,6 +73,7 @@ TEST(LaneGuideboardWaitTest, StableHintLocksImmediately) {
   EXPECT_FALSE(decision.debugInfo().guideboard_waiting_for_hint);
   EXPECT_TRUE(decision.debugInfo().guideboard_hint_valid);
   EXPECT_EQ(state.branch_side, "right");
+  EXPECT_EQ(decision.debugInfo().encoder_hold_target, 20000);
 }
 
 TEST(LaneGuideboardWaitTest, UsesLateHintAfterGuideboardLeavesRoi) {

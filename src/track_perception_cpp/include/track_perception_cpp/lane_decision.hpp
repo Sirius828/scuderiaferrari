@@ -34,6 +34,7 @@ struct LaneDecisionConfig {
   double guideboard_hint_wait_timeout_sec{0.20};
   bool enable_encoder_branch_hold{true};
   int64_t encoder_hold_counts{5000};
+  int64_t encoder_hold_right_counts{20000};
   double encoder_feedback_timeout_sec{0.30};
 
   int fit_min_points{5};
@@ -102,7 +103,6 @@ struct LaneDecisionConfig {
   float finish_stop_arm_y_ratio{0.70f};
   int finish_stop_lost_frames{3};
 
-  bool enable_branch_event_log{false};
 };
 
 struct LaneSegmentDebug {
@@ -274,6 +274,7 @@ class LaneDecision {
   int64_t encoder_hold_start_count_{0};
   bool encoder_hold_active_{false};
   int64_t encoder_hold_delta_{0};
+  int64_t encoder_hold_target_{0};
   std::vector<double> left_boundary_template_offsets_;
   std::vector<double> right_boundary_template_offsets_;
   bool traffic_stop_active_{false};
