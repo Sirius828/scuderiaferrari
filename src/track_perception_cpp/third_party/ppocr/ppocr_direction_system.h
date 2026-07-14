@@ -40,15 +40,19 @@ public:
     ~PPOCRDirectionSystem();
 
     int init(const char* det_model_path, const char* rec_model_path);
+    int init_rec(const char* rec_model_path);
     int run_image(const char* image_path, PPOCRDirectionResult* result);
     int run_mat(const cv::Mat& image_rgb, PPOCRDirectionResult* result);
+    int run_det_rec_mat(const cv::Mat& image_rgb, PPOCRDirectionResult* result);
+    int run_rec_mat(const cv::Mat& image_rgb, PPOCRDirectionResult* result);
     void release();
 
 private:
     int run_buffer(image_buffer_t* src_image, PPOCRDirectionResult* result);
 
     ppocr_system_app_context ctx_;
-    bool initialized_;
+    bool det_initialized_;
+    bool rec_initialized_;
 };
 
 #endif

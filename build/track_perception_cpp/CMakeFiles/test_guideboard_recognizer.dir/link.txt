@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/test_guideboard_recognizer.dir/test/test_guideboard_recognizer.cpp.o CMakeFiles/test_guideboard_recognizer.dir/src/guideboard_recognizer.cpp.o -o test_guideboard_recognizer  gtest/libgtest_main.a gtest/libgtest.a -pthread 

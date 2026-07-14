@@ -210,6 +210,58 @@ fused_perception_node/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/build
 .PHONY : fused_perception_node/fast
 
+#=============================================================================
+# Target rules for targets named test_guideboard_recognizer
+
+# Build rule for target.
+test_guideboard_recognizer: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_guideboard_recognizer
+.PHONY : test_guideboard_recognizer
+
+# fast build rule for target.
+test_guideboard_recognizer/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_recognizer.dir/build.make CMakeFiles/test_guideboard_recognizer.dir/build
+.PHONY : test_guideboard_recognizer/fast
+
+#=============================================================================
+# Target rules for targets named test_lane_guideboard_wait
+
+# Build rule for target.
+test_lane_guideboard_wait: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_lane_guideboard_wait
+.PHONY : test_lane_guideboard_wait
+
+# fast build rule for target.
+test_lane_guideboard_wait/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_guideboard_wait.dir/build.make CMakeFiles/test_lane_guideboard_wait.dir/build
+.PHONY : test_lane_guideboard_wait/fast
+
+#=============================================================================
+# Target rules for targets named gtest
+
+# Build rule for target.
+gtest: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 gtest
+.PHONY : gtest
+
+# fast build rule for target.
+gtest/fast:
+	$(MAKE) $(MAKESILENT) -f gtest/CMakeFiles/gtest.dir/build.make gtest/CMakeFiles/gtest.dir/build
+.PHONY : gtest/fast
+
+#=============================================================================
+# Target rules for targets named gtest_main
+
+# Build rule for target.
+gtest_main: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 gtest_main
+.PHONY : gtest_main
+
+# fast build rule for target.
+gtest_main/fast:
+	$(MAKE) $(MAKESILENT) -f gtest/CMakeFiles/gtest_main.dir/build.make gtest/CMakeFiles/gtest_main.dir/build
+.PHONY : gtest_main/fast
+
 src/fused_perception_node.o: src/fused_perception_node.cpp.o
 .PHONY : src/fused_perception_node.o
 
@@ -234,12 +286,40 @@ src/fused_perception_node.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.s
 .PHONY : src/fused_perception_node.cpp.s
 
+src/guideboard_recognizer.o: src/guideboard_recognizer.cpp.o
+.PHONY : src/guideboard_recognizer.o
+
+# target to build an object file
+src/guideboard_recognizer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_recognizer.dir/build.make CMakeFiles/test_guideboard_recognizer.dir/src/guideboard_recognizer.cpp.o
+.PHONY : src/guideboard_recognizer.cpp.o
+
+src/guideboard_recognizer.i: src/guideboard_recognizer.cpp.i
+.PHONY : src/guideboard_recognizer.i
+
+# target to preprocess a source file
+src/guideboard_recognizer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_recognizer.dir/build.make CMakeFiles/test_guideboard_recognizer.dir/src/guideboard_recognizer.cpp.i
+.PHONY : src/guideboard_recognizer.cpp.i
+
+src/guideboard_recognizer.s: src/guideboard_recognizer.cpp.s
+.PHONY : src/guideboard_recognizer.s
+
+# target to generate assembly for a file
+src/guideboard_recognizer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_recognizer.dir/build.make CMakeFiles/test_guideboard_recognizer.dir/src/guideboard_recognizer.cpp.s
+.PHONY : src/guideboard_recognizer.cpp.s
+
 src/lane_decision.o: src/lane_decision.cpp.o
 .PHONY : src/lane_decision.o
 
 # target to build an object file
 src/lane_decision.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_guideboard_wait.dir/build.make CMakeFiles/test_lane_guideboard_wait.dir/src/lane_decision.cpp.o
 .PHONY : src/lane_decision.cpp.o
 
 src/lane_decision.i: src/lane_decision.cpp.i
@@ -248,6 +328,7 @@ src/lane_decision.i: src/lane_decision.cpp.i
 # target to preprocess a source file
 src/lane_decision.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_guideboard_wait.dir/build.make CMakeFiles/test_lane_guideboard_wait.dir/src/lane_decision.cpp.i
 .PHONY : src/lane_decision.cpp.i
 
 src/lane_decision.s: src/lane_decision.cpp.s
@@ -256,6 +337,7 @@ src/lane_decision.s: src/lane_decision.cpp.s
 # target to generate assembly for a file
 src/lane_decision.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_guideboard_wait.dir/build.make CMakeFiles/test_lane_guideboard_wait.dir/src/lane_decision.cpp.s
 .PHONY : src/lane_decision.cpp.s
 
 src/rknn_model.o: src/rknn_model.cpp.o
@@ -353,6 +435,54 @@ src/yolo_seg.s: src/yolo_seg.cpp.s
 src/yolo_seg.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.s
 .PHONY : src/yolo_seg.cpp.s
+
+test/test_guideboard_recognizer.o: test/test_guideboard_recognizer.cpp.o
+.PHONY : test/test_guideboard_recognizer.o
+
+# target to build an object file
+test/test_guideboard_recognizer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_recognizer.dir/build.make CMakeFiles/test_guideboard_recognizer.dir/test/test_guideboard_recognizer.cpp.o
+.PHONY : test/test_guideboard_recognizer.cpp.o
+
+test/test_guideboard_recognizer.i: test/test_guideboard_recognizer.cpp.i
+.PHONY : test/test_guideboard_recognizer.i
+
+# target to preprocess a source file
+test/test_guideboard_recognizer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_recognizer.dir/build.make CMakeFiles/test_guideboard_recognizer.dir/test/test_guideboard_recognizer.cpp.i
+.PHONY : test/test_guideboard_recognizer.cpp.i
+
+test/test_guideboard_recognizer.s: test/test_guideboard_recognizer.cpp.s
+.PHONY : test/test_guideboard_recognizer.s
+
+# target to generate assembly for a file
+test/test_guideboard_recognizer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_recognizer.dir/build.make CMakeFiles/test_guideboard_recognizer.dir/test/test_guideboard_recognizer.cpp.s
+.PHONY : test/test_guideboard_recognizer.cpp.s
+
+test/test_lane_guideboard_wait.o: test/test_lane_guideboard_wait.cpp.o
+.PHONY : test/test_lane_guideboard_wait.o
+
+# target to build an object file
+test/test_lane_guideboard_wait.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_guideboard_wait.dir/build.make CMakeFiles/test_lane_guideboard_wait.dir/test/test_lane_guideboard_wait.cpp.o
+.PHONY : test/test_lane_guideboard_wait.cpp.o
+
+test/test_lane_guideboard_wait.i: test/test_lane_guideboard_wait.cpp.i
+.PHONY : test/test_lane_guideboard_wait.i
+
+# target to preprocess a source file
+test/test_lane_guideboard_wait.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_guideboard_wait.dir/build.make CMakeFiles/test_lane_guideboard_wait.dir/test/test_lane_guideboard_wait.cpp.i
+.PHONY : test/test_lane_guideboard_wait.cpp.i
+
+test/test_lane_guideboard_wait.s: test/test_lane_guideboard_wait.cpp.s
+.PHONY : test/test_lane_guideboard_wait.s
+
+# target to generate assembly for a file
+test/test_lane_guideboard_wait.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_guideboard_wait.dir/build.make CMakeFiles/test_lane_guideboard_wait.dir/test/test_lane_guideboard_wait.cpp.s
+.PHONY : test/test_lane_guideboard_wait.cpp.s
 
 third_party/ppocr/clipper.o: third_party/ppocr/clipper.cc.o
 .PHONY : third_party/ppocr/clipper.o
@@ -538,9 +668,16 @@ help:
 	@echo "... track_perception_cpp_uninstall"
 	@echo "... uninstall"
 	@echo "... fused_perception_node"
+	@echo "... gtest"
+	@echo "... gtest_main"
+	@echo "... test_guideboard_recognizer"
+	@echo "... test_lane_guideboard_wait"
 	@echo "... src/fused_perception_node.o"
 	@echo "... src/fused_perception_node.i"
 	@echo "... src/fused_perception_node.s"
+	@echo "... src/guideboard_recognizer.o"
+	@echo "... src/guideboard_recognizer.i"
+	@echo "... src/guideboard_recognizer.s"
 	@echo "... src/lane_decision.o"
 	@echo "... src/lane_decision.i"
 	@echo "... src/lane_decision.s"
@@ -556,6 +693,12 @@ help:
 	@echo "... src/yolo_seg.o"
 	@echo "... src/yolo_seg.i"
 	@echo "... src/yolo_seg.s"
+	@echo "... test/test_guideboard_recognizer.o"
+	@echo "... test/test_guideboard_recognizer.i"
+	@echo "... test/test_guideboard_recognizer.s"
+	@echo "... test/test_lane_guideboard_wait.o"
+	@echo "... test/test_lane_guideboard_wait.i"
+	@echo "... test/test_lane_guideboard_wait.s"
 	@echo "... third_party/ppocr/clipper.o"
 	@echo "... third_party/ppocr/clipper.i"
 	@echo "... third_party/ppocr/clipper.s"

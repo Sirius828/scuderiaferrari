@@ -34,6 +34,7 @@ include_directories(
 
 add_executable(fused_perception_node
   src/fused_perception_node.cpp
+  src/guideboard_recognizer.cpp
   src/lane_decision.cpp
   src/rknn_model.cpp
   src/shm_reader.cpp
@@ -83,5 +84,21 @@ install(DIRECTORY scripts
 install(DIRECTORY model
   DESTINATION share/${PROJECT_NAME}
 )
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_guideboard_recognizer
+    test/test_guideboard_recognizer.cpp
+    src/guideboard_recognizer.cpp
+  )
+  target_include_directories(test_guideboard_recognizer PRIVATE include)
+
+  ament_add_gtest(test_lane_guideboard_wait
+    test/test_lane_guideboard_wait.cpp
+    src/lane_decision.cpp
+  )
+  target_include_directories(test_lane_guideboard_wait PRIVATE include)
+  target_link_libraries(test_lane_guideboard_wait ${OpenCV_LIBS})
+endif()
 
 ament_package()

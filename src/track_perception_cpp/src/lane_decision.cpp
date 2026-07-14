@@ -161,6 +161,11 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.right_boundary_template_weight = std::max(0.01f, cfg_.right_boundary_template_weight);
   cfg_.encoder_hold_counts = std::max<int64_t>(0, cfg_.encoder_hold_counts);
   cfg_.encoder_feedback_timeout_sec = std::max(0.0, cfg_.encoder_feedback_timeout_sec);
+  cfg_.guideboard_hint_wait_timeout_sec =
+      std::max(0.0, cfg_.guideboard_hint_wait_timeout_sec);
+  if (cfg_.guideboard_unknown_branch != "left" && cfg_.guideboard_unknown_branch != "right") {
+    cfg_.guideboard_unknown_branch = cfg_.outer_side;
+  }
   cfg_.offset_y07_ratio = clampValue(cfg_.offset_y07_ratio, 0.0f, 1.0f);
   cfg_.offset_y08_ratio = clampValue(cfg_.offset_y08_ratio, 0.0f, 1.0f);
   cfg_.offset_y09_ratio = clampValue(cfg_.offset_y09_ratio, 0.0f, 1.0f);
@@ -174,7 +179,6 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
 void LaneDecision::setGuideboardBranchHint(const std::string& branch, bool valid) {
   if (!valid) {
     guideboard_branch_hint_valid_ = false;
-    guideboard_branch_hint_ = "left";
     return;
   }
   if (branch == "left" || branch == "right") {
@@ -245,33 +249,61 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     debug_info_.guideboard_roi_count = guideboard_roi_count;
     debug_info_.guideboard_best_confidence = guideboard_best_confidence;
     debug_info_.guideboard_best_center = guideboard_best_center;
+    debug_info_.guideboard_hint_valid = guideboard_branch_hint_valid_;
     if (!branch_locked_) {
-      if (branch_detected || (guideboard_seen && branch_score > 0)) {
+      const bool hint_wait_active = guideboard_hint_wait_start_sec_ > 0.0;
+      if (branch_detected || (guideboard_seen && branch_score > 0) || hint_wait_active) {
         ++branch_confirm_count_;
       } else {
         branch_confirm_count_ = 0;
+        guideboard_hint_wait_start_sec_ = 0.0;
       }
       if (branch_confirm_count_ >= cfg_.branch_confirm_frames) {
-        std::string target_branch = cfg_.outer_side;
-        if (guideboard_seen) {
-          target_branch = guideboard_branch_hint_valid_ ? guideboard_branch_hint_ : cfg_.guideboard_branch;
+        const bool waiting_for_hint = cfg_.guideboard_require_hint &&
+                                      !guideboard_branch_hint_valid_;
+        if (waiting_for_hint && guideboard_hint_wait_start_sec_ <= 0.0) {
+          guideboard_hint_wait_start_sec_ = current_time;
         }
-        if (target_branch != "left" && target_branch != "right") {
-          target_branch = cfg_.outer_side;
-        }
+        const double hint_wait_elapsed = waiting_for_hint
+                                             ? std::max(0.0, current_time - guideboard_hint_wait_start_sec_)
+                                             : 0.0;
+        const bool hint_wait_timed_out = waiting_for_hint &&
+                                         hint_wait_elapsed >= cfg_.guideboard_hint_wait_timeout_sec;
+        debug_info_.guideboard_waiting_for_hint = waiting_for_hint && !hint_wait_timed_out;
+        debug_info_.guideboard_hint_wait_elapsed = hint_wait_elapsed;
+        if (waiting_for_hint && !hint_wait_timed_out) {
+          branch_confirm_count_ = cfg_.branch_confirm_frames;
+        } else {
+          std::string target_branch = cfg_.outer_side;
+          if (cfg_.guideboard_require_hint) {
+            target_branch = guideboard_branch_hint_valid_
+                                ? guideboard_branch_hint_
+                                : cfg_.guideboard_unknown_branch;
+          } else if (guideboard_seen) {
+            target_branch = guideboard_branch_hint_valid_
+                                ? guideboard_branch_hint_
+                                : cfg_.guideboard_branch;
+          }
+          if (target_branch != "left" && target_branch != "right") {
+            target_branch = cfg_.outer_side;
+          }
 
-        branch_locked_ = cfg_.enable_encoder_branch_hold;
-        locked_branch_side_ = target_branch;
-        lock_start_time_ = current_time;
-        branch_confirm_count_ = 0;
-        encoder_hold_active_ = branch_locked_;
-        encoder_hold_baseline_valid_ = false;
-        encoder_hold_delta_ = 0;
-        if (has_encoder_count_) {
-          encoder_hold_start_count_ = latest_encoder_count_;
-          encoder_hold_baseline_valid_ = true;
+          branch_locked_ = cfg_.enable_encoder_branch_hold;
+          locked_branch_side_ = target_branch;
+          lock_start_time_ = current_time;
+          branch_confirm_count_ = 0;
+          encoder_hold_active_ = branch_locked_;
+          encoder_hold_baseline_valid_ = false;
+          encoder_hold_delta_ = 0;
+          guideboard_hint_wait_start_sec_ = 0.0;
+          if (has_encoder_count_) {
+            encoder_hold_start_count_ = latest_encoder_count_;
+            encoder_hold_baseline_valid_ = true;
+          }
         }
       }
+    } else {
+      guideboard_hint_wait_start_sec_ = 0.0;
     }
 
     if (branch_locked_ && encoder_hold_active_) {

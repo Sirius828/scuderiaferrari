@@ -1,8 +1,8 @@
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cctype>
-#include <deque>
 #include <cmath>
 #include <filesystem>
 #include <future>
@@ -23,6 +23,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "ppocr_direction_system.h"
+#include "track_perception_cpp/guideboard_recognizer.hpp"
 #include "track_perception_cpp/lane_decision.hpp"
 #include "track_perception_cpp/shm_reader.hpp"
 #include "track_perception_cpp/yolo_detector.hpp"
@@ -35,9 +36,9 @@ namespace track_perception_cpp {
 
 namespace {
 
-constexpr double kGuideboardOcrMinIntervalSec = 0.08;
-constexpr int kOcrVoteRequired = 2;
 constexpr int kMinOcrCropSizePx = 20;
+constexpr int kRecBoardWidth = 192;
+constexpr int kRecBoardHeight = 128;
 
 std::vector<int> parseCoreIds(const std::string& text) {
   std::vector<int> ids;
@@ -96,6 +97,16 @@ std::string jsonEscape(const std::string& text) {
     }
   }
   return ss.str();
+}
+
+double percentile95(std::vector<double> values) {
+  if (values.empty()) {
+    return 0.0;
+  }
+  const size_t index = static_cast<size_t>(
+      std::ceil(0.95 * static_cast<double>(values.size()))) - 1;
+  std::nth_element(values.begin(), values.begin() + index, values.end());
+  return values[index];
 }
 
 double normalizeCenterX(int center_x, int image_width) {
@@ -169,6 +180,10 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"segments\":" << debug_info.segment_count << ","
      << "\"branch_detected\":" << (debug_info.branch_detected ? "true" : "false") << ","
      << "\"branch_score\":" << debug_info.branch_score << ","
+     << "\"guideboard_hint_valid\":" << (debug_info.guideboard_hint_valid ? "true" : "false") << ","
+     << "\"guideboard_waiting_for_hint\":"
+     << (debug_info.guideboard_waiting_for_hint ? "true" : "false") << ","
+     << "\"guideboard_hint_wait_elapsed\":" << debug_info.guideboard_hint_wait_elapsed << ","
      << "\"encoder_hold\":" << (debug_info.encoder_hold ? "true" : "false") << ","
      << "\"encoder_hold_side\":\"" << jsonEscape(debug_info.encoder_hold_side) << "\","
      << "\"encoder_count\":" << debug_info.encoder_count << ","
@@ -256,6 +271,9 @@ class FusedPerceptionNode : public rclcpp::Node {
     PPOCRDirectionResult result{};
     int crop_width{0};
     int crop_height{0};
+    uint64_t track_id{0};
+    std::string pipeline;
+    std::string fallback_reason;
   };
 
   void declareParameters() {
@@ -322,6 +340,29 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<bool>("enable_guideboard_ocr", true);
     declare_parameter<std::string>("ocr_det_model_path", "model/ppocrv4_det.rknn");
     declare_parameter<std::string>("ocr_rec_model_path", "model/ppocrv4_rec.rknn");
+    declare_parameter<std::string>("ocr_pipeline_mode", "rec_then_det");
+    declare_parameter<bool>("ocr_apply_to_control", false);
+    declare_parameter<double>("ocr_rec_interval_sec", 0.05);
+    declare_parameter<int>("ocr_fallback_uncertain_count", 2);
+    declare_parameter<double>("ocr_min_text_score", 0.35);
+    declare_parameter<double>("ocr_evidence_decay", 0.7);
+    declare_parameter<double>("ocr_stable_min_evidence", 4.0);
+    declare_parameter<double>("ocr_stable_min_margin", 2.0);
+    declare_parameter<int>("ocr_stable_frames", 2);
+    declare_parameter<double>("ocr_branch_wait_timeout_sec", 0.20);
+    declare_parameter<std::string>("ocr_unknown_maneuver", "straight");
+    declare_parameter<std::vector<std::string>>(
+        "ocr_template_ids",
+        {"rough_right", "irony_straight", "phone_straight", "shortcut_right"});
+    declare_parameter<std::vector<std::string>>(
+        "ocr_template_texts",
+        {"右道真的有点崎岖，但是直道真的走不了",
+         "右道比直道好走多了？才怪！",
+         "他们来电话了，说不让我方向盘往右打！",
+         "我就说三个字：抄近道"});
+    declare_parameter<std::vector<std::string>>(
+        "ocr_template_maneuvers", {"right", "straight", "straight", "right"});
+    // Legacy parameters remain declared so old config files still load; closed-set OCR does not use them.
     declare_parameter<double>("ocr_min_score", 0.75);
     declare_parameter<double>("ocr_crop_padding_ratio", 0.25);
     declare_parameter<int>("ocr_vote_window", 3);
@@ -415,9 +456,49 @@ class FusedPerceptionNode : public rclcpp::Node {
     enable_guideboard_ocr_ = get_parameter("enable_guideboard_ocr").as_bool();
     ocr_det_model_path_ = resolveOwnPackagePath(get_parameter("ocr_det_model_path").as_string());
     ocr_rec_model_path_ = resolveOwnPackagePath(get_parameter("ocr_rec_model_path").as_string());
-    ocr_min_score_ = static_cast<float>(get_parameter("ocr_min_score").as_double());
+    ocr_pipeline_mode_ = get_parameter("ocr_pipeline_mode").as_string();
+    if (ocr_pipeline_mode_ != "rec_only" && ocr_pipeline_mode_ != "det_rec" &&
+        ocr_pipeline_mode_ != "rec_then_det") {
+      throw std::runtime_error("ocr_pipeline_mode must be rec_only, det_rec, or rec_then_det");
+    }
+    ocr_apply_to_control_ = get_parameter("ocr_apply_to_control").as_bool();
+    ocr_rec_interval_sec_ = std::max(0.0, get_parameter("ocr_rec_interval_sec").as_double());
+    ocr_fallback_uncertain_count_ =
+        std::max(1, static_cast<int>(get_parameter("ocr_fallback_uncertain_count").as_int()));
+    ocr_branch_wait_timeout_sec_ =
+        std::max(0.0, get_parameter("ocr_branch_wait_timeout_sec").as_double());
+    ocr_unknown_maneuver_ = get_parameter("ocr_unknown_maneuver").as_string();
+    if (ocr_unknown_maneuver_ != "straight" && ocr_unknown_maneuver_ != "right") {
+      throw std::runtime_error("ocr_unknown_maneuver must be straight or right");
+    }
     ocr_crop_padding_ratio_ = static_cast<float>(get_parameter("ocr_crop_padding_ratio").as_double());
-    ocr_vote_window_ = static_cast<int>(get_parameter("ocr_vote_window").as_int());
+    const auto template_ids = get_parameter("ocr_template_ids").as_string_array();
+    const auto template_texts = get_parameter("ocr_template_texts").as_string_array();
+    const auto template_maneuvers = get_parameter("ocr_template_maneuvers").as_string_array();
+    if (template_ids.size() != template_texts.size() ||
+        template_ids.size() != template_maneuvers.size()) {
+      throw std::runtime_error("OCR template id/text/maneuver arrays must have equal lengths");
+    }
+    std::vector<GuideboardTemplateSpec> template_specs;
+    template_specs.reserve(template_ids.size());
+    for (size_t i = 0; i < template_ids.size(); ++i) {
+      template_specs.push_back({template_ids[i], template_texts[i], template_maneuvers[i]});
+    }
+    GuideboardRecognizerConfig recognizer_cfg;
+    recognizer_cfg.min_text_score =
+        static_cast<float>(get_parameter("ocr_min_text_score").as_double());
+    recognizer_cfg.evidence_decay =
+        static_cast<float>(get_parameter("ocr_evidence_decay").as_double());
+    recognizer_cfg.stable_min_evidence =
+        static_cast<float>(get_parameter("ocr_stable_min_evidence").as_double());
+    recognizer_cfg.stable_min_margin =
+        static_cast<float>(get_parameter("ocr_stable_min_margin").as_double());
+    recognizer_cfg.stable_frames =
+        static_cast<int>(get_parameter("ocr_stable_frames").as_int());
+    std::string recognizer_error;
+    if (!guideboard_recognizer_.configure(template_specs, recognizer_cfg, &recognizer_error)) {
+      throw std::runtime_error("invalid guideboard OCR templates: " + recognizer_error);
+    }
 
     det_model_path_ = resolveTrackPerceptionPath(get_parameter("det_model_path").as_string());
     label_list_path_ = resolveTrackPerceptionPath(get_parameter("label_list_path").as_string());
@@ -467,6 +548,9 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.guideboard_branch = get_parameter("guideboard_branch").as_string();
     lane_cfg.guideboard_detect_y0_ratio = static_cast<float>(get_parameter("guideboard_detect_y0_ratio").as_double());
     lane_cfg.guideboard_detect_y1_ratio = static_cast<float>(get_parameter("guideboard_detect_y1_ratio").as_double());
+    lane_cfg.guideboard_require_hint = enable_guideboard_ocr_ && ocr_apply_to_control_;
+    lane_cfg.guideboard_unknown_branch = maneuverToBranch(ocr_unknown_maneuver_);
+    lane_cfg.guideboard_hint_wait_timeout_sec = ocr_branch_wait_timeout_sec_;
     lane_guideboard_y0_ratio_ = lane_cfg.guideboard_detect_y0_ratio;
     lane_guideboard_y1_ratio_ = lane_cfg.guideboard_detect_y1_ratio;
     lane_cfg.fit_min_points = static_cast<int>(get_parameter("fit_min_points").as_int());
@@ -571,8 +655,9 @@ class FusedPerceptionNode : public rclcpp::Node {
     return best;
   }
 
-  cv::Rect makePaddedCropRect(const cv::Rect2f& bbox, const cv::Size& image_size) const {
-    float pad = std::max(bbox.width, bbox.height) * std::max(0.0f, ocr_crop_padding_ratio_);
+  cv::Rect makePaddedCropRect(const cv::Rect2f& bbox, const cv::Size& image_size,
+                              float padding_ratio) const {
+    float pad = std::max(bbox.width, bbox.height) * std::max(0.0f, padding_ratio);
     int x0 = static_cast<int>(std::floor(bbox.x - pad));
     int y0 = static_cast<int>(std::floor(bbox.y - pad));
     int x1 = static_cast<int>(std::ceil(bbox.x + bbox.width + pad));
@@ -584,34 +669,202 @@ class FusedPerceptionNode : public rclcpp::Node {
     return cv::Rect(x0, y0, x1 - x0, y1 - y0);
   }
 
-  bool isOcrResultReliable(const PPOCRDirectionResult& result) const {
-    return result.status == PPOCR_STATUS_OK && result.raw_direction != -1 &&
-           !result.text_touch_edge && result.ocr_score >= ocr_min_score_;
+  static float bboxIoU(const cv::Rect2f& a, const cv::Rect2f& b) {
+    const float intersection = (a & b).area();
+    const float union_area = a.area() + b.area() - intersection;
+    return union_area > 0.0f ? intersection / union_area : 0.0f;
   }
 
-  void addOcrVote(int raw_direction) {
-    int window = std::clamp(ocr_vote_window_, kOcrVoteRequired, 9);
-    guideboard_ocr_votes_.push_back(raw_direction);
-    while (static_cast<int>(guideboard_ocr_votes_.size()) > window) {
-      guideboard_ocr_votes_.pop_front();
-    }
+  std::string maneuverToBranch(const std::string& maneuver) const {
+    return maneuver == "right" ? "right" : "left";
+  }
 
-    int straight_votes = 0;
-    int right_votes = 0;
-    for (int vote : guideboard_ocr_votes_) {
-      if (vote == 0) {
-        ++straight_votes;
-      } else if (vote == 1) {
-        ++right_votes;
+  void resetGuideboardTrack(bool invalidate_pending = true) {
+    if (invalidate_pending) {
+      ++guideboard_track_id_;
+    }
+    has_guideboard_track_ = false;
+    tracked_guideboard_bbox_ = cv::Rect2f{};
+    guideboard_last_seen_sec_ = 0.0;
+    guideboard_uncertain_count_ = 0;
+    guideboard_fallback_used_ = false;
+    stable_guideboard_branch_.clear();
+    guideboard_decision_start_sec_ = 0.0;
+    stable_decision_latency_ms_ = -1.0;
+    last_guideboard_ocr_sec_ = 0.0;
+    guideboard_recognizer_.reset();
+    last_guideboard_match_ = guideboard_recognizer_.lastMatch();
+  }
+
+  void startGuideboardTrack(const cv::Rect2f& bbox, double now) {
+    resetGuideboardTrack(true);
+    has_guideboard_track_ = true;
+    tracked_guideboard_bbox_ = bbox;
+    guideboard_last_seen_sec_ = now;
+  }
+
+  void updateGuideboardTrack(const cv::Rect2f& bbox, double now) {
+    if (!has_guideboard_track_) {
+      startGuideboardTrack(bbox, now);
+      return;
+    }
+    const cv::Point2f previous_center(
+        tracked_guideboard_bbox_.x + tracked_guideboard_bbox_.width * 0.5f,
+        tracked_guideboard_bbox_.y + tracked_guideboard_bbox_.height * 0.5f);
+    const cv::Point2f center(bbox.x + bbox.width * 0.5f, bbox.y + bbox.height * 0.5f);
+    const float center_distance = cv::norm(center - previous_center);
+    const float previous_diagonal = std::hypot(tracked_guideboard_bbox_.width,
+                                                tracked_guideboard_bbox_.height);
+    const float current_diagonal = std::hypot(bbox.width, bbox.height);
+    const bool center_jump = center_distance > 0.25f * std::max(previous_diagonal, current_diagonal);
+    if (bboxIoU(tracked_guideboard_bbox_, bbox) < 0.2f && center_jump) {
+      startGuideboardTrack(bbox, now);
+      return;
+    }
+    tracked_guideboard_bbox_ = bbox;
+    guideboard_last_seen_sec_ = now;
+  }
+
+  static std::array<cv::Point2f, 4> orderQuad(const std::vector<cv::Point>& points) {
+    std::array<cv::Point2f, 4> ordered{};
+    auto min_sum = std::min_element(points.begin(), points.end(), [](const auto& a, const auto& b) {
+      return a.x + a.y < b.x + b.y;
+    });
+    auto max_sum = std::max_element(points.begin(), points.end(), [](const auto& a, const auto& b) {
+      return a.x + a.y < b.x + b.y;
+    });
+    auto min_diff = std::min_element(points.begin(), points.end(), [](const auto& a, const auto& b) {
+      return a.x - a.y < b.x - b.y;
+    });
+    auto max_diff = std::max_element(points.begin(), points.end(), [](const auto& a, const auto& b) {
+      return a.x - a.y < b.x - b.y;
+    });
+    ordered[0] = *min_sum;
+    ordered[1] = *max_diff;
+    ordered[2] = *max_sum;
+    ordered[3] = *min_diff;
+    return ordered;
+  }
+
+  cv::Mat makeRecOnlyInput(const cv::Mat& frame_rgb, const cv::Rect2f& bbox) const {
+    const cv::Rect crop_rect = makePaddedCropRect(bbox, frame_rgb.size(), 0.05f);
+    if (crop_rect.width < kMinOcrCropSizePx || crop_rect.height < kMinOcrCropSizePx) {
+      return {};
+    }
+    const cv::Mat crop = frame_rgb(crop_rect).clone();
+    cv::Mat hsv;
+    cv::cvtColor(crop, hsv, cv::COLOR_RGB2HSV);
+    cv::Mat blue_mask;
+    cv::inRange(hsv, cv::Scalar(90, 60, 30), cv::Scalar(140, 255, 255), blue_mask);
+    cv::morphologyEx(blue_mask, blue_mask, cv::MORPH_CLOSE,
+                     cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3)));
+
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(blue_mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    cv::Mat board;
+    if (!contours.empty()) {
+      auto largest = std::max_element(contours.begin(), contours.end(), [](const auto& a, const auto& b) {
+        return cv::contourArea(a) < cv::contourArea(b);
+      });
+      if (cv::contourArea(*largest) >= 0.15 * static_cast<double>(crop.total())) {
+        const double perimeter = cv::arcLength(*largest, true);
+        std::vector<cv::Point> quad;
+        cv::approxPolyDP(*largest, quad, 0.03 * perimeter, true);
+        if (quad.size() != 4 || !cv::isContourConvex(quad)) {
+          cv::Point2f rect_points[4];
+          cv::minAreaRect(*largest).points(rect_points);
+          quad.clear();
+          for (const auto& point : rect_points) {
+            quad.emplace_back(cvRound(point.x), cvRound(point.y));
+          }
+        }
+        const auto src_points = orderQuad(quad);
+        const std::array<cv::Point2f, 4> dst_points{{
+            {0.0f, 0.0f}, {static_cast<float>(kRecBoardWidth - 1), 0.0f},
+            {static_cast<float>(kRecBoardWidth - 1), static_cast<float>(kRecBoardHeight - 1)},
+            {0.0f, static_cast<float>(kRecBoardHeight - 1)}}};
+        cv::warpPerspective(crop, board,
+                            cv::getPerspectiveTransform(src_points.data(), dst_points.data()),
+                            cv::Size(kRecBoardWidth, kRecBoardHeight), cv::INTER_LINEAR,
+                            cv::BORDER_REPLICATE);
       }
     }
-    if (straight_votes >= kOcrVoteRequired) {
-      stable_guideboard_branch_ = "left";
-      stable_guideboard_raw_direction_ = 0;
-    } else if (right_votes >= kOcrVoteRequired) {
-      stable_guideboard_branch_ = "right";
-      stable_guideboard_raw_direction_ = 1;
+    if (board.empty()) {
+      cv::resize(crop, board, cv::Size(kRecBoardWidth, kRecBoardHeight), 0.0, 0.0,
+                 cv::INTER_LINEAR);
     }
+
+    const int x0 = std::clamp(cvRound(board.cols * 0.045), 0, board.cols - 2);
+    const int x1 = std::clamp(cvRound(board.cols * 0.955), x0 + 1, board.cols);
+    const int top_y0 = std::clamp(cvRound(board.rows * 0.17), 0, board.rows - 2);
+    const int top_y1 = std::clamp(cvRound(board.rows * 0.49), top_y0 + 1, board.rows);
+    const int bottom_y0 = std::clamp(cvRound(board.rows * 0.50), 0, board.rows - 2);
+    const int bottom_y1 = std::clamp(cvRound(board.rows * 0.83), bottom_y0 + 1, board.rows);
+    cv::Mat top = board(cv::Rect(x0, top_y0, x1 - x0, top_y1 - top_y0)).clone();
+    cv::Mat bottom = board(cv::Rect(x0, bottom_y0, x1 - x0, bottom_y1 - bottom_y0)).clone();
+    if (bottom.rows != top.rows) {
+      cv::resize(bottom, bottom, cv::Size(bottom.cols, top.rows), 0.0, 0.0, cv::INTER_LINEAR);
+    }
+    cv::Mat joined;
+    cv::hconcat(top, bottom, joined);
+    return joined;
+  }
+
+  void applyGuideboardHint() {
+    const bool valid = ocr_apply_to_control_ && has_guideboard_track_ &&
+                       last_guideboard_match_.stable;
+    lane_decision_.setGuideboardBranchHint(valid ? stable_guideboard_branch_ : "", valid);
+  }
+
+  std::string guideboardRecognitionJson(const OcrTaskResult& task,
+                                        const GuideboardMatch& match) const {
+    std::ostringstream ss;
+    ss << "{\"track_id\":" << task.track_id
+       << ",\"pipeline\":\"" << jsonEscape(task.pipeline) << "\""
+       << ",\"text\":\"" << jsonEscape(task.result.text) << "\""
+       << ",\"normalized_text\":\"" << jsonEscape(match.normalized_text) << "\""
+       << ",\"model_score\":" << task.result.ocr_score
+       << ",\"sign\":\"" << jsonEscape(match.best_id) << "\""
+       << ",\"maneuver\":\"" << jsonEscape(match.maneuver) << "\""
+       << ",\"stable_template\":\""
+       << jsonEscape(match.stable ? match.best_id : "") << "\""
+       << ",\"action\":\""
+       << jsonEscape(match.stable ? match.maneuver : "unknown") << "\""
+       << ",\"eligible\":" << (match.eligible ? "true" : "false")
+       << ",\"stable\":" << (match.stable ? "true" : "false")
+       << ",\"best_score\":" << match.best_score
+       << ",\"margin\":" << match.margin
+       << ",\"reason\":\"" << jsonEscape(match.reason) << "\""
+       << ",\"fallback_reason\":\"" << jsonEscape(task.fallback_reason) << "\""
+       << ",\"latency_ms\":" << task.result.time_ms
+       << ",\"decision_latency_ms\":" << stable_decision_latency_ms_
+       << ",\"control_enabled\":" << (ocr_apply_to_control_ ? "true" : "false")
+       << ",\"return_code\":" << task.ret
+       << ",\"status\":" << task.result.status
+       << ",\"legacy_raw_direction\":" << task.result.raw_direction
+       << ",\"template_ids\":[";
+    const auto& templates = guideboard_recognizer_.templates();
+    for (size_t i = 0; i < templates.size(); ++i) {
+      if (i > 0) ss << ",";
+      ss << "\"" << jsonEscape(templates[i].id) << "\"";
+    }
+    ss << "],\"hits\":[";
+    for (size_t i = 0; i < match.unique_bigram_hits.size(); ++i) {
+      if (i > 0) ss << ",";
+      ss << match.unique_bigram_hits[i];
+    }
+    ss << "],\"frame_scores\":[";
+    for (size_t i = 0; i < match.frame_scores.size(); ++i) {
+      if (i > 0) ss << ",";
+      ss << match.frame_scores[i];
+    }
+    ss << "],\"evidence\":[";
+    for (size_t i = 0; i < match.evidence.size(); ++i) {
+      if (i > 0) ss << ",";
+      ss << match.evidence[i];
+    }
+    ss << "]}";
+    return ss.str();
   }
 
   void consumeGuideboardOcrResult() {
@@ -641,31 +894,62 @@ class FusedPerceptionNode : public rclcpp::Node {
 
     const PPOCRDirectionResult& result = task.result;
     last_ocr_text_ = result.text;
-    last_ocr_status_ = result.status;
-    last_ocr_raw_direction_ = result.raw_direction;
     last_ocr_score_ = result.ocr_score;
     last_ocr_time_ms_ = result.time_ms;
-    last_ocr_touch_edge_ = result.text_touch_edge;
 
-    if (task.ret == 0 && isOcrResultReliable(result)) {
-      addOcrVote(result.raw_direction);
-    }
     if (result.time_ms > 0.0) {
-      sum_ocr_ms_ += result.time_ms;
-      ++ocr_run_count_;
+      if (task.pipeline == "rec") {
+        sum_ocr_rec_ms_ += result.time_ms;
+        ++ocr_rec_run_count_;
+        ocr_rec_latencies_ms_.push_back(result.time_ms);
+      } else {
+        sum_ocr_det_rec_ms_ += result.time_ms;
+        ++ocr_det_rec_run_count_;
+        ocr_det_rec_latencies_ms_.push_back(result.time_ms);
+      }
     }
+    if (task.track_id != guideboard_track_id_ || !has_guideboard_track_) {
+      return;
+    }
+
+    last_guideboard_match_ = guideboard_recognizer_.update(result.text, result.ocr_score);
+    if (task.pipeline == "rec") {
+      if (task.ret == 0 && last_guideboard_match_.eligible) {
+        guideboard_uncertain_count_ = 0;
+      } else {
+        ++guideboard_uncertain_count_;
+      }
+    }
+    if (last_guideboard_match_.stable) {
+      stable_guideboard_branch_ = maneuverToBranch(last_guideboard_match_.maneuver);
+      if (stable_decision_latency_ms_ < 0.0 && guideboard_decision_start_sec_ > 0.0) {
+        stable_decision_latency_ms_ =
+            std::max(0.0, (nowSeconds() - guideboard_decision_start_sec_) * 1000.0);
+        sum_ocr_decision_ms_ += stable_decision_latency_ms_;
+        ++ocr_decision_count_;
+        ocr_decision_latencies_ms_.push_back(stable_decision_latency_ms_);
+      }
+    }
+
+    std_msgs::msg::String recognition_msg;
+    recognition_msg.data = guideboardRecognitionJson(task, last_guideboard_match_);
+    guideboard_recognition_pub_->publish(recognition_msg);
 
     if (enable_branch_event_log_) {
       RCLCPP_INFO_THROTTLE(
           get_logger(), *get_clock(), 500,
-          "GuideBoard OCR ret=%d text=%s raw=%d status=%d score=%.2f edge=%d time=%.1fms "
-          "stable=%s votes=%zu crop=%dx%d skipped=%d boxes=%s error=%s",
-          task.ret, last_ocr_text_.c_str(), last_ocr_raw_direction_, last_ocr_status_,
-          last_ocr_score_, last_ocr_touch_edge_, last_ocr_time_ms_,
-          stable_guideboard_branch_.c_str(), guideboard_ocr_votes_.size(), task.crop_width,
-          task.crop_height, result.skipped_box_count, result.skipped_box_summary.c_str(),
-          result.error.c_str());
+          "GuideBoard OCR track=%lu pipeline=%s ret=%d text=%s model=%.2f sign=%s "
+          "maneuver=%s eligible=%d stable=%d best=%.2f margin=%.2f reason=%s "
+          "time=%.1fms crop=%dx%d fallback=%s error=%s",
+          static_cast<unsigned long>(task.track_id), task.pipeline.c_str(), task.ret,
+          last_ocr_text_.c_str(), last_ocr_score_, last_guideboard_match_.best_id.c_str(),
+          last_guideboard_match_.maneuver.c_str(), last_guideboard_match_.eligible,
+          last_guideboard_match_.stable, last_guideboard_match_.best_score,
+          last_guideboard_match_.margin, last_guideboard_match_.reason.c_str(),
+          last_ocr_time_ms_, task.crop_width, task.crop_height,
+          task.fallback_reason.c_str(), result.error.c_str());
     }
+    applyGuideboardHint();
   }
 
   void waitForGuideboardOcr() {
@@ -681,44 +965,76 @@ class FusedPerceptionNode : public rclcpp::Node {
 
   void updateGuideboardOcr(const cv::Mat& frame_rgb, const std::vector<Detection>& detections) {
     if (!enable_guideboard_ocr_ || !guideboard_ocr_ready_ || frame_rgb.empty()) {
-      lane_decision_.setGuideboardBranchHint("left", enable_guideboard_ocr_);
+      lane_decision_.setGuideboardBranchHint("", false);
       return;
     }
 
     consumeGuideboardOcrResult();
 
     const Detection* guideboard = selectGuideboardForOcr(detections, frame_rgb.rows);
+    const double now = nowSeconds();
     if (guideboard == nullptr) {
-      lane_decision_.setGuideboardBranchHint(stable_guideboard_branch_, true);
+      if (has_guideboard_track_ && now - guideboard_last_seen_sec_ > 0.25) {
+        resetGuideboardTrack(true);
+      }
+      applyGuideboardHint();
       return;
     }
+    updateGuideboardTrack(guideboard->bbox, now);
+    if (guideboard_decision_start_sec_ <= 0.0 &&
+        guideboard->bbox.width >= 70.0f && guideboard->bbox.height >= 30.0f) {
+      guideboard_decision_start_sec_ = now;
+    }
+    applyGuideboardHint();
 
-    double now = nowSeconds();
-    if (guideboard_ocr_future_.valid()) {
-      lane_decision_.setGuideboardBranchHint(stable_guideboard_branch_, true);
+    if (guideboard_ocr_future_.valid() || last_guideboard_match_.stable) {
       return;
     }
-    if (now - last_guideboard_ocr_sec_ < kGuideboardOcrMinIntervalSec) {
-      lane_decision_.setGuideboardBranchHint(stable_guideboard_branch_, true);
+    if (now - last_guideboard_ocr_sec_ < ocr_rec_interval_sec_) {
       return;
     }
     last_guideboard_ocr_sec_ = now;
 
-    cv::Rect crop_rect = makePaddedCropRect(guideboard->bbox, frame_rgb.size());
-    if (crop_rect.width < kMinOcrCropSizePx || crop_rect.height < kMinOcrCropSizePx) {
-      lane_decision_.setGuideboardBranchHint(stable_guideboard_branch_, true);
+    std::string pipeline = ocr_pipeline_mode_ == "det_rec" ? "det_rec" : "rec";
+    std::string fallback_reason;
+    if (ocr_pipeline_mode_ == "rec_then_det" && !guideboard_fallback_used_ &&
+        guideboard_uncertain_count_ >= ocr_fallback_uncertain_count_ &&
+        guideboard->bbox.width >= 70.0f && guideboard->bbox.height >= 30.0f) {
+      pipeline = "det_rec";
+      guideboard_fallback_used_ = true;
+      fallback_reason = "rec_uncertain_" + std::to_string(guideboard_uncertain_count_);
+    }
+
+    cv::Mat crop;
+    if (pipeline == "rec") {
+      crop = makeRecOnlyInput(frame_rgb, guideboard->bbox);
+    } else {
+      const cv::Rect crop_rect =
+          makePaddedCropRect(guideboard->bbox, frame_rgb.size(), ocr_crop_padding_ratio_);
+      if (crop_rect.width >= kMinOcrCropSizePx && crop_rect.height >= kMinOcrCropSizePx) {
+        crop = frame_rgb(crop_rect).clone();
+      }
+    }
+    if (crop.empty()) {
       return;
     }
 
-    cv::Mat crop = frame_rgb(crop_rect).clone();
     ocr_task_crop_width_ = crop.cols;
     ocr_task_crop_height_ = crop.rows;
-    guideboard_ocr_future_ = std::async(std::launch::async, [this, crop = std::move(crop)]() {
+    const uint64_t task_track_id = guideboard_track_id_;
+    guideboard_ocr_future_ = std::async(
+        std::launch::async,
+        [this, crop = std::move(crop), pipeline, fallback_reason, task_track_id]() {
       OcrTaskResult task;
       task.crop_width = crop.cols;
       task.crop_height = crop.rows;
+      task.track_id = task_track_id;
+      task.pipeline = pipeline;
+      task.fallback_reason = fallback_reason;
       try {
-        task.ret = guideboard_ocr_.run_mat(crop, &task.result);
+        task.ret = pipeline == "rec"
+                       ? guideboard_ocr_.run_rec_mat(crop, &task.result)
+                       : guideboard_ocr_.run_det_rec_mat(crop, &task.result);
       } catch (const cv::Exception& e) {
         task.result.status = PPOCR_STATUS_INFERENCE_FAILED;
         task.result.error = e.what();
@@ -731,7 +1047,6 @@ class FusedPerceptionNode : public rclcpp::Node {
       }
       return task;
     });
-    lane_decision_.setGuideboardBranchHint(stable_guideboard_branch_, true);
   }
 
   void initialize() {
@@ -747,6 +1062,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     stop_request_pub_ = create_publisher<std_msgs::msg::Bool>("/perception/stop_request", 10);
     lane_state_pub_ = create_publisher<std_msgs::msg::String>("/perception/lane_state", 10);
     lane_debug_pub_ = create_publisher<std_msgs::msg::String>("/perception/lane_debug", 10);
+    guideboard_recognition_pub_ =
+        create_publisher<std_msgs::msg::String>("/perception/guideboard_recognition", 10);
     encoder_count_sub_ = create_subscription<std_msgs::msg::Int64>(
       encoder_count_topic_, rclcpp::QoS(10).reliable(),
       [this](const std_msgs::msg::Int64::SharedPtr msg) {
@@ -770,13 +1087,18 @@ class FusedPerceptionNode : public rclcpp::Node {
       throw std::runtime_error("failed to initialize segmentation model");
     }
     if (enable_guideboard_ocr_) {
-      int ret = guideboard_ocr_.init(ocr_det_model_path_.c_str(), ocr_rec_model_path_.c_str());
+      int ret = ocr_pipeline_mode_ == "rec_only"
+                    ? guideboard_ocr_.init_rec(ocr_rec_model_path_.c_str())
+                    : guideboard_ocr_.init(ocr_det_model_path_.c_str(), ocr_rec_model_path_.c_str());
       if (ret != 0) {
         throw std::runtime_error("failed to initialize guideboard OCR model");
       }
       guideboard_ocr_ready_ = true;
-      RCLCPP_INFO(get_logger(), "guideboard OCR ready: det=%s rec=%s",
-                  ocr_det_model_path_.c_str(), ocr_rec_model_path_.c_str());
+      RCLCPP_INFO(get_logger(),
+                  "guideboard closed-set OCR ready: mode=%s control=%d det=%s rec=%s templates=%zu",
+                  ocr_pipeline_mode_.c_str(), ocr_apply_to_control_,
+                  ocr_pipeline_mode_ == "rec_only" ? "not_loaded" : ocr_det_model_path_.c_str(),
+                  ocr_rec_model_path_.c_str(), guideboard_recognizer_.templates().size());
     }
 
     std_msgs::msg::String labels_msg;
@@ -1276,13 +1598,25 @@ class FusedPerceptionNode : public rclcpp::Node {
                                     : 0.0;
     RCLCPP_INFO(get_logger(),
                 "perf %.1fs upstream=%.1f fps processed=%.1f fps det=%.2f/%.2f ms "
-                "seg=%.2f/%.2f ms ocr=%.2f ms/%lu decision=%.2f ms publish=%.2f ms detections=%zu "
+                "seg=%.2f/%.2f ms ocr_rec=%.2f/%.2f ms/%lu "
+                "ocr_det_rec=%.2f/%.2f ms/%lu ocr_stable=%.2f/%.2f ms/%lu "
+                "decision=%.2f ms publish=%.2f ms detections=%zu "
                 "seg_model_conf_avg=%.3f seg_model_instances=%lu last_seg_conf=%.3f[%.3f,%.3f]/%d",
                 dt, upstream_fps, processed_fps, sum_det_rknn_ms_ / frames,
                 sum_det_post_ms_ / frames, sum_seg_rknn_ms_ / frames,
                 sum_seg_post_ms_ / frames,
-                ocr_run_count_ > 0 ? sum_ocr_ms_ / static_cast<double>(ocr_run_count_) : 0.0,
-                static_cast<unsigned long>(ocr_run_count_), sum_decision_ms_ / frames,
+                ocr_rec_run_count_ > 0
+                    ? sum_ocr_rec_ms_ / static_cast<double>(ocr_rec_run_count_) : 0.0,
+                percentile95(ocr_rec_latencies_ms_),
+                static_cast<unsigned long>(ocr_rec_run_count_),
+                ocr_det_rec_run_count_ > 0
+                    ? sum_ocr_det_rec_ms_ / static_cast<double>(ocr_det_rec_run_count_) : 0.0,
+                percentile95(ocr_det_rec_latencies_ms_),
+                static_cast<unsigned long>(ocr_det_rec_run_count_),
+                ocr_decision_count_ > 0
+                    ? sum_ocr_decision_ms_ / static_cast<double>(ocr_decision_count_) : 0.0,
+                percentile95(ocr_decision_latencies_ms_),
+                static_cast<unsigned long>(ocr_decision_count_), sum_decision_ms_ / frames,
                 sum_publish_ms_ / frames, last_det_count_, seg_model_conf_avg,
                 static_cast<unsigned long>(sum_seg_model_instances_), last_seg_model_conf_mean_,
                 last_seg_model_conf_min_, last_seg_model_conf_max_,
@@ -1297,8 +1631,15 @@ class FusedPerceptionNode : public rclcpp::Node {
     sum_seg_post_ms_ = 0.0;
     sum_decision_ms_ = 0.0;
     sum_publish_ms_ = 0.0;
-    sum_ocr_ms_ = 0.0;
-    ocr_run_count_ = 0;
+    sum_ocr_rec_ms_ = 0.0;
+    ocr_rec_run_count_ = 0;
+    ocr_rec_latencies_ms_.clear();
+    sum_ocr_det_rec_ms_ = 0.0;
+    ocr_det_rec_run_count_ = 0;
+    ocr_det_rec_latencies_ms_.clear();
+    sum_ocr_decision_ms_ = 0.0;
+    ocr_decision_count_ = 0;
+    ocr_decision_latencies_ms_.clear();
     sum_seg_model_score_ = 0.0;
     sum_seg_model_instances_ = 0;
   }
@@ -1365,6 +1706,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr stop_request_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr lane_state_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr lane_debug_pub_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr guideboard_recognition_pub_;
   rclcpp::Subscription<std_msgs::msg::Int64>::SharedPtr encoder_count_sub_;
 
   uint64_t last_fid_{0};
@@ -1377,8 +1719,15 @@ class FusedPerceptionNode : public rclcpp::Node {
   double sum_seg_post_ms_{0.0};
   double sum_decision_ms_{0.0};
   double sum_publish_ms_{0.0};
-  double sum_ocr_ms_{0.0};
-  uint64_t ocr_run_count_{0};
+  double sum_ocr_rec_ms_{0.0};
+  uint64_t ocr_rec_run_count_{0};
+  std::vector<double> ocr_rec_latencies_ms_;
+  double sum_ocr_det_rec_ms_{0.0};
+  uint64_t ocr_det_rec_run_count_{0};
+  std::vector<double> ocr_det_rec_latencies_ms_;
+  double sum_ocr_decision_ms_{0.0};
+  uint64_t ocr_decision_count_{0};
+  std::vector<double> ocr_decision_latencies_ms_;
   double sum_seg_model_score_{0.0};
   uint64_t sum_seg_model_instances_{0};
   size_t last_det_count_{0};
@@ -1398,25 +1747,34 @@ class FusedPerceptionNode : public rclcpp::Node {
   bool guideboard_ocr_ready_{false};
   std::string ocr_det_model_path_;
   std::string ocr_rec_model_path_;
-  float ocr_min_score_{0.75f};
+  std::string ocr_pipeline_mode_{"rec_then_det"};
+  bool ocr_apply_to_control_{false};
+  double ocr_rec_interval_sec_{0.05};
+  int ocr_fallback_uncertain_count_{2};
+  double ocr_branch_wait_timeout_sec_{0.20};
+  std::string ocr_unknown_maneuver_{"straight"};
   float ocr_crop_padding_ratio_{0.25f};
-  int ocr_vote_window_{3};
   float lane_guideboard_y0_ratio_{0.2f};
   float lane_guideboard_y1_ratio_{0.7f};
   PPOCRDirectionSystem guideboard_ocr_;
+  GuideboardRecognizer guideboard_recognizer_;
+  GuideboardMatch last_guideboard_match_;
   std::future<OcrTaskResult> guideboard_ocr_future_;
   int ocr_task_crop_width_{0};
   int ocr_task_crop_height_{0};
-  std::deque<int> guideboard_ocr_votes_;
-  std::string stable_guideboard_branch_{"left"};
-  int stable_guideboard_raw_direction_{0};
+  bool has_guideboard_track_{false};
+  uint64_t guideboard_track_id_{0};
+  cv::Rect2f tracked_guideboard_bbox_;
+  double guideboard_last_seen_sec_{0.0};
+  int guideboard_uncertain_count_{0};
+  bool guideboard_fallback_used_{false};
+  std::string stable_guideboard_branch_;
+  double guideboard_decision_start_sec_{0.0};
+  double stable_decision_latency_ms_{-1.0};
   double last_guideboard_ocr_sec_{0.0};
   std::string last_ocr_text_;
-  int last_ocr_status_{PPOCR_STATUS_NO_TEXT};
-  int last_ocr_raw_direction_{-1};
   float last_ocr_score_{0.0f};
   double last_ocr_time_ms_{0.0};
-  bool last_ocr_touch_edge_{false};
 };
 
 }  // namespace track_perception_cpp

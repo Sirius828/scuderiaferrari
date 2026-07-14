@@ -29,6 +29,9 @@ struct LaneDecisionConfig {
   std::string guideboard_branch{"right"};
   float guideboard_detect_y0_ratio{0.2f};
   float guideboard_detect_y1_ratio{0.7f};
+  bool guideboard_require_hint{false};
+  std::string guideboard_unknown_branch{"left"};
+  double guideboard_hint_wait_timeout_sec{0.20};
   bool enable_encoder_branch_hold{true};
   int64_t encoder_hold_counts{5000};
   double encoder_feedback_timeout_sec{0.30};
@@ -137,6 +140,9 @@ struct LaneDebugInfo {
   int guideboard_roi_count{0};
   float guideboard_best_confidence{0.0f};
   cv::Point2f guideboard_best_center;
+  bool guideboard_hint_valid{false};
+  bool guideboard_waiting_for_hint{false};
+  double guideboard_hint_wait_elapsed{0.0};
   bool encoder_hold{false};
   std::string encoder_hold_side;
   int64_t encoder_count{0};
@@ -258,6 +264,7 @@ class LaneDecision {
   std::string locked_branch_side_{"left"};
   std::string guideboard_branch_hint_{"left"};
   bool guideboard_branch_hint_valid_{false};
+  double guideboard_hint_wait_start_sec_{0.0};
   double lock_start_time_{0.0};
   int branch_confirm_count_{0};
   bool has_encoder_count_{false};

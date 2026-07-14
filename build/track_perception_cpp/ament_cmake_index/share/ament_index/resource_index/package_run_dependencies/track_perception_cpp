@@ -1,1 +1,1 @@
-ament_index_cpp;rclcpp;std_msgs
+ament_index_cpp;rclcpp;std_msgs;ament_cmake_gtest

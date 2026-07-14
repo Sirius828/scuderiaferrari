@@ -83,10 +83,24 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.s: cmake_forc
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/fused_perception_node.cpp -o CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.s
 
+CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o: CMakeFiles/fused_perception_node.dir/flags.make
+CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/guideboard_recognizer.cpp
+CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o -MF CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o.d -o CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o -c /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/guideboard_recognizer.cpp
+
+CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/guideboard_recognizer.cpp > CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.i
+
+CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/guideboard_recognizer.cpp -o CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.s
+
 CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: CMakeFiles/fused_perception_node.dir/flags.make
 CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/lane_decision.cpp
 CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o -MF CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o.d -o CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o -c /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/lane_decision.cpp
 
 CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.i: cmake_force
@@ -100,7 +114,7 @@ CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.s: cmake_force
 CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.o: CMakeFiles/fused_perception_node.dir/flags.make
 CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/rknn_model.cpp
 CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.o -MF CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.o.d -o CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.o -c /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/rknn_model.cpp
 
 CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.i: cmake_force
@@ -114,7 +128,7 @@ CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.s: cmake_force
 CMakeFiles/fused_perception_node.dir/src/shm_reader.cpp.o: CMakeFiles/fused_perception_node.dir/flags.make
 CMakeFiles/fused_perception_node.dir/src/shm_reader.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/shm_reader.cpp
 CMakeFiles/fused_perception_node.dir/src/shm_reader.cpp.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/fused_perception_node.dir/src/shm_reader.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/fused_perception_node.dir/src/shm_reader.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/src/shm_reader.cpp.o -MF CMakeFiles/fused_perception_node.dir/src/shm_reader.cpp.o.d -o CMakeFiles/fused_perception_node.dir/src/shm_reader.cpp.o -c /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/shm_reader.cpp
 
 CMakeFiles/fused_perception_node.dir/src/shm_reader.cpp.i: cmake_force
@@ -128,7 +142,7 @@ CMakeFiles/fused_perception_node.dir/src/shm_reader.cpp.s: cmake_force
 CMakeFiles/fused_perception_node.dir/src/yolo_detector.cpp.o: CMakeFiles/fused_perception_node.dir/flags.make
 CMakeFiles/fused_perception_node.dir/src/yolo_detector.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/yolo_detector.cpp
 CMakeFiles/fused_perception_node.dir/src/yolo_detector.cpp.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/fused_perception_node.dir/src/yolo_detector.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/fused_perception_node.dir/src/yolo_detector.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/src/yolo_detector.cpp.o -MF CMakeFiles/fused_perception_node.dir/src/yolo_detector.cpp.o.d -o CMakeFiles/fused_perception_node.dir/src/yolo_detector.cpp.o -c /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/yolo_detector.cpp
 
 CMakeFiles/fused_perception_node.dir/src/yolo_detector.cpp.i: cmake_force
@@ -142,7 +156,7 @@ CMakeFiles/fused_perception_node.dir/src/yolo_detector.cpp.s: cmake_force
 CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: CMakeFiles/fused_perception_node.dir/flags.make
 CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/yolo_seg.cpp
 CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o -MF CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o.d -o CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.o -c /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/yolo_seg.cpp
 
 CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.i: cmake_force
@@ -156,7 +170,7 @@ CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.s: cmake_force
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/ppocr_direction_system.cc.o: CMakeFiles/fused_perception_node.dir/flags.make
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/ppocr_direction_system.cc.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/ppocr_direction_system.cc
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/ppocr_direction_system.cc.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/fused_perception_node.dir/third_party/ppocr/ppocr_direction_system.cc.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/fused_perception_node.dir/third_party/ppocr/ppocr_direction_system.cc.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/third_party/ppocr/ppocr_direction_system.cc.o -MF CMakeFiles/fused_perception_node.dir/third_party/ppocr/ppocr_direction_system.cc.o.d -o CMakeFiles/fused_perception_node.dir/third_party/ppocr/ppocr_direction_system.cc.o -c /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/ppocr_direction_system.cc
 
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/ppocr_direction_system.cc.i: cmake_force
@@ -170,7 +184,7 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/ppocr_direction_system.cc
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/direction_rule.cpp.o: CMakeFiles/fused_perception_node.dir/flags.make
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/direction_rule.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/direction_rule.cpp
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/direction_rule.cpp.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/fused_perception_node.dir/third_party/ppocr/direction_rule.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/fused_perception_node.dir/third_party/ppocr/direction_rule.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/third_party/ppocr/direction_rule.cpp.o -MF CMakeFiles/fused_perception_node.dir/third_party/ppocr/direction_rule.cpp.o.d -o CMakeFiles/fused_perception_node.dir/third_party/ppocr/direction_rule.cpp.o -c /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/direction_rule.cpp
 
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/direction_rule.cpp.i: cmake_force
@@ -184,7 +198,7 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/direction_rule.cpp.s: cma
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/postprocess.cc.o: CMakeFiles/fused_perception_node.dir/flags.make
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/postprocess.cc.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/postprocess.cc
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/postprocess.cc.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/fused_perception_node.dir/third_party/ppocr/postprocess.cc.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/fused_perception_node.dir/third_party/ppocr/postprocess.cc.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/third_party/ppocr/postprocess.cc.o -MF CMakeFiles/fused_perception_node.dir/third_party/ppocr/postprocess.cc.o.d -o CMakeFiles/fused_perception_node.dir/third_party/ppocr/postprocess.cc.o -c /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/postprocess.cc
 
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/postprocess.cc.i: cmake_force
@@ -198,7 +212,7 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/postprocess.cc.s: cmake_f
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/clipper.cc.o: CMakeFiles/fused_perception_node.dir/flags.make
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/clipper.cc.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/clipper.cc
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/clipper.cc.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/fused_perception_node.dir/third_party/ppocr/clipper.cc.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/fused_perception_node.dir/third_party/ppocr/clipper.cc.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/third_party/ppocr/clipper.cc.o -MF CMakeFiles/fused_perception_node.dir/third_party/ppocr/clipper.cc.o.d -o CMakeFiles/fused_perception_node.dir/third_party/ppocr/clipper.cc.o -c /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/clipper.cc
 
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/clipper.cc.i: cmake_force
@@ -212,7 +226,7 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/clipper.cc.s: cmake_force
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/rknpu2/ppocr_system.cc.o: CMakeFiles/fused_perception_node.dir/flags.make
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/rknpu2/ppocr_system.cc.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/rknpu2/ppocr_system.cc
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/rknpu2/ppocr_system.cc.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/fused_perception_node.dir/third_party/ppocr/rknpu2/ppocr_system.cc.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/fused_perception_node.dir/third_party/ppocr/rknpu2/ppocr_system.cc.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/third_party/ppocr/rknpu2/ppocr_system.cc.o -MF CMakeFiles/fused_perception_node.dir/third_party/ppocr/rknpu2/ppocr_system.cc.o.d -o CMakeFiles/fused_perception_node.dir/third_party/ppocr/rknpu2/ppocr_system.cc.o -c /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/rknpu2/ppocr_system.cc
 
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/rknpu2/ppocr_system.cc.i: cmake_force
@@ -226,7 +240,7 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/rknpu2/ppocr_system.cc.s:
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/file_utils.c.o: CMakeFiles/fused_perception_node.dir/flags.make
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/file_utils.c.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/utils/file_utils.c
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/file_utils.c.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building C object CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/file_utils.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building C object CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/file_utils.c.o"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/file_utils.c.o -MF CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/file_utils.c.o.d -o CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/file_utils.c.o -c /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/utils/file_utils.c
 
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/file_utils.c.i: cmake_force
@@ -240,7 +254,7 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/file_utils.c.s: cma
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: CMakeFiles/fused_perception_node.dir/flags.make
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/utils/image_utils.c
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: CMakeFiles/fused_perception_node.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building C object CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building C object CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o -MF CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o.d -o CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o -c /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/utils/image_utils.c
 
 CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.i: cmake_force
@@ -254,6 +268,7 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.s: cm
 # Object files for target fused_perception_node
 fused_perception_node_OBJECTS = \
 "CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o" \
+"CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o" \
 "CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o" \
 "CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.o" \
 "CMakeFiles/fused_perception_node.dir/src/shm_reader.cpp.o" \
@@ -271,6 +286,7 @@ fused_perception_node_OBJECTS = \
 fused_perception_node_EXTERNAL_OBJECTS =
 
 fused_perception_node: CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o
+fused_perception_node: CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o
 fused_perception_node: CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o
 fused_perception_node: CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.o
 fused_perception_node: CMakeFiles/fused_perception_node.dir/src/shm_reader.cpp.o
@@ -402,7 +418,7 @@ fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_photo.so.4.5.4d
 fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_imgproc.so.4.5.4d
 fused_perception_node: /usr/lib/aarch64-linux-gnu/libopencv_core.so.4.5.4d
 fused_perception_node: CMakeFiles/fused_perception_node.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Linking CXX executable fused_perception_node"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Linking CXX executable fused_perception_node"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/fused_perception_node.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

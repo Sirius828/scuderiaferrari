@@ -106,7 +106,8 @@ bool quad_touches_edge(const rknn_quad_t& box, int width, int height) {
 
 }  // namespace
 
-PPOCRDirectionSystem::PPOCRDirectionSystem() : initialized_(false) {
+PPOCRDirectionSystem::PPOCRDirectionSystem()
+    : det_initialized_(false), rec_initialized_(false) {
     std::memset(&ctx_, 0, sizeof(ctx_));
 }
 
@@ -125,6 +126,7 @@ int PPOCRDirectionSystem::init(const char* det_model_path, const char* rec_model
     if (ret != 0) {
         return ret;
     }
+    det_initialized_ = true;
 
     {
         StdoutSilencer silence;
@@ -132,16 +134,32 @@ int PPOCRDirectionSystem::init(const char* det_model_path, const char* rec_model
     }
     if (ret != 0) {
         release_ppocr_model(&ctx_.det_context);
+        det_initialized_ = false;
         std::memset(&ctx_, 0, sizeof(ctx_));
         return ret;
     }
 
-    initialized_ = true;
+    rec_initialized_ = true;
+    return 0;
+}
+
+int PPOCRDirectionSystem::init_rec(const char* rec_model_path) {
+    release();
+    int ret = 0;
+    {
+        StdoutSilencer silence;
+        ret = init_ppocr_model(rec_model_path, &ctx_.rec_context);
+    }
+    if (ret != 0) {
+        std::memset(&ctx_, 0, sizeof(ctx_));
+        return ret;
+    }
+    rec_initialized_ = true;
     return 0;
 }
 
 int PPOCRDirectionSystem::run_image(const char* image_path, PPOCRDirectionResult* result) {
-    if (!initialized_ || result == nullptr) {
+    if (!det_initialized_ || !rec_initialized_ || result == nullptr) {
         return -1;
     }
 
@@ -170,7 +188,7 @@ int PPOCRDirectionSystem::run_image(const char* image_path, PPOCRDirectionResult
 }
 
 int PPOCRDirectionSystem::run_mat(const cv::Mat& image_rgb, PPOCRDirectionResult* result) {
-    if (!initialized_ || result == nullptr) {
+    if (!det_initialized_ || !rec_initialized_ || result == nullptr) {
         return -1;
     }
 
@@ -206,8 +224,83 @@ int PPOCRDirectionSystem::run_mat(const cv::Mat& image_rgb, PPOCRDirectionResult
     return run_buffer(&src_image, result);
 }
 
+int PPOCRDirectionSystem::run_det_rec_mat(const cv::Mat& image_rgb,
+                                          PPOCRDirectionResult* result) {
+    return run_mat(image_rgb, result);
+}
+
+int PPOCRDirectionSystem::run_rec_mat(const cv::Mat& image_rgb,
+                                      PPOCRDirectionResult* result) {
+    if (!rec_initialized_ || result == nullptr) {
+        return -1;
+    }
+    reset_result(result);
+    if (image_rgb.empty()) {
+        result->status = PPOCR_STATUS_BAD_ARGUMENT;
+        return -1;
+    }
+
+    cv::Mat rgb;
+    if (image_rgb.channels() == 3) {
+        rgb = image_rgb.isContinuous() ? image_rgb : image_rgb.clone();
+    } else if (image_rgb.channels() == 4) {
+        cv::cvtColor(image_rgb, rgb, cv::COLOR_RGBA2RGB);
+    } else if (image_rgb.channels() == 1) {
+        cv::cvtColor(image_rgb, rgb, cv::COLOR_GRAY2RGB);
+    } else {
+        result->status = PPOCR_STATUS_BAD_ARGUMENT;
+        return -1;
+    }
+
+    image_buffer_t src_image;
+    std::memset(&src_image, 0, sizeof(src_image));
+    src_image.width = rgb.cols;
+    src_image.height = rgb.rows;
+    src_image.width_stride = rgb.cols;
+    src_image.height_stride = rgb.rows;
+    src_image.format = IMAGE_FORMAT_RGB888;
+    src_image.virt_addr = rgb.data;
+    src_image.size = static_cast<int>(rgb.total() * rgb.elemSize());
+
+    const auto start = std::chrono::steady_clock::now();
+    ppocr_rec_result rec_result;
+    std::memset(&rec_result, 0, sizeof(rec_result));
+    int ret = 0;
+    try {
+        StdoutSilencer silence;
+        ret = inference_ppocr_rec_model(&ctx_.rec_context, &src_image, &rec_result);
+    } catch (const cv::Exception& e) {
+        ret = -1;
+        result->error = e.what();
+    } catch (const std::exception& e) {
+        ret = -1;
+        result->error = e.what();
+    } catch (...) {
+        ret = -1;
+        result->error = "unknown OCR recognition exception";
+    }
+    if (ret == 0) {
+        result->text = rec_result.str;
+        result->box_count = result->text.empty() ? 0 : 1;
+        result->ocr_score = rec_result.score;
+        if (result->text.empty()) {
+            result->status = PPOCR_STATUS_NO_TEXT;
+        } else if (result->ocr_score > 0.0f && result->ocr_score < kLowOcrScore) {
+            result->status = PPOCR_STATUS_LOW_OCR_SCORE;
+        } else {
+            result->status = PPOCR_STATUS_OK;
+        }
+    } else {
+        result->status = PPOCR_STATUS_INFERENCE_FAILED;
+    }
+    const auto end = std::chrono::steady_clock::now();
+    result->time_ms = std::chrono::duration<double, std::milli>(end - start).count();
+    return ret;
+}
+
 int PPOCRDirectionSystem::run_buffer(image_buffer_t* src_image, PPOCRDirectionResult* result) {
-    if (!initialized_ || result == nullptr || src_image == nullptr || src_image->virt_addr == nullptr ||
+    if (!det_initialized_ || !rec_initialized_ || result == nullptr ||
+        src_image == nullptr || src_image->virt_addr == nullptr ||
         src_image->width <= 0 || src_image->height <= 0) {
         if (result != nullptr) {
             reset_result(result);
@@ -295,12 +388,13 @@ int PPOCRDirectionSystem::run_buffer(image_buffer_t* src_image, PPOCRDirectionRe
 }
 
 void PPOCRDirectionSystem::release() {
-    if (!initialized_) {
-        return;
+    if (det_initialized_) {
+        release_ppocr_model(&ctx_.det_context);
     }
-
-    release_ppocr_model(&ctx_.det_context);
-    release_ppocr_model(&ctx_.rec_context);
+    if (rec_initialized_) {
+        release_ppocr_model(&ctx_.rec_context);
+    }
     std::memset(&ctx_, 0, sizeof(ctx_));
-    initialized_ = false;
+    det_initialized_ = false;
+    rec_initialized_ = false;
 }
