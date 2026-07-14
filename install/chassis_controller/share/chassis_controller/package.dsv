@@ -4,3 +4,6 @@ source;share/chassis_controller/hook/pythonpath.sh
 source;share/chassis_controller/hook/ament_prefix_path.ps1
 source;share/chassis_controller/hook/ament_prefix_path.dsv
 source;share/chassis_controller/hook/ament_prefix_path.sh
+source;../../build/chassis_controller/share/chassis_controller/hook/pythonpath_develop.ps1
+source;../../build/chassis_controller/share/chassis_controller/hook/pythonpath_develop.dsv
+source;../../build/chassis_controller/share/chassis_controller/hook/pythonpath_develop.sh
