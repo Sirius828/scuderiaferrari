@@ -19,6 +19,7 @@
 #include <std_msgs/msg/float32_multi_array.hpp>
 #include <std_msgs/msg/int64.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <std_msgs/msg/u_int64.hpp>
 #include <std_srvs/srv/trigger.hpp>
 
 #include <opencv2/opencv.hpp>
@@ -116,6 +117,35 @@ double normalizeCenterX(int center_x, int image_width) {
   }
   return (static_cast<double>(center_x) - 0.5 * static_cast<double>(image_width)) /
          (0.5 * static_cast<double>(image_width));
+}
+
+uint64_t frameSignature(const cv::Mat& image) {
+  if (image.empty() || image.channels() != 3) {
+    return 0;
+  }
+
+  // Sample a 40x30 grid. Exact equality is extremely unlikely once camera
+  // pixels change, while the cost stays negligible beside RKNN inference.
+  constexpr uint64_t kFnvOffset = 1469598103934665603ULL;
+  constexpr uint64_t kFnvPrime = 1099511628211ULL;
+  uint64_t hash = kFnvOffset;
+  const int row_step = std::max(1, image.rows / 30);
+  const int col_step = std::max(1, image.cols / 40);
+  for (int y = 0; y < image.rows; y += row_step) {
+    const auto* row = image.ptr<cv::Vec3b>(y);
+    for (int x = 0; x < image.cols; x += col_step) {
+      const auto& pixel = row[x];
+      for (int channel = 0; channel < 3; ++channel) {
+        hash ^= static_cast<uint64_t>(pixel[channel]);
+        hash *= kFnvPrime;
+      }
+    }
+  }
+  hash ^= static_cast<uint64_t>(image.rows);
+  hash *= kFnvPrime;
+  hash ^= static_cast<uint64_t>(image.cols);
+  hash *= kFnvPrime;
+  return hash == 0 ? 1 : hash;
 }
 
 int selectedCenterAtRatio(const LaneDebugInfo& debug_info, double ratio) {
@@ -1148,6 +1178,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     is_valid_pub_ = create_publisher<std_msgs::msg::Bool>("/segmentation/is_valid", sensor_qos);
     lane_state_pub_ = create_publisher<std_msgs::msg::String>("/perception/lane_state", 10);
     lane_debug_pub_ = create_publisher<std_msgs::msg::String>("/perception/lane_debug", 10);
+    frame_signature_pub_ =
+        create_publisher<std_msgs::msg::UInt64>("/perception/frame_signature", sensor_qos);
     guideboard_recognition_pub_ =
         create_publisher<std_msgs::msg::String>("/perception/guideboard_recognition", 10);
     line_follower_start_client_ = create_client<std_srvs::srv::Trigger>(line_follower_start_service_);
@@ -1211,6 +1243,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     if (!shm_reader_->readLatest(frame)) {
       return;
     }
+    const uint64_t frame_signature = frameSignature(frame.image);
 
     if (last_fid_ != 0 && frame.fid > last_fid_) {
       upstream_frames_ += static_cast<uint64_t>(frame.fid - last_fid_);
@@ -1275,7 +1308,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     }
 
     auto t_pub0 = std::chrono::steady_clock::now();
-    publishAll(detections, lane_state, lane_debug);
+    publishAll(detections, lane_state, lane_debug, frame_signature);
     auto t_pub1 = std::chrono::steady_clock::now();
     stats.publish_ms = std::chrono::duration<double, std::milli>(t_pub1 - t_pub0).count();
 
@@ -1400,7 +1433,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   }
 
   void publishAll(const std::vector<Detection>& detections, const LaneState& lane_state,
-                  const LaneDebugInfo& lane_debug) {
+                  const LaneDebugInfo& lane_debug, uint64_t frame_signature) {
     std_msgs::msg::Float32MultiArray det_msg;
     det_msg.data.reserve(detections.size() * 8);
     for (const auto& det : detections) {
@@ -1459,6 +1492,10 @@ class FusedPerceptionNode : public rclcpp::Node {
     std_msgs::msg::String lane_debug_msg;
     lane_debug_msg.data = laneDebugToJson(lane_debug, seg_input_width_);
     lane_debug_pub_->publish(lane_debug_msg);
+
+    std_msgs::msg::UInt64 signature_msg;
+    signature_msg.data = frame_signature;
+    frame_signature_pub_->publish(signature_msg);
   }
 
   void showDebugWindow(const cv::Mat& frame_rgb, const cv::Mat& seg_map,
@@ -1972,6 +2009,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr is_valid_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr lane_state_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr lane_debug_pub_;
+  rclcpp::Publisher<std_msgs::msg::UInt64>::SharedPtr frame_signature_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr guideboard_recognition_pub_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr line_follower_start_client_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr line_follower_stop_client_;

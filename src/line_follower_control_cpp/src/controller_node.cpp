@@ -21,6 +21,7 @@
 #include "std_msgs/msg/float32.hpp"
 #include "std_msgs/msg/int8.hpp"
 #include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/u_int64.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 #include "std_srvs/srv/trigger.hpp"
 
@@ -76,6 +77,8 @@ struct ControllerParameters
   double branch_error_recovery_rate{2.00};
   double offset_timeout{0.25};
   double geometry_stall_timeout{0.20};
+  bool enable_geometry_stall_auto_resume{true};
+  double geometry_stall_recovery_time{0.50};
   double invalid_hold_speed_mps{0.25};
   double offset_y07_weight{0.20};
   double offset_y08_weight{0.30};
@@ -105,7 +108,8 @@ class LineFollowerControllerCpp : public rclcpp::Node
 public:
   LineFollowerControllerCpp()
   : Node("line_follower_controller_cpp"),
-    last_geometry_content_change_time_(std::chrono::steady_clock::now()),
+    last_frame_signature_time_(std::chrono::steady_clock::now()),
+    last_frame_signature_change_time_(std::chrono::steady_clock::now()),
     previous_control_time_(std::chrono::steady_clock::now())
   {
     declare_parameter<double>("Kp", params_.kp);
@@ -151,6 +155,10 @@ public:
     declare_parameter<double>("branch_error_recovery_rate", params_.branch_error_recovery_rate);
     declare_parameter<double>("offset_timeout", params_.offset_timeout);
     declare_parameter<double>("geometry_stall_timeout", params_.geometry_stall_timeout);
+    declare_parameter<bool>(
+      "enable_geometry_stall_auto_resume", params_.enable_geometry_stall_auto_resume);
+    declare_parameter<double>(
+      "geometry_stall_recovery_time", params_.geometry_stall_recovery_time);
     declare_parameter<double>("invalid_hold_speed", params_.invalid_hold_speed_mps);
     declare_parameter<double>("offset_y07_weight", params_.offset_y07_weight);
     declare_parameter<double>("offset_y08_weight", params_.offset_y08_weight);
@@ -215,6 +223,10 @@ public:
     lane_state_subscription_ = create_subscription<std_msgs::msg::String>(
       lane_state_topic_, 10,
       std::bind(&LineFollowerControllerCpp::lane_state_callback, this, std::placeholders::_1));
+    frame_signature_subscription_ = create_subscription<std_msgs::msg::UInt64>(
+      "/perception/frame_signature", sensor_qos,
+      std::bind(
+        &LineFollowerControllerCpp::frame_signature_callback, this, std::placeholders::_1));
 
     cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic_, 10);
     chassis_enable_publisher_ = create_publisher<std_msgs::msg::Int8>("/chassis/enable", 10);
@@ -320,6 +332,10 @@ private:
     params_.branch_error_recovery_rate = get_parameter("branch_error_recovery_rate").as_double();
     params_.offset_timeout = get_parameter("offset_timeout").as_double();
     params_.geometry_stall_timeout = get_parameter("geometry_stall_timeout").as_double();
+    params_.enable_geometry_stall_auto_resume =
+      get_parameter("enable_geometry_stall_auto_resume").as_bool();
+    params_.geometry_stall_recovery_time =
+      get_parameter("geometry_stall_recovery_time").as_double();
     params_.invalid_hold_speed_mps = get_parameter("invalid_hold_speed").as_double();
     params_.offset_y07_weight = get_parameter("offset_y07_weight").as_double();
     params_.offset_y08_weight = get_parameter("offset_y08_weight").as_double();
@@ -564,6 +580,12 @@ private:
     {
       return fail("geometry_stall_timeout must be >= 0");
     }
+    if (!std::isfinite(parameters.geometry_stall_recovery_time) ||
+      parameters.geometry_stall_recovery_time < 0.0 ||
+      parameters.geometry_stall_recovery_time > 10.0)
+    {
+      return fail("geometry_stall_recovery_time must be in [0, 10]");
+    }
     if (!std::isfinite(parameters.invalid_hold_speed_mps) ||
       parameters.invalid_hold_speed_mps < 0.0 ||
       parameters.invalid_hold_speed_mps > parameters.linear_speed_mps)
@@ -760,6 +782,10 @@ private:
         pending.offset_timeout = parameter.as_double();
       } else if (name == "geometry_stall_timeout") {
         pending.geometry_stall_timeout = parameter.as_double();
+      } else if (name == "enable_geometry_stall_auto_resume") {
+        pending.enable_geometry_stall_auto_resume = parameter.as_bool();
+      } else if (name == "geometry_stall_recovery_time") {
+        pending.geometry_stall_recovery_time = parameter.as_double();
       } else if (name == "invalid_hold_speed") {
         pending.invalid_hold_speed_mps = parameter.as_double();
       } else if (name == "offset_y07_weight") {
@@ -821,6 +847,9 @@ private:
 
     params_ = pending;
     steering_sign_ = pending_steering_sign;
+    if (!params_.enable_geometry_stall_auto_resume) {
+      cancel_geometry_stall_resume();
+    }
     RCLCPP_INFO(
       get_logger(),
       "Updated controller parameters: Kp=%.3f Kd=%.3f speed=%.3fm/s min=%.3fm/s "
@@ -867,9 +896,6 @@ private:
     }
     const auto now = std::chrono::steady_clock::now();
     const double clamped = std::clamp(static_cast<double>(value), -1.0, 1.0);
-    if (!*has_value || std::abs(clamped - *target) > 1e-6) {
-      last_geometry_content_change_time_ = now;
-    }
     *target = clamped;
     *has_value = true;
     *timestamp = now;
@@ -951,6 +977,17 @@ private:
       last_branch_seen_time_ = now;
       has_seen_branch_ = true;
     }
+  }
+
+  void frame_signature_callback(const std_msgs::msg::UInt64::SharedPtr msg)
+  {
+    const auto now = std::chrono::steady_clock::now();
+    if (!has_frame_signature_ || msg->data != current_frame_signature_) {
+      last_frame_signature_change_time_ = now;
+    }
+    current_frame_signature_ = msg->data;
+    has_frame_signature_ = msg->data != 0;
+    last_frame_signature_time_ = now;
   }
 
   static bool extract_json_number(
@@ -1089,9 +1126,10 @@ private:
     auto_enabled_ = true;
     safety_locked_ = false;
     auto_start_pending_ = false;
+    cancel_geometry_stall_resume();
     stop_reason_ = "running";
     invalid_since_.reset();
-    last_geometry_content_change_time_ = now;
+    last_frame_signature_change_time_ = now;
     current_speed_mps_ = 0.0;
     current_steering_ = 0.0;
     limited_control_error_ = compute_control_error();
@@ -1128,6 +1166,9 @@ private:
     // resume.  Keep obstacle_hold_active_ unchanged so a Human that is still
     // present continues to block manual /start calls.
     obstacle_resume_armed_ = false;
+    if (reason != "geometry_stall") {
+      cancel_geometry_stall_resume();
+    }
     if (!auto_enabled_ && safety_locked_ && stop_reason_ == reason) {
       publish_stop_state();
       return;
@@ -1151,6 +1192,7 @@ private:
   {
     // An explicit operator stop must cancel any pending automatic resume.
     obstacle_resume_armed_ = false;
+    cancel_geometry_stall_resume();
     disable_control("service_stop", false);
     response->success = true;
     response->message = "line following stopped; chassis disabled";
@@ -1161,6 +1203,8 @@ private:
     const std::shared_ptr<std_srvs::srv::Trigger::Request>,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
   {
+    // A Human hold always takes priority over an automatic stall recovery.
+    cancel_geometry_stall_resume();
     if (obstacle_hold_active_) {
       publish_stop_state();
       response->success = true;
@@ -1239,6 +1283,7 @@ private:
     }
 
     obstacle_resume_armed_ = false;
+    cancel_geometry_stall_resume();
     disable_control("service_stop", false);
     response->success = true;
     response->message = "autonomous line following disabled; chassis disabled";
@@ -1259,6 +1304,12 @@ private:
     }
 
     if (!auto_enabled_) {
+      if (try_geometry_stall_auto_resume(now)) {
+        last_mode_ = "geometry_recovered";
+        publish_debug(now);
+        previous_control_time_ = now;
+        return;
+      }
       publish_stop_state();
       if (last_mode_ != "auto_start_wait") {
         last_mode_ = safety_locked_ ? "locked_stop" : "disabled";
@@ -1280,6 +1331,9 @@ private:
       return;
     }
     if (geometry_content_stalled(now)) {
+      geometry_stall_resume_armed_ = params_.enable_geometry_stall_auto_resume;
+      geometry_stall_stop_time_ = now;
+      geometry_stall_recovery_since_.reset();
       lock_and_stop("geometry_stall");
       last_mode_ = "geometry_stall";
       publish_debug(now);
@@ -1368,13 +1422,74 @@ private:
            geometry_ready(now);
   }
 
+  void cancel_geometry_stall_resume()
+  {
+    geometry_stall_resume_armed_ = false;
+    geometry_stall_recovery_since_.reset();
+  }
+
+  bool try_geometry_stall_auto_resume(
+    const std::chrono::steady_clock::time_point & now)
+  {
+    if (!geometry_stall_resume_armed_) {
+      return false;
+    }
+    if (!safety_locked_ || stop_reason_ != "geometry_stall") {
+      cancel_geometry_stall_resume();
+      return false;
+    }
+    if (obstacle_hold_active_ || emergency_stop_active_) {
+      geometry_stall_recovery_since_.reset();
+      return false;
+    }
+
+    // Require feedback generated after the stall, not merely still-fresh data
+    // that was queued before the stop.  Continuous perception_ready() for the
+    // recovery window then proves the producer is publishing again.
+    const bool received_after_stall =
+      has_offset_y07_ && has_lane_state_ && has_frame_signature_ &&
+      last_offset_y07_time_ > geometry_stall_stop_time_ &&
+      last_lane_state_time_ > geometry_stall_stop_time_ &&
+      last_frame_signature_time_ > geometry_stall_stop_time_ &&
+      last_frame_signature_change_time_ > geometry_stall_stop_time_;
+    if (!received_after_stall || !perception_ready(now)) {
+      geometry_stall_recovery_since_.reset();
+      return false;
+    }
+
+    if (!geometry_stall_recovery_since_) {
+      geometry_stall_recovery_since_ = now;
+      RCLCPP_WARN(
+        get_logger(),
+        "Geometry feedback recovered; waiting %.2fs before automatic resume",
+        params_.geometry_stall_recovery_time);
+      return false;
+    }
+    const double healthy_age = std::chrono::duration<double>(
+      now - *geometry_stall_recovery_since_).count();
+    if (healthy_age < params_.geometry_stall_recovery_time) {
+      return false;
+    }
+
+    std::string reason;
+    if (!try_start(&reason)) {
+      geometry_stall_recovery_since_.reset();
+      return false;
+    }
+    RCLCPP_WARN(
+      get_logger(), "Line following automatically resumed after geometry stall");
+    return true;
+  }
+
   bool geometry_content_stalled(const std::chrono::steady_clock::time_point & now) const
   {
-    if (params_.geometry_stall_timeout <= 0.0 || current_speed_mps_ < 0.30) {
+    if (params_.geometry_stall_timeout <= 0.0 || current_speed_mps_ < 0.30 ||
+      !has_frame_signature_)
+    {
       return false;
     }
     return std::chrono::duration<double>(
-      now - last_geometry_content_change_time_).count() > params_.geometry_stall_timeout;
+      now - last_frame_signature_change_time_).count() > params_.geometry_stall_timeout;
   }
 
   bool lane_state_ready(const std::chrono::steady_clock::time_point & now) const
@@ -1857,9 +1972,17 @@ private:
          << " offset_y09_age=" << geometry_age_seconds(last_offset_y09_time_, has_offset_y09_, now)
          << " heading_age=" << geometry_age_seconds(last_heading_error_time_, has_heading_error_, now)
          << " curvature_age=" << geometry_age_seconds(last_curvature_time_, has_curvature_, now)
-         << " geometry_content_age=" << std::chrono::duration<double>(
-      now - last_geometry_content_change_time_).count()
+         << " frame_signature=" << current_frame_signature_
+         << " frame_signature_age=" << geometry_age_seconds(
+      last_frame_signature_time_, has_frame_signature_, now)
+         << " frame_content_age=" << geometry_age_seconds(
+      last_frame_signature_change_time_, has_frame_signature_, now)
          << " geometry_stalled=" << (geometry_content_stalled(now) ? "True" : "False")
+         << " geometry_resume_armed=" <<
+      (geometry_stall_resume_armed_ ? "True" : "False")
+         << " geometry_recovery_age=" <<
+      (geometry_stall_recovery_since_ ?
+      std::chrono::duration<double>(now - *geometry_stall_recovery_since_).count() : 0.0)
          << " perception_ready=" << (perception_ready(now) ? "True" : "False")
          << " emergency=" << (emergency_stop_active_ ? "True" : "False")
          << " offset_y07=" << current_offset_y07_
@@ -1928,6 +2051,8 @@ private:
   bool safety_locked_{false};
   bool obstacle_hold_active_{false};
   bool obstacle_resume_armed_{false};
+  bool geometry_stall_resume_armed_{false};
+  bool has_frame_signature_{false};
   bool has_offset_y07_{false};
   bool has_offset_y08_{false};
   bool has_offset_y09_{false};
@@ -1950,7 +2075,9 @@ private:
   double filtered_derivative_{0.0};
   double current_speed_mps_{0.0};
   double current_steering_{0.0};
+  uint64_t current_frame_signature_{0};
   std::optional<std::chrono::steady_clock::time_point> invalid_since_;
+  std::optional<std::chrono::steady_clock::time_point> geometry_stall_recovery_since_;
   std::chrono::steady_clock::time_point last_valid_time_;
   std::chrono::steady_clock::time_point last_offset_y07_time_;
   std::chrono::steady_clock::time_point last_offset_y08_time_;
@@ -1959,7 +2086,9 @@ private:
   std::chrono::steady_clock::time_point last_curvature_time_;
   std::chrono::steady_clock::time_point last_lane_state_time_;
   std::chrono::steady_clock::time_point last_branch_seen_time_;
-  std::chrono::steady_clock::time_point last_geometry_content_change_time_;
+  std::chrono::steady_clock::time_point last_frame_signature_time_;
+  std::chrono::steady_clock::time_point last_frame_signature_change_time_;
+  std::chrono::steady_clock::time_point geometry_stall_stop_time_;
   std::string lane_road_state_{"UNKNOWN"};
   bool has_seen_branch_{false};
   bool branch_error_limiter_engaged_{false};
@@ -1979,6 +2108,7 @@ private:
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr valid_subscription_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr emergency_subscription_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr lane_state_subscription_;
+  rclcpp::Subscription<std_msgs::msg::UInt64>::SharedPtr frame_signature_subscription_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
   rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr chassis_enable_publisher_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr debug_publisher_;

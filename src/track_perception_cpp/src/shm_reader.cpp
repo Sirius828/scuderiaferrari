@@ -66,6 +66,20 @@ bool ShmReader::readLatest(Frame& frame) {
   frame.height = height;
   frame.image.create(static_cast<int>(height), static_cast<int>(width), CV_8UC3);
   std::memcpy(frame.image.data, data_ + kHeaderSize, image_size);
+
+  // The producer marks an in-progress update with fid=0. Re-read the header
+  // after copying so a frame replaced mid-copy is discarded rather than
+  // feeding a torn image to perception.
+  uint64_t confirmed_fid = 0;
+  uint32_t confirmed_width = 0;
+  uint32_t confirmed_height = 0;
+  std::memcpy(&confirmed_fid, data_, sizeof(confirmed_fid));
+  std::memcpy(&confirmed_width, data_ + 8, sizeof(confirmed_width));
+  std::memcpy(&confirmed_height, data_ + 12, sizeof(confirmed_height));
+  if (confirmed_fid == 0 || confirmed_fid != fid ||
+      confirmed_width != width || confirmed_height != height) {
+    return false;
+  }
   last_fid_ = fid;
   return true;
 }

@@ -164,12 +164,12 @@ fused_perception_node:
     obstacle_max_age: 0.3
     obstacle_min_bottom_y_ratio: 0.35
     enable_human_obstacle_stop: true
-    human_left_expand_px: 25.0
+    human_left_expand_px: 30.0
     human_left_expand_width_ratio: 0.50
     human_line_margin_px: 5.0
     human_line_sample_count: 5
     human_line_sample_start_ratio: 0.60
-    human_stop_effective_area_ratio: 0.020
+    human_stop_effective_area_ratio: 0.012
     human_stop_confirm_frames: 2
     human_clear_confirm_frames: 3
     enable_car_right_boundary_filter: true

@@ -22,11 +22,11 @@
 
     # ==================== 速度与底盘标定 ====================
     # 直道目标最高速度，单位 m/s；低风险时加速到此速度。
-    linear_speed: 0.85
+    linear_speed: 1.00
     # 弯道动态降速的最低速度，单位 m/s；不是停车速度。
-    min_linear_speed: 0.62
+    min_linear_speed: 0.74
     # 原始误差持续变大时允许短时低于动态速度下限；0 表示关闭。
-    high_error_rescue_speed: 0.45
+    high_error_rescue_speed: 0.52
     # 原始误差从该值开始渐进救车，到 curve_entry_error_override 时完全降至救车速度。
     high_error_rescue_start: 0.70
     # y09 为负表示车辆位于当前验证过的弯心安全侧；仅在该侧提高动态最低速度。
@@ -72,7 +72,7 @@
     speed_error_rate_start: 1.50
     speed_error_rate_full: 3.00
     # 加速斜率，单位 m/s^2；限制突然冲刺。
-    speed_accel_rate: 0.28
+    speed_accel_rate: 0.32
     # 减速斜率，单位 m/s^2；越大越快降速。
     speed_decel_rate: 5.0
     # 长期 BRANCH 仅表示路径模板锁定，不参与速度决策；保持 0 关闭岔路最高速度覆盖。
@@ -144,8 +144,12 @@
     # ==================== 感知安全 ====================
     # offset、is_valid 和几何数据允许的最大年龄，单位 s。
     offset_timeout: 0.25
-    # 行驶中三个 offset 内容完全不变超过该时间，判定共享内存画面冻结并停车；0 表示关闭。
+    # 行驶中原始画面采样签名完全不变超过该时间，判定上游重复/冻结画面并停车；0 表示关闭。
     geometry_stall_timeout: 0.20
+    # geometry_stall 停车后，仅在新的有效道路数据持续恢复时自动重新发车。
+    enable_geometry_stall_auto_resume: true
+    # 新几何数据连续有效达到该时间后才恢复，单位 s。
+    geometry_stall_recovery_time: 0.50
     # lane_state 置信度低于此值时禁止发车并锁定停车。
     min_perception_confidence: 0.50
     # 感知短暂失效时保持的最高速度，单位 m/s。

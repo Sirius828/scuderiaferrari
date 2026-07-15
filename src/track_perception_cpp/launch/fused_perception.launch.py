@@ -1,10 +1,48 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.actions import Node
 import os
 from ament_index_python.packages import get_package_share_directory
+
+
+def _launch_fused_perception(context):
+    parameter_overrides = {
+        'enable_debug_screenshots': ParameterValue(
+            LaunchConfiguration('enable_debug_screenshots'), value_type=bool
+        ),
+        'debug_screenshot_interval_sec': ParameterValue(
+            LaunchConfiguration('debug_screenshot_interval_sec'), value_type=float
+        ),
+        'debug_screenshot_branch_only': ParameterValue(
+            LaunchConfiguration('debug_screenshot_branch_only'), value_type=bool
+        ),
+        'debug_screenshot_dir': LaunchConfiguration('debug_screenshot_dir'),
+    }
+
+    # An empty launch argument means "use the value from the YAML file".  Only
+    # an explicit show_window:=true/false should override that file.
+    show_window_override = LaunchConfiguration('show_window').perform(context).strip().lower()
+    if show_window_override:
+        if show_window_override not in ('true', 'false'):
+            raise ValueError('show_window must be true, false, or omitted to use YAML')
+        parameter_overrides['show_window'] = ParameterValue(
+            show_window_override, value_type=bool
+        )
+
+    return [
+        Node(
+            package='track_perception_cpp',
+            executable='fused_perception_node',
+            name='fused_perception_node',
+            output='screen',
+            parameters=[
+                LaunchConfiguration('config_file'),
+                parameter_overrides,
+            ],
+        )
+    ]
 
 
 def generate_launch_description():
@@ -23,8 +61,8 @@ def generate_launch_description():
     )
     show_window_arg = DeclareLaunchArgument(
         'show_window',
-        default_value='false',
-        description='Show OpenCV fused perception preview window (disabled by default)',
+        default_value='',
+        description='Optional true/false override; empty uses show_window from the YAML file',
     )
     enable_debug_screenshots_arg = DeclareLaunchArgument(
         'enable_debug_screenshots',
@@ -47,29 +85,6 @@ def generate_launch_description():
         description='Directory for debug screenshots',
     )
 
-    fused_node = Node(
-        package='track_perception_cpp',
-        executable='fused_perception_node',
-        name='fused_perception_node',
-        output='screen',
-        parameters=[
-            LaunchConfiguration('config_file'),
-            {
-                'show_window': ParameterValue(LaunchConfiguration('show_window'), value_type=bool),
-                'enable_debug_screenshots': ParameterValue(
-                    LaunchConfiguration('enable_debug_screenshots'), value_type=bool
-                ),
-                'debug_screenshot_interval_sec': ParameterValue(
-                    LaunchConfiguration('debug_screenshot_interval_sec'), value_type=float
-                ),
-                'debug_screenshot_branch_only': ParameterValue(
-                    LaunchConfiguration('debug_screenshot_branch_only'), value_type=bool
-                ),
-                'debug_screenshot_dir': LaunchConfiguration('debug_screenshot_dir'),
-            },
-        ],
-    )
-
     return LaunchDescription([
         config_file_arg,
         show_window_arg,
@@ -77,5 +92,5 @@ def generate_launch_description():
         debug_screenshot_interval_sec_arg,
         debug_screenshot_branch_only_arg,
         debug_screenshot_dir_arg,
-        fused_node,
+        OpaqueFunction(function=_launch_fused_perception),
     ])
