@@ -19,6 +19,7 @@
 #include <std_msgs/msg/float32_multi_array.hpp>
 #include <std_msgs/msg/int64.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <std_srvs/srv/trigger.hpp>
 
 #include <opencv2/opencv.hpp>
 
@@ -470,6 +471,9 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<bool>("enable_result_log", true);
     declare_parameter<bool>("enable_data_log", false);
     declare_parameter<bool>("publish_lane_state", true);
+    declare_parameter<std::string>("line_follower_start_service", "/line_follower/start");
+    declare_parameter<std::string>("line_follower_stop_service", "/line_follower/stop");
+    declare_parameter<double>("human_service_retry_interval_sec", 0.20);
   }
 
   void loadParameters() {
@@ -490,6 +494,10 @@ class FusedPerceptionNode : public rclcpp::Node {
     publish_lane_state_ = get_parameter("publish_lane_state").as_bool();
     enable_result_log_ = get_parameter("enable_result_log").as_bool();
     enable_data_log_ = get_parameter("enable_data_log").as_bool();
+    line_follower_start_service_ = get_parameter("line_follower_start_service").as_string();
+    line_follower_stop_service_ = get_parameter("line_follower_stop_service").as_string();
+    human_service_retry_interval_sec_ = std::max(
+        0.05, get_parameter("human_service_retry_interval_sec").as_double());
     enable_guideboard_ocr_ = get_parameter("enable_guideboard_ocr").as_bool();
     ocr_det_model_path_ = resolveOwnPackagePath(get_parameter("ocr_det_model_path").as_string());
     ocr_rec_model_path_ = resolveOwnPackagePath(get_parameter("ocr_rec_model_path").as_string());
@@ -1138,11 +1146,12 @@ class FusedPerceptionNode : public rclcpp::Node {
     heading_error_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/heading_error", sensor_qos);
     curvature_pub_ = create_publisher<std_msgs::msg::Float32>("/segmentation/curvature", sensor_qos);
     is_valid_pub_ = create_publisher<std_msgs::msg::Bool>("/segmentation/is_valid", sensor_qos);
-    stop_request_pub_ = create_publisher<std_msgs::msg::Bool>("/perception/stop_request", 10);
     lane_state_pub_ = create_publisher<std_msgs::msg::String>("/perception/lane_state", 10);
     lane_debug_pub_ = create_publisher<std_msgs::msg::String>("/perception/lane_debug", 10);
     guideboard_recognition_pub_ =
         create_publisher<std_msgs::msg::String>("/perception/guideboard_recognition", 10);
+    line_follower_start_client_ = create_client<std_srvs::srv::Trigger>(line_follower_start_service_);
+    line_follower_stop_client_ = create_client<std_srvs::srv::Trigger>(line_follower_stop_service_);
     encoder_count_sub_ = create_subscription<std_msgs::msg::Int64>(
       encoder_count_topic_, rclcpp::QoS(10).reliable(),
       [this](const std_msgs::msg::Int64::SharedPtr msg) {
@@ -1258,6 +1267,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     stats.decision_ms = std::chrono::duration<double, std::milli>(t_decision1 - t_decision0).count();
     const LaneDebugInfo& lane_debug = lane_decision_.debugInfo();
     logDecisionStatus(lane_state, lane_debug);
+    updateHumanExecution(lane_debug);
 
     refreshDebugParameters();
     if (show_window_ || enable_debug_screenshots_) {
@@ -1291,6 +1301,102 @@ class FusedPerceptionNode : public rclcpp::Node {
     }
 
     logPerfIfNeeded();
+  }
+
+  void updateHumanExecution(const LaneDebugInfo& debug_info) {
+    // Human state is the only source for this service pair.  In particular,
+    // LEFT_LATCHED_WAIT_AREA and NO_FIT_LATCHED intentionally do not stop or
+    // start the controller; only a confirmed OBSTACLE_STOP transition does.
+    human_stop_desired_ = debug_info.human_state == "OBSTACLE_STOP";
+    const double now = nowSeconds();
+    if (now - human_service_last_call_sec_ < human_service_retry_interval_sec_) {
+      return;
+    }
+
+    if (human_stop_desired_) {
+      if (human_service_stop_active_ || human_stop_call_pending_ || human_start_call_pending_) {
+        return;
+      }
+      if (!line_follower_stop_client_->service_is_ready()) {
+        human_service_action_ = "stop_wait_service";
+        human_service_last_call_sec_ = now;
+        RCLCPP_WARN_THROTTLE(
+            get_logger(), *get_clock(), 2000,
+            "Human OBSTACLE_STOP active, waiting for %s",
+            line_follower_stop_service_.c_str());
+        return;
+      }
+
+      human_stop_call_pending_ = true;
+      human_service_action_ = "stop_pending";
+      human_service_last_call_sec_ = now;
+      auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
+      line_follower_stop_client_->async_send_request(
+          request,
+          [this](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
+            human_stop_call_pending_ = false;
+            try {
+              const auto response = future.get();
+              if (response->success) {
+                human_service_stop_active_ = true;
+                human_service_action_ = "stopped";
+                RCLCPP_WARN(get_logger(),
+                            "Human obstacle stop applied through line follower service: %s",
+                            response->message.c_str());
+              } else {
+                human_service_action_ = "stop_failed";
+                RCLCPP_WARN(get_logger(),
+                            "Human obstacle stop rejected by line follower: %s",
+                            response->message.c_str());
+              }
+            } catch (const std::exception& e) {
+              human_service_action_ = "stop_failed";
+              RCLCPP_WARN(get_logger(), "Human obstacle stop service failed: %s", e.what());
+            }
+          });
+      return;
+    }
+
+    if (!human_service_stop_active_ || human_stop_call_pending_ || human_start_call_pending_) {
+      return;
+    }
+    if (!line_follower_start_client_->service_is_ready()) {
+      human_service_action_ = "resume_wait_service";
+      human_service_last_call_sec_ = now;
+      RCLCPP_WARN_THROTTLE(
+          get_logger(), *get_clock(), 2000,
+          "Human obstacle cleared, waiting for %s",
+          line_follower_start_service_.c_str());
+      return;
+    }
+
+    human_start_call_pending_ = true;
+    human_service_action_ = "resume_pending";
+    human_service_last_call_sec_ = now;
+    auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
+    line_follower_start_client_->async_send_request(
+        request,
+        [this](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
+          human_start_call_pending_ = false;
+          try {
+            const auto response = future.get();
+            if (response->success) {
+              human_service_stop_active_ = false;
+              human_service_action_ = "cleared";
+              RCLCPP_INFO(get_logger(),
+                          "Human obstacle cleared; controller resume service completed: %s",
+                          response->message.c_str());
+            } else {
+              human_service_action_ = "resume_failed";
+              RCLCPP_WARN(get_logger(),
+                          "Human obstacle resume rejected by line follower: %s",
+                          response->message.c_str());
+            }
+          } catch (const std::exception& e) {
+            human_service_action_ = "resume_failed";
+            RCLCPP_WARN(get_logger(), "Human obstacle resume service failed: %s", e.what());
+          }
+        });
   }
 
   void publishAll(const std::vector<Detection>& detections, const LaneState& lane_state,
@@ -1343,10 +1449,6 @@ class FusedPerceptionNode : public rclcpp::Node {
     std_msgs::msg::Bool valid_msg;
     valid_msg.data = lane_state.is_valid;
     is_valid_pub_->publish(valid_msg);
-
-    std_msgs::msg::Bool stop_msg;
-    stop_msg.data = lane_state.task_state != "CLEAR";
-    stop_request_pub_->publish(stop_msg);
 
     std_msgs::msg::String lane_msg;
     lane_msg.data = laneStateToJson(lane_state);
@@ -1441,7 +1543,8 @@ class FusedPerceptionNode : public rclcpp::Node {
                  << " latched=" << (debug_info.human_left_seen_latched ? 1 : 0)
                  << " right=" << debug_info.human_right_clear_confirm_count
                  << " stop=" << debug_info.human_stop_confirm_count
-                 << " area=" << debug_info.human_effective_area_ratio;
+                 << " area=" << debug_info.human_effective_area_ratio
+                 << " ctrl=" << human_service_action_;
     const cv::Scalar human_status_color = debug_info.human_state == "OBSTACLE_STOP"
                                               ? cv::Scalar(0, 0, 255)
                                               : (debug_info.human_left_seen_latched
@@ -1691,8 +1794,9 @@ class FusedPerceptionNode : public rclcpp::Node {
                     lane_state.offset_y09, lane_state.is_valid, debug_info.guideboard_seen);
       }
       if (lane_state.task_state != last_task_state_) {
-        RCLCPP_INFO(get_logger(), "task_state=%s stop_request=%d",
-                    lane_state.task_state.c_str(), lane_state.task_state != "CLEAR");
+        RCLCPP_INFO(get_logger(), "task_state=%s human_state=%s human_service=%s",
+                    lane_state.task_state.c_str(), debug_info.human_state.c_str(),
+                    human_service_action_.c_str());
       }
 
     }
@@ -1824,6 +1928,9 @@ class FusedPerceptionNode : public rclcpp::Node {
   bool publish_lane_state_{true};
   bool enable_result_log_{true};
   bool enable_data_log_{false};
+  std::string line_follower_start_service_{"/line_follower/start"};
+  std::string line_follower_stop_service_{"/line_follower/stop"};
+  double human_service_retry_interval_sec_{0.20};
 
   std::string det_model_path_;
   std::string label_list_path_;
@@ -1863,11 +1970,19 @@ class FusedPerceptionNode : public rclcpp::Node {
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr heading_error_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr curvature_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr is_valid_pub_;
-  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr stop_request_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr lane_state_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr lane_debug_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr guideboard_recognition_pub_;
+  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr line_follower_start_client_;
+  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr line_follower_stop_client_;
   rclcpp::Subscription<std_msgs::msg::Int64>::SharedPtr encoder_count_sub_;
+
+  bool human_stop_desired_{false};
+  bool human_service_stop_active_{false};
+  bool human_stop_call_pending_{false};
+  bool human_start_call_pending_{false};
+  double human_service_last_call_sec_{0.0};
+  std::string human_service_action_{"idle"};
 
   uint64_t last_fid_{0};
   uint64_t upstream_frames_{0};

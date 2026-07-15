@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="2" skipped="1" tests="3" time="0.487" timestamp="2026-07-15T01:41:01.761739" hostname="orangepi5"><testcase classname="chassis_controller.test.test_copyright" name="test_copyright" time="0.000"><skipped type="pytest.skip" message="No copyright header has been placed in the generated source file.">/home/orangepi/scuderiaferrari/src/chassis_controller/test/test_copyright.py:20: No copyright header has been placed in the generated source file.</skipped></testcase><testcase classname="chassis_controller.test.test_flake8" name="test_flake8" time="0.212"><failure message="AssertionError: Found 55 code style errors / warnings:&#10;  ./chassis_controller/chassis_controller_node.py:6:6: W291 trailing whitespace&#10;  ./chassis_controller/chassis_controller_node.py:23:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:32:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:38:100: E501 line too long (102 &gt; 99 characters)&#10;  ./chassis_controller/chassis_controller_node.py:39:100: E501 line too long (104 &gt; 99 characters)&#10;  ./chassis_controller/chassis_controller_node.py:43:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:46:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:58:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:63:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:67:100: E501 line too long (101 &gt; 99 characters)&#10;  ./chassis_controller/chassis_controller_node.py:68:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:71:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:74:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:77:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:81:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:102:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:111:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:115:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:122:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:125:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:128:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:140:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:145:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:155:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:161:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:167:100: E501 line too long (112 &gt; 99 characters)&#10;  ./chassis_controller/chassis_controller_node.py:170:100: E501 line too long (118 &gt; 99 characters)&#10;  ./chassis_controller/chassis_controller_node.py:171:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:174:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:178:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:180:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:189:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:194:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:198:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:203:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:214:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:218:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:221:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:226:100: E501 line too long (120 &gt; 99 characters)&#10;  ./chassis_controller/chassis_controller_node.py:229:100: E501 line too long (121 &gt; 99 characters)&#10;  ./chassis_controller/chassis_controller_node.py:231:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:238:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:243:13: E722 do not use bare 'except'&#10;  ./chassis_controller/chassis_controller_node.py:264:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:269:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:275:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:280:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:285:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:308:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:310:100: E501 line too long (107 &gt; 99 characters)&#10;  ./chassis_controller/chassis_controller_node.py:312:100: E501 line too long (106 &gt; 99 characters)&#10;  ./chassis_controller/chassis_controller_node.py:316:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:319:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:322:1: W293 blank line contains whitespace&#10;  ./chassis_controller/chassis_controller_node.py:347:1: W293 blank line contains whitespace&#10;assert 1 == 0">test/test_flake8.py:23: in test_flake8
+    assert rc == 0, \
+E   AssertionError: Found 55 code style errors / warnings:
+E     ./chassis_controller/chassis_controller_node.py:6:6: W291 trailing whitespace
+E     ./chassis_controller/chassis_controller_node.py:23:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:32:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:38:100: E501 line too long (102 &gt; 99 characters)
+E     ./chassis_controller/chassis_controller_node.py:39:100: E501 line too long (104 &gt; 99 characters)
+E     ./chassis_controller/chassis_controller_node.py:43:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:46:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:58:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:63:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:67:100: E501 line too long (101 &gt; 99 characters)
+E     ./chassis_controller/chassis_controller_node.py:68:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:71:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:74:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:77:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:81:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:102:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:111:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:115:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:122:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:125:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:128:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:140:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:145:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:155:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:161:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:167:100: E501 line too long (112 &gt; 99 characters)
+E     ./chassis_controller/chassis_controller_node.py:170:100: E501 line too long (118 &gt; 99 characters)
+E     ./chassis_controller/chassis_controller_node.py:171:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:174:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:178:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:180:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:189:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:194:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:198:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:203:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:214:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:218:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:221:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:226:100: E501 line too long (120 &gt; 99 characters)
+E     ./chassis_controller/chassis_controller_node.py:229:100: E501 line too long (121 &gt; 99 characters)
+E     ./chassis_controller/chassis_controller_node.py:231:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:238:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:243:13: E722 do not use bare 'except'
+E     ./chassis_controller/chassis_controller_node.py:264:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:269:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:275:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:280:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:285:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:308:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:310:100: E501 line too long (107 &gt; 99 characters)
+E     ./chassis_controller/chassis_controller_node.py:312:100: E501 line too long (106 &gt; 99 characters)
+E     ./chassis_controller/chassis_controller_node.py:316:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:319:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:322:1: W293 blank line contains whitespace
+E     ./chassis_controller/chassis_controller_node.py:347:1: W293 blank line contains whitespace
+E   assert 1 == 0</failure></testcase><testcase classname="chassis_controller.test.test_pep257" name="test_pep257" time="0.058"><failure message="AssertionError: Found code style errors / warnings&#10;assert 1 == 0">test/test_pep257.py:23: in test_pep257
+    assert rc == 0, 'Found code style errors / warnings'
+E   AssertionError: Found code style errors / warnings
+E   assert 1 == 0</failure></testcase></testsuite></testsuites>

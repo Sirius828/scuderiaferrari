@@ -21,6 +21,7 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(OpenCV REQUIRED)
 
 include_directories(
@@ -58,6 +59,7 @@ ament_target_dependencies(fused_perception_node
   ament_index_cpp
   rclcpp
   std_msgs
+  std_srvs
 )
 
 target_link_libraries(fused_perception_node

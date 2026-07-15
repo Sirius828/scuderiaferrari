@@ -10,7 +10,7 @@
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int8, Int32
+from std_msgs.msg import Int8, Int32, Int64
 from geometry_msgs.msg import Twist
 import serial
 import re
@@ -28,6 +28,7 @@ class ChassisController(Node):
         self.declare_parameter('servo_center', 3000)  # 舵机中位PWM值
         self.declare_parameter('servo_left_max', 2300)  # 舵机左打满PWM值
         self.declare_parameter('servo_right_max', 3700)  # 舵机右打满PWM值
+        self.declare_parameter('cmd_vel_timeout_sec', 0.20)  # 控制指令断流后自动停车
         
         # 获取参数
         self.serial_port = self.get_parameter('serial_port').get_parameter_value().string_value
@@ -36,16 +37,23 @@ class ChassisController(Node):
         self.servo_center = self.get_parameter('servo_center').get_parameter_value().integer_value
         self.servo_left_max = self.get_parameter('servo_left_max').get_parameter_value().integer_value
         self.servo_right_max = self.get_parameter('servo_right_max').get_parameter_value().integer_value
+        self.cmd_vel_timeout_sec = (
+            self.get_parameter('cmd_vel_timeout_sec').get_parameter_value().double_value
+        )
         
         # 串口对象
         self.ser = None
         
         # 当前状态
-        self.enabled = True   # ⭐ Flag: 启1停0（默认启用，适合巡线模式）
+        self.enabled = False  # Flag: 启1停0；必须收到显式 /chassis/enable 才启用
         self.direction = 1    # DIR: 前进1后退0
         self.speed = 0.0      # 速度 rad/s
         self.steering_ratio = 0.0  # 转向比例 -1.0(右满) 到 1.0(左满)
+        self.last_cmd_vel_time = time.monotonic()
+        self.has_cmd_vel = False
+        self.cmd_vel_watchdog_active = False
         self.latest_encoder_delta = 0
+        self.encoder_count = 0
         self.latest_speed_set_feedback = 0
         
         # 订阅话题 - 控制指令
@@ -55,6 +63,7 @@ class ChassisController(Node):
         
         # 发布话题 - 底盘反馈
         self.encoder_delta_pub = self.create_publisher(Int32, '/chassis/encoder_delta', 10)
+        self.encoder_count_pub = self.create_publisher(Int64, '/chassis/encoder_count', 10)
         self.speed_set_feedback_pub = self.create_publisher(Int32, '/chassis/speed_set_feedback', 10)
         
         # 初始化串口
@@ -93,6 +102,10 @@ class ChassisController(Node):
     
     def cmd_vel_callback(self, msg: Twist):
         """处理速度控制指令"""
+        self.last_cmd_vel_time = time.monotonic()
+        self.has_cmd_vel = True
+        self.cmd_vel_watchdog_active = False
+
         # linear.x 控制轮子转速 (rps, revolutions per second)
         self.speed = msg.linear.x
         
@@ -119,6 +132,10 @@ class ChassisController(Node):
         if new_enabled == self.enabled:
             return
         self.enabled = new_enabled
+        if not self.enabled:
+            # 禁用时同步清除缓存，避免后续只发 enable 就恢复旧速度。
+            self.speed = 0.0
+            self.steering_ratio = 0.0
         self.get_logger().info(f'底盘使能状态: {"启用" if self.enabled else "禁用"}')
     
     def direction_callback(self, msg: Int8):
@@ -163,6 +180,8 @@ class ChassisController(Node):
     
     def send_control_command(self):
         """定时发送控制指令"""
+        self.enforce_cmd_vel_watchdog()
+
         if self.ser is None or not self.ser.is_open:
             self.get_logger().warn('串口未打开，尝试重新连接...')
             self.init_serial()
@@ -224,6 +243,24 @@ class ChassisController(Node):
             except:
                 pass
             self.ser = None
+
+    def enforce_cmd_vel_watchdog(self):
+        """控制器断流时清零速度、舵角并关闭底盘使能。"""
+        if not self.enabled or self.cmd_vel_timeout_sec <= 0.0:
+            return
+
+        command_age = time.monotonic() - self.last_cmd_vel_time
+        if self.has_cmd_vel and command_age <= self.cmd_vel_timeout_sec:
+            return
+
+        self.speed = 0.0
+        self.steering_ratio = 0.0
+        self.enabled = False
+        if not self.cmd_vel_watchdog_active:
+            self.cmd_vel_watchdog_active = True
+            self.get_logger().error(
+                f'/cmd_vel 超时 {command_age:.3f}s，底盘已自动清零并禁用'
+            )
     
     def read_serial_data(self):
         """读取串口数据（底盘反馈）- 优化版本"""
@@ -254,11 +291,16 @@ class ChassisController(Node):
                                 speed_set_feedback = int(match.group(2))
 
                                 self.latest_encoder_delta = encoder_delta
+                                self.encoder_count += encoder_delta
                                 self.latest_speed_set_feedback = speed_set_feedback
 
                                 encoder_msg = Int32()
                                 encoder_msg.data = encoder_delta
                                 self.encoder_delta_pub.publish(encoder_msg)
+
+                                encoder_count_msg = Int64()
+                                encoder_count_msg.data = self.encoder_count
+                                self.encoder_count_pub.publish(encoder_count_msg)
 
                                 speed_set_msg = Int32()
                                 speed_set_msg.data = speed_set_feedback

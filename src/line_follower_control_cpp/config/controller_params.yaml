@@ -22,11 +22,11 @@
 
     # ==================== 速度与底盘标定 ====================
     # 直道目标最高速度，单位 m/s；低风险时加速到此速度。
-    linear_speed: 1.35
+    linear_speed: 0.85
     # 弯道动态降速的最低速度，单位 m/s；不是停车速度。
-    min_linear_speed: 1.06
+    min_linear_speed: 0.62
     # 原始误差持续变大时允许短时低于动态速度下限；0 表示关闭。
-    high_error_rescue_speed: 0.75
+    high_error_rescue_speed: 0.45
     # 原始误差从该值开始渐进救车，到 curve_entry_error_override 时完全降至救车速度。
     high_error_rescue_start: 0.70
     # y09 为负表示车辆位于当前验证过的弯心安全侧；仅在该侧提高动态最低速度。
@@ -72,7 +72,7 @@
     speed_error_rate_start: 1.50
     speed_error_rate_full: 3.00
     # 加速斜率，单位 m/s^2；限制突然冲刺。
-    speed_accel_rate: 0.35
+    speed_accel_rate: 0.28
     # 减速斜率，单位 m/s^2；越大越快降速。
     speed_decel_rate: 5.0
     # 长期 BRANCH 仅表示路径模板锁定，不参与速度决策；保持 0 关闭岔路最高速度覆盖。
@@ -114,10 +114,8 @@
     enable_curve_offset_allowance: false
     # true 时在强弯中减弱前瞻误差，优先使用近场误差稳定车辆。
     enable_curve_offset_relief: false
-    # 调车阶段由 /line_follower/start 和 /line_follower/stop 完全控制启停；
-    # false 时忽略感知任务（终点、红灯、障碍物）发布的 stop_request。
+    # Human 避障由 fused 直接调用 /line_follower/start 和 /line_follower/stop；
     # /race/emergency_stop 仍然保留为独立紧急停车联锁。
-    enable_perception_stop_request: false
     # 直道允许的前瞻偏差，范围 [0, 1]。
     straight_allowed_offset: 0.05
     # 强弯允许的前瞻偏差，范围 [straight_allowed_offset, 1]。

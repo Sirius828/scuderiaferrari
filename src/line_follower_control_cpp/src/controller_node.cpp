@@ -95,7 +95,6 @@ struct ControllerParameters
   bool enable_dynamic_steering_limit{true};
   bool enable_curve_offset_allowance{true};
   bool enable_curve_offset_relief{true};
-  bool enable_perception_stop_request{true};
   double straight_allowed_offset{0.05};
   double curve_allowed_offset{0.60};
   double min_perception_confidence{0.50};
@@ -172,7 +171,6 @@ public:
     declare_parameter<bool>("enable_dynamic_steering_limit", params_.enable_dynamic_steering_limit);
     declare_parameter<bool>("enable_curve_offset_allowance", params_.enable_curve_offset_allowance);
     declare_parameter<bool>("enable_curve_offset_relief", params_.enable_curve_offset_relief);
-    declare_parameter<bool>("enable_perception_stop_request", params_.enable_perception_stop_request);
     declare_parameter<double>("straight_allowed_offset", params_.straight_allowed_offset);
     declare_parameter<double>("curve_allowed_offset", params_.curve_allowed_offset);
     declare_parameter<double>("min_perception_confidence", params_.min_perception_confidence);
@@ -211,9 +209,6 @@ public:
     valid_subscription_ = create_subscription<std_msgs::msg::Bool>(
       "/segmentation/is_valid", sensor_qos,
       std::bind(&LineFollowerControllerCpp::valid_callback, this, std::placeholders::_1));
-    stop_request_subscription_ = create_subscription<std_msgs::msg::Bool>(
-      "/perception/stop_request", 10,
-      std::bind(&LineFollowerControllerCpp::stop_request_callback, this, std::placeholders::_1));
     emergency_subscription_ = create_subscription<std_msgs::msg::Bool>(
       "/race/emergency_stop", 10,
       std::bind(&LineFollowerControllerCpp::emergency_callback, this, std::placeholders::_1));
@@ -234,6 +229,16 @@ public:
       "/line_follower/stop",
       std::bind(
         &LineFollowerControllerCpp::stop_service_callback, this,
+        std::placeholders::_1, std::placeholders::_2));
+    obstacle_pause_service_ = create_service<std_srvs::srv::Trigger>(
+      "/line_follower/obstacle_pause",
+      std::bind(
+        &LineFollowerControllerCpp::obstacle_pause_service_callback, this,
+        std::placeholders::_1, std::placeholders::_2));
+    obstacle_resume_service_ = create_service<std_srvs::srv::Trigger>(
+      "/line_follower/obstacle_resume",
+      std::bind(
+        &LineFollowerControllerCpp::obstacle_resume_service_callback, this,
         std::placeholders::_1, std::placeholders::_2));
     set_enabled_service_ = create_service<std_srvs::srv::SetBool>(
       "/line_follower/set_enabled",
@@ -335,7 +340,6 @@ private:
     params_.enable_dynamic_steering_limit = get_parameter("enable_dynamic_steering_limit").as_bool();
     params_.enable_curve_offset_allowance = get_parameter("enable_curve_offset_allowance").as_bool();
     params_.enable_curve_offset_relief = get_parameter("enable_curve_offset_relief").as_bool();
-    params_.enable_perception_stop_request = get_parameter("enable_perception_stop_request").as_bool();
     params_.straight_allowed_offset = get_parameter("straight_allowed_offset").as_double();
     params_.curve_allowed_offset = get_parameter("curve_allowed_offset").as_double();
     params_.min_perception_confidence = get_parameter("min_perception_confidence").as_double();
@@ -794,8 +798,6 @@ private:
         pending.enable_curve_offset_allowance = parameter.as_bool();
       } else if (name == "enable_curve_offset_relief") {
         pending.enable_curve_offset_relief = parameter.as_bool();
-      } else if (name == "enable_perception_stop_request") {
-        pending.enable_perception_stop_request = parameter.as_bool();
       } else if (name == "straight_allowed_offset") {
         pending.straight_allowed_offset = parameter.as_double();
       } else if (name == "curve_allowed_offset") {
@@ -819,9 +821,6 @@ private:
 
     params_ = pending;
     steering_sign_ = pending_steering_sign;
-    if (!params_.enable_perception_stop_request) {
-      stop_request_active_ = false;
-    }
     RCLCPP_INFO(
       get_logger(),
       "Updated controller parameters: Kp=%.3f Kd=%.3f speed=%.3fm/s min=%.3fm/s "
@@ -913,18 +912,6 @@ private:
     *target = std::clamp(static_cast<double>(value), -1.0, 1.0);
     *has_value = true;
     *timestamp = std::chrono::steady_clock::now();
-  }
-
-  void stop_request_callback(const std_msgs::msg::Bool::SharedPtr msg)
-  {
-    if (!params_.enable_perception_stop_request) {
-      stop_request_active_ = false;
-      return;
-    }
-    stop_request_active_ = msg->data;
-    if (params_.enable_perception_stop_request && stop_request_active_) {
-      lock_and_stop("perception_stop");
-    }
   }
 
   void emergency_callback(const std_msgs::msg::Bool::SharedPtr msg)
@@ -1072,12 +1059,6 @@ private:
       }
       return false;
     }
-    if (params_.enable_perception_stop_request && stop_request_active_) {
-      if (reason) {
-        *reason = "perception stop request is active";
-      }
-      return false;
-    }
     if (emergency_stop_active_) {
       if (reason) {
         *reason = "emergency stop is active";
@@ -1087,8 +1068,15 @@ private:
     return true;
   }
 
-  bool try_start(std::string * reason)
+  bool try_start(std::string * reason, bool obstacle_resume = false)
   {
+    if (obstacle_hold_active_ && !obstacle_resume) {
+      if (reason) {
+        *reason = "obstacle hold is active";
+      }
+      publish_stop_state();
+      return false;
+    }
     if (auto_enabled_) {
       return true;
     }
@@ -1136,6 +1124,10 @@ private:
 
   void lock_and_stop(const std::string & reason)
   {
+    // A safety lock or emergency stop always cancels automatic obstacle
+    // resume.  Keep obstacle_hold_active_ unchanged so a Human that is still
+    // present continues to block manual /start calls.
+    obstacle_resume_armed_ = false;
     if (!auto_enabled_ && safety_locked_ && stop_reason_ == reason) {
       publish_stop_state();
       return;
@@ -1157,10 +1149,81 @@ private:
     const std::shared_ptr<std_srvs::srv::Trigger::Request>,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
   {
+    // An explicit operator stop must cancel any pending automatic resume.
+    obstacle_resume_armed_ = false;
     disable_control("service_stop", false);
     response->success = true;
     response->message = "line following stopped; chassis disabled";
     RCLCPP_WARN(get_logger(), "Line following stopped by service");
+  }
+
+  void obstacle_pause_service_callback(
+    const std::shared_ptr<std_srvs::srv::Trigger::Request>,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+  {
+    if (obstacle_hold_active_) {
+      publish_stop_state();
+      response->success = true;
+      response->message = obstacle_resume_armed_ ?
+        "obstacle hold already active; resume remains armed" :
+        "obstacle hold already active; controller remains stopped";
+      return;
+    }
+
+    const bool was_running = auto_enabled_;
+    obstacle_hold_active_ = true;
+    obstacle_resume_armed_ = was_running;
+    if (was_running) {
+      disable_control("obstacle_pause", false);
+      response->message = "obstacle pause applied; resume armed";
+    } else {
+      // Preserve an existing safety lock and its reason.  In particular, an
+      // obstacle detected while waiting to start must never convert that state
+      // into an automatically resumable pause.
+      publish_stop_state();
+      response->message = "obstacle pause applied; controller was not running";
+    }
+    response->success = true;
+    RCLCPP_WARN(
+      get_logger(), "Obstacle hold applied (resume_armed=%s)",
+      obstacle_resume_armed_ ? "true" : "false");
+  }
+
+  void obstacle_resume_service_callback(
+    const std::shared_ptr<std_srvs::srv::Trigger::Request>,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+  {
+    if (!obstacle_hold_active_ && !obstacle_resume_armed_) {
+      publish_stop_state();
+      response->success = true;
+      response->message = "no obstacle pause is active; controller remains stopped";
+      return;
+    }
+
+    if (!obstacle_resume_armed_) {
+      obstacle_hold_active_ = false;
+      publish_stop_state();
+      response->success = true;
+      response->message = "obstacle cleared; controller was not running before pause";
+      RCLCPP_INFO(get_logger(), "Obstacle cleared without automatic resume");
+      return;
+    }
+
+    std::string reason;
+    if (!try_start(&reason, true)) {
+      // Keep the hold and arm latched while perception is stale or another
+      // safety condition is active.  The perception client may safely retry.
+      obstacle_hold_active_ = true;
+      response->success = false;
+      response->message = "obstacle resume rejected: " + reason;
+      return;
+    }
+
+    obstacle_hold_active_ = false;
+    obstacle_resume_armed_ = false;
+    response->success = true;
+    response->message = "obstacle cleared; line following resumed";
+    RCLCPP_INFO(get_logger(), "Obstacle cleared; line following resumed");
   }
 
   void set_enabled_service_callback(
@@ -1175,6 +1238,7 @@ private:
       return;
     }
 
+    obstacle_resume_armed_ = false;
     disable_control("service_stop", false);
     response->success = true;
     response->message = "autonomous line following disabled; chassis disabled";
@@ -1215,14 +1279,6 @@ private:
       previous_control_time_ = now;
       return;
     }
-    if (params_.enable_perception_stop_request && stop_request_active_) {
-      lock_and_stop("perception_stop");
-      last_mode_ = "perception_stop";
-      publish_debug(now);
-      previous_control_time_ = now;
-      return;
-    }
-
     if (geometry_content_stalled(now)) {
       lock_and_stop("geometry_stall");
       last_mode_ = "geometry_stall";
@@ -1788,6 +1844,8 @@ private:
          << "mode=" << last_mode_
          << " enabled=" << (auto_enabled_ ? "True" : "False")
          << " locked=" << (safety_locked_ ? "True" : "False")
+         << " obstacle_hold=" << (obstacle_hold_active_ ? "True" : "False")
+         << " obstacle_resume_armed=" << (obstacle_resume_armed_ ? "True" : "False")
          << " valid=" << (is_valid_ ? "True" : "False")
          << " lane_valid=" << (lane_state_valid_ ? "True" : "False")
          << " confidence=" << lane_confidence_
@@ -1803,7 +1861,6 @@ private:
       now - last_geometry_content_change_time_).count()
          << " geometry_stalled=" << (geometry_content_stalled(now) ? "True" : "False")
          << " perception_ready=" << (perception_ready(now) ? "True" : "False")
-         << " stop_request=" << (stop_request_active_ ? "True" : "False")
          << " emergency=" << (emergency_stop_active_ ? "True" : "False")
          << " offset_y07=" << current_offset_y07_
          << " offset_y08=" << current_offset_y08_
@@ -1869,6 +1926,8 @@ private:
 
   bool auto_enabled_{false};
   bool safety_locked_{false};
+  bool obstacle_hold_active_{false};
+  bool obstacle_resume_armed_{false};
   bool has_offset_y07_{false};
   bool has_offset_y08_{false};
   bool has_offset_y09_{false};
@@ -1878,7 +1937,6 @@ private:
   bool has_lane_state_{false};
   bool is_valid_{false};
   bool lane_state_valid_{false};
-  bool stop_request_active_{false};
   bool emergency_stop_active_{false};
   double current_offset_y07_{0.0};
   double current_offset_y08_{0.0};
@@ -1919,7 +1977,6 @@ private:
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr heading_error_subscription_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr curvature_subscription_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr valid_subscription_;
-  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr stop_request_subscription_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr emergency_subscription_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr lane_state_subscription_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
@@ -1927,6 +1984,8 @@ private:
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr debug_publisher_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_service_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_service_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr obstacle_pause_service_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr obstacle_resume_service_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_enabled_service_;
   rclcpp::TimerBase::SharedPtr control_timer_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;

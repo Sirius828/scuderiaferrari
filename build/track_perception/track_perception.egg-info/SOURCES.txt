@@ -11,6 +11,7 @@ setup.py
 config/intersection_params.yaml
 launch/perception.launch.py
 model/best-5-rk3588.rknn
+model/det_715.rknn
 model/label_list.txt
 model/pp_liteseg.rknn
 model/pp_liteseg_v2.rknn

@@ -31,9 +31,13 @@ def generate_launch_description():
         }.items()
     )
     controller_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(_launch_file('line_follower_control', 'launch/controller.launch.py')),
+        PythonLaunchDescriptionSource(
+            _launch_file('line_follower_control_cpp', 'launch/controller.launch.py')
+        ),
         launch_arguments={
-            'controller_config_file': _src_file('line_follower_control', 'config/controller_params.yaml'),
+            'controller_config_file': _src_file(
+                'line_follower_control_cpp', 'config/controller_params.yaml'
+            ),
         }.items()
     )
     ui_node = Node(

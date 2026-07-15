@@ -17,7 +17,7 @@ fused_perception_node:
     perf_interval: 2.0
 
     # 画面显示：只影响 OpenCV 预览窗口，不影响终端日志
-    show_window: true
+    show_window: false
     blend_alpha: 0.5
     show_branch_debug: true
     enable_debug_screenshots: false
@@ -29,13 +29,17 @@ fused_perception_node:
     enable_result_log: false
     # 数据日志：终端逐次 OCR、车道几何和周期状态；详细 JSON 始终发布到 ROS 话题
     enable_data_log: true
+    # Human 使用带运行状态记忆的专用服务：只有避障前已发车才允许清障后恢复。
+    line_follower_start_service: "/line_follower/obstacle_resume"
+    line_follower_stop_service: "/line_follower/obstacle_pause"
+    human_service_retry_interval_sec: 0.20
 
     # 目标检测模型
-    det_model_path: "model/yolo11n_det_zhang_320x320_raw3_sim.rknn"
+    det_model_path: "model/det_715.rknn"
     label_list_path: "model/label_list.txt"
     det_core_id: 0
     det_input_width: 320 #384
-    det_input_height: 320 # 288
+    det_input_height: 256 # 288
     det_conf_threshold: 0.75
     det_nms_threshold: 0.35
     det_raw_output: true
@@ -176,7 +180,8 @@ fused_perception_node:
     car_fit_hold_timeout_sec: 0.20
 
     # 终点停车：Stop bbox 底部达到阈值才 FINISH_STOP
-    enable_finish_stop: true
+    # 联调阶段忽略 Stop 标签，不产生 FINISH_STOP；后续接入专用终点联锁后再开启。
+    enable_finish_stop: false
     finish_stop_min_confidence: 0.45
     finish_stop_arm_y_ratio: 0.70
     finish_stop_lost_frames: 3

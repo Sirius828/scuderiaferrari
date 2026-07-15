@@ -1,4 +1,4 @@
-test_guideboard_recognizer 19 0.00878858
-test_lane_guideboard_wait 17 0.00948048
-test_lane_decision_car_boundary 10 0.0171123
+test_guideboard_recognizer 22 0.00799618
+test_lane_guideboard_wait 20 0.01108
+test_lane_decision_car_boundary 13 0.0162046
 ---
