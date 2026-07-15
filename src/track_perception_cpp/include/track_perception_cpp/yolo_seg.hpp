@@ -26,7 +26,7 @@ class YoloSeg {
   bool init(const std::string& model_path, const std::vector<int>& core_ids,
             int input_width, int input_height, float crop_y0, float crop_y1,
             int pad_value, float conf_thresh, float nms_thresh, float mask_thresh,
-            float nms_contain_thresh, int max_detections, bool raw_output);
+            int max_detections, bool raw_output);
   bool infer(const cv::Mat& frame_rgb, cv::Mat& seg_map, double* rknn_ms, double* post_ms);
   const YoloSegStats& lastStats() const { return last_stats_; }
   const std::vector<YoloSegInstance>& lastInstances() const { return last_instances_; }
@@ -61,9 +61,9 @@ class YoloSeg {
   float crop_y1_ratio_{1.0f};
   int pad_value_{114};
   float conf_thresh_{0.45f};
-  float nms_thresh_{0.45f};
+  // Ultralytics' box NMS IoU threshold (predict(..., iou=0.7)).
+  float nms_thresh_{0.70f};
   float mask_thresh_{0.45f};
-  float nms_contain_thresh_{0.85f};
   int max_detections_{30};
   bool raw_output_{false};
   YoloSegStats last_stats_;

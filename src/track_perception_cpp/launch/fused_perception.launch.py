@@ -27,9 +27,10 @@ def _launch_fused_perception(context):
     if show_window_override:
         if show_window_override not in ('true', 'false'):
             raise ValueError('show_window must be true, false, or omitted to use YAML')
-        parameter_overrides['show_window'] = ParameterValue(
-            show_window_override, value_type=bool
-        )
+        # The value has already been resolved by OpaqueFunction.  Pass a real
+        # bool here; wrapping the resolved string in ParameterValue leaves a
+        # string substitution and makes show_window:=false fail type checking.
+        parameter_overrides['show_window'] = show_window_override == 'true'
 
     return [
         Node(

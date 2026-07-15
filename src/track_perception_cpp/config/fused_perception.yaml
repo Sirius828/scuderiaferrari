@@ -17,7 +17,7 @@ fused_perception_node:
     perf_interval: 2.0
 
     # 画面显示：只影响 OpenCV 预览窗口，不影响终端日志
-    show_window: false
+    show_window: true
     blend_alpha: 0.5
     show_branch_debug: true
     enable_debug_screenshots: false
@@ -53,12 +53,13 @@ fused_perception_node:
     seg_core_ids: "1,2"
     seg_input_width: 320 #384
     seg_input_height: 128 #160
-    seg_crop_y0_ratio: 0.50
+    seg_crop_y0_ratio: 0.45
     seg_crop_y1_ratio: 1.0
     seg_pad_value: 114
     seg_conf_threshold: 0.15
-    seg_nms_threshold: 0.45
-    seg_nms_contain_threshold: 0.85
+    # 与 Ultralytics predict(..., iou=0.7) 对齐：同类别仅按 box IoU 做 NMS。
+    # 不再使用 containment 抑制，否则大框会把其中真实的小区域 mask 筛掉。
+    seg_nms_threshold: 0.70
     seg_mask_threshold: 0.5
     seg_max_detections: 30
     seg_raw_output: true
@@ -101,8 +102,8 @@ fused_perception_node:
 
     # Band 扫描
     enable_segment_branch_logic: true
-    band_count: 24
-    band_y_min_ratio: 0.61
+    band_count: 28
+    band_y_min_ratio: 0.45
     band_y_max_ratio: 1.0
     band_height_ratio: 0.015
     min_segment_width_px: 60
@@ -133,10 +134,12 @@ fused_perception_node:
     fit_point_trend_slope_delta: 0.65
     fit_point_trend_min_points: 6
     fit_point_trend_min_keep_ratio: 0.75
-    offset_y07_ratio: 0.70
-    offset_y08_ratio: 0.80
-    offset_y09_ratio: 0.90
-    heading_y_ratio: 0.75
+    # 高视角下按新 band 范围 [0.45, 1.0] 重新分布远/中/近采样点。
+    # topic 名保留 y07/y08/y09 仅为兼容控制器，不再代表固定图像高度。
+    offset_y07_ratio: 0.58
+    offset_y08_ratio: 0.72
+    offset_y09_ratio: 0.86
+    heading_y_ratio: 0.65
     max_offset_jump: 0.80
     offset_smoothing_alpha: 0.35
 

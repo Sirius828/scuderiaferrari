@@ -171,26 +171,12 @@ float boxIou(const SegCandidate& a, const SegCandidate& b) {
   return uni > 0.0f ? inter / uni : 0.0f;
 }
 
-float boxContainment(const SegCandidate& a, const SegCandidate& b) {
-  float ix0 = std::max(a.x0, b.x0);
-  float iy0 = std::max(a.y0, b.y0);
-  float ix1 = std::min(a.x1, b.x1);
-  float iy1 = std::min(a.y1, b.y1);
-  float iw = std::max(0.0f, ix1 - ix0);
-  float ih = std::max(0.0f, iy1 - iy0);
-  float inter = iw * ih;
-  float area_a = std::max(0.0f, a.x1 - a.x0) * std::max(0.0f, a.y1 - a.y0);
-  float area_b = std::max(0.0f, b.x1 - b.x0) * std::max(0.0f, b.y1 - b.y0);
-  float smaller = std::min(area_a, area_b);
-  return smaller > 0.0f ? inter / smaller : 0.0f;
-}
-
 }  // namespace
 
 bool YoloSeg::init(const std::string& model_path, const std::vector<int>& core_ids,
                    int input_width, int input_height, float crop_y0, float crop_y1,
                    int pad_value, float conf_thresh, float nms_thresh, float mask_thresh,
-                   float nms_contain_thresh, int max_detections, bool raw_output) {
+                   int max_detections, bool raw_output) {
   input_width_ = input_width;
   input_height_ = input_height;
   crop_y0_ratio_ = crop_y0;
@@ -199,7 +185,6 @@ bool YoloSeg::init(const std::string& model_path, const std::vector<int>& core_i
   conf_thresh_ = conf_thresh;
   nms_thresh_ = nms_thresh;
   mask_thresh_ = mask_thresh;
-  nms_contain_thresh_ = nms_contain_thresh;
   max_detections_ = max_detections;
   raw_output_ = raw_output;
 
@@ -520,11 +505,11 @@ bool YoloSeg::postprocess(const std::vector<TensorData>& outputs, const Preproce
   for (const auto& candidate : candidates) {
     bool suppress = false;
     for (const auto& kept : selected) {
-      bool same_class = candidate.class_id == kept.class_id;
-      bool high_iou = boxIou(candidate, kept) > nms_thresh_;
-      bool high_containment = nms_contain_thresh_ > 0.0f &&
-                              boxContainment(candidate, kept) > nms_contain_thresh_;
-      if (same_class && (high_iou || high_containment)) {
+      // Match Ultralytics NMS: suppress only same-class boxes whose IoU is
+      // above iou_thres. Do not suppress a fully-contained box based on
+      // containment alone; its mask may be an additional real region and
+      // must remain available for the union below.
+      if (candidate.class_id == kept.class_id && boxIou(candidate, kept) > nms_thresh_) {
         suppress = true;
         break;
       }

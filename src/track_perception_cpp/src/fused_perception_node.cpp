@@ -389,8 +389,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("seg_crop_y1_ratio", 1.0);
     declare_parameter<int>("seg_pad_value", 114);
     declare_parameter<double>("seg_conf_threshold", 0.45);
-    declare_parameter<double>("seg_nms_threshold", 0.45);
-    declare_parameter<double>("seg_nms_contain_threshold", 0.85);
+    // Ultralytics-style class-aware NMS IoU threshold (predict(..., iou=0.7)).
+    declare_parameter<double>("seg_nms_threshold", 0.70);
     declare_parameter<double>("seg_mask_threshold", 0.45);
     declare_parameter<int>("seg_max_detections", 30);
     declare_parameter<bool>("seg_raw_output", false);
@@ -596,8 +596,6 @@ class FusedPerceptionNode : public rclcpp::Node {
     seg_pad_value_ = static_cast<int>(get_parameter("seg_pad_value").as_int());
     seg_conf_threshold_ = static_cast<float>(get_parameter("seg_conf_threshold").as_double());
     seg_nms_threshold_ = static_cast<float>(get_parameter("seg_nms_threshold").as_double());
-    seg_nms_contain_threshold_ =
-        static_cast<float>(get_parameter("seg_nms_contain_threshold").as_double());
     seg_mask_threshold_ = static_cast<float>(get_parameter("seg_mask_threshold").as_double());
     seg_max_detections_ = static_cast<int>(get_parameter("seg_max_detections").as_int());
     seg_raw_output_ = get_parameter("seg_raw_output").as_bool();
@@ -1203,7 +1201,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     if (!segmenter_.init(seg_model_path_, seg_core_ids_, seg_input_width_, seg_input_height_,
                          seg_crop_y0_ratio_, seg_crop_y1_ratio_, seg_pad_value_,
                          seg_conf_threshold_, seg_nms_threshold_, seg_mask_threshold_,
-                         seg_nms_contain_threshold_, seg_max_detections_, seg_raw_output_)) {
+                         seg_max_detections_, seg_raw_output_)) {
       throw std::runtime_error("failed to initialize segmentation model");
     }
     if (enable_guideboard_ocr_) {
@@ -1986,8 +1984,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   float seg_crop_y1_ratio_{1.0f};
   int seg_pad_value_{114};
   float seg_conf_threshold_{0.45f};
-  float seg_nms_threshold_{0.45f};
-  float seg_nms_contain_threshold_{0.85f};
+  float seg_nms_threshold_{0.70f};
   float seg_mask_threshold_{0.45f};
   int seg_max_detections_{30};
   bool seg_raw_output_{false};
