@@ -540,3 +540,7 @@ bottom_offset + heading_error + curvature + 实际舵量 + 实际速度
 
 
 拟合点和band中心点,避障的时候生存拟合点
+
+offset有小值改变的时候没有做出响应导致offset累积形成救车或者大舵的情况
+
+设置大p看出入弯情况，后面长测检查舵量分配和使用比例

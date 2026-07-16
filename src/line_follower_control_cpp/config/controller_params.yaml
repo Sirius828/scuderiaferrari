@@ -24,11 +24,11 @@
     # 直道目标最高速度，单位 m/s；低风险时加速到此速度。
     linear_speed: 1.20
     # 弯道动态降速的最低速度，单位 m/s；不是停车速度。
-    min_linear_speed: 0.88
+    min_linear_speed: 0.9
     # 原始误差持续变大时允许短时低于动态速度下限；0 表示关闭。
-    high_error_rescue_speed: 0.52
+    high_error_rescue_speed: 0.6
     # 原始误差从该值开始渐进救车，到 curve_entry_error_override 时完全降至救车速度。
-    high_error_rescue_start: 0.62
+    high_error_rescue_start: 0.70
     # y09 为负表示车辆位于当前验证过的弯心安全侧；仅在该侧提高动态最低速度。
     inner_side_min_linear_speed: 0.0
     # y09 小于此值的负数后才启用安全侧最低速度，避免中心附近频繁切换。

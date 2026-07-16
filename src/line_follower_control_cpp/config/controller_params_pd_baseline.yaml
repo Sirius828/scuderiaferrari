@@ -1,0 +1,24 @@
+# 第一阶段 PD 隔离配置：全程 0.6 m/s，弯道前馈关闭。
+/**:
+  ros__parameters:
+    Kp: 0.80
+    Kd: 0.05
+    curve_feedforward_gain: 0.0
+    straight_speed: 0.60
+    curve_speed: 0.60
+    curve_enter_threshold: 0.20
+    curve_exit_threshold: 0.10
+
+    wheel_radius: 0.032
+    max_steering: 0.80
+    steering_sign: 1.0
+    offset_timeout: 0.25
+    geometry_stall_timeout: 0.20
+    enable_geometry_stall_auto_resume: true
+    geometry_stall_recovery_time: 0.50
+    invalid_hold_speed: 0.10
+    min_perception_confidence: 0.50
+    autonomous_enabled_on_start: false
+    control_frequency: 50.0
+    lane_state_topic: "/perception/lane_state"
+    cmd_vel_topic: "/cmd_vel"

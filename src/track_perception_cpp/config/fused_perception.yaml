@@ -172,7 +172,7 @@ fused_perception_node:
     human_line_margin_px: 5.0
     human_line_sample_count: 5
     human_line_sample_start_ratio: 0.60
-    human_stop_effective_area_ratio: 0.012
+    human_stop_effective_area_ratio: 0.010
     human_stop_confirm_frames: 2
     human_clear_confirm_frames: 3
     enable_car_right_boundary_filter: true

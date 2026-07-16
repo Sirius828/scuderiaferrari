@@ -1,0 +1,25 @@
+-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/track_perception_cpp':
+ - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_fit_transition --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_fit_transition.gtest.xml
+
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 4 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 4 tests from LaneFitTransitionTest
+[ RUN      ] LaneFitTransitionTest.NormalToLeftBranchIsContinuousAndConverges
+[       OK ] LaneFitTransitionTest.NormalToLeftBranchIsContinuousAndConverges (120 ms)
+[ RUN      ] LaneFitTransitionTest.RightBranchUsesIndependentSourceName
+[       OK ] LaneFitTransitionTest.RightBranchUsesIndependentSourceName (0 ms)
+[ RUN      ] LaneFitTransitionTest.ReleaseDuringTransitionRestartsFromPublishedCurve
+[       OK ] LaneFitTransitionTest.ReleaseDuringTransitionRestartsFromPublishedCurve (171 ms)
+[ RUN      ] LaneFitTransitionTest.FailedFitHoldsAndPausesTransition
+[       OK ] LaneFitTransitionTest.FailedFitHoldsAndPausesTransition (60 ms)
+[----------] 4 tests from LaneFitTransitionTest (351 ms total)
+
+[----------] Global test environment tear-down
+[==========] 4 tests from 1 test suite ran. (351 ms total)
+[  PASSED  ] 4 tests.
+
+
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_fit_transition.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_fit_transition.gtest.xml'

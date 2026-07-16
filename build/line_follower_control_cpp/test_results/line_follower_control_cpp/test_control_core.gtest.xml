@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="9" failures="0" disabled="0" errors="0" time="0" timestamp="2026-07-16T09:00:44" name="AllTests">
+  <testsuite name="ControlCoreTest" tests="9" failures="0" disabled="0" errors="0" time="0" timestamp="2026-07-16T09:00:44">
+    <testcase name="PureStraightUsesNearErrorForPd" status="run" result="completed" time="0" timestamp="2026-07-16T09:00:44" classname="line_follower_control_cpp.ControlCoreTest" />
+    <testcase name="CurveFeedforwardRemainsWithZeroNearError" status="run" result="completed" time="0" timestamp="2026-07-16T09:00:44" classname="line_follower_control_cpp.ControlCoreTest" />
+    <testcase name="HeadingCancelsStraightLinePreviewSlope" status="run" result="completed" time="0" timestamp="2026-07-16T09:00:44" classname="line_follower_control_cpp.ControlCoreTest" />
+    <testcase name="DerivativeOnlyChangesForNewSample" status="run" result="completed" time="0" timestamp="2026-07-16T09:00:44" classname="line_follower_control_cpp.ControlCoreTest" />
+    <testcase name="CurveStateUsesEntryAndExitHysteresis" status="run" result="completed" time="0" timestamp="2026-07-16T09:00:44" classname="line_follower_control_cpp.ControlCoreTest" />
+    <testcase name="SteeringIsLimitedAndSlewed" status="run" result="completed" time="0" timestamp="2026-07-16T09:00:44" classname="line_follower_control_cpp.ControlCoreTest" />
+    <testcase name="RejectsInvalidConfiguration" status="run" result="completed" time="0" timestamp="2026-07-16T09:00:44" classname="line_follower_control_cpp.ControlCoreTest" />
+    <testcase name="InvalidLaneTargetsAStopAndClearsFeedback" status="run" result="completed" time="0" timestamp="2026-07-16T09:00:44" classname="line_follower_control_cpp.ControlCoreTest" />
+    <testcase name="InvalidFrameDoesNotCauseAFalseCurveExit" status="run" result="completed" time="0" timestamp="2026-07-16T09:00:44" classname="line_follower_control_cpp.ControlCoreTest" />
+  </testsuite>
+</testsuites>

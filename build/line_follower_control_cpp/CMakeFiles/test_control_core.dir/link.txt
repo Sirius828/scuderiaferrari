@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/test_control_core.dir/test/test_control_core.cpp.o -o test_control_core  gtest/libgtest_main.a gtest/libgtest.a libcontrol_core.a -pthread 

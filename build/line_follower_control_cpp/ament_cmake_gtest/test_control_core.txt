@@ -1,0 +1,35 @@
+-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp':
+ - /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_control_core --gtest_output=xml:/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_control_core.gtest.xml
+
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 9 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 9 tests from ControlCoreTest
+[ RUN      ] ControlCoreTest.PureStraightUsesNearErrorForPd
+[       OK ] ControlCoreTest.PureStraightUsesNearErrorForPd (0 ms)
+[ RUN      ] ControlCoreTest.CurveFeedforwardRemainsWithZeroNearError
+[       OK ] ControlCoreTest.CurveFeedforwardRemainsWithZeroNearError (0 ms)
+[ RUN      ] ControlCoreTest.HeadingCancelsStraightLinePreviewSlope
+[       OK ] ControlCoreTest.HeadingCancelsStraightLinePreviewSlope (0 ms)
+[ RUN      ] ControlCoreTest.DerivativeOnlyChangesForNewSample
+[       OK ] ControlCoreTest.DerivativeOnlyChangesForNewSample (0 ms)
+[ RUN      ] ControlCoreTest.CurveStateUsesEntryAndExitHysteresis
+[       OK ] ControlCoreTest.CurveStateUsesEntryAndExitHysteresis (0 ms)
+[ RUN      ] ControlCoreTest.SteeringIsLimitedAndSlewed
+[       OK ] ControlCoreTest.SteeringIsLimitedAndSlewed (0 ms)
+[ RUN      ] ControlCoreTest.RejectsInvalidConfiguration
+[       OK ] ControlCoreTest.RejectsInvalidConfiguration (0 ms)
+[ RUN      ] ControlCoreTest.InvalidLaneTargetsAStopAndClearsFeedback
+[       OK ] ControlCoreTest.InvalidLaneTargetsAStopAndClearsFeedback (0 ms)
+[ RUN      ] ControlCoreTest.InvalidFrameDoesNotCauseAFalseCurveExit
+[       OK ] ControlCoreTest.InvalidFrameDoesNotCauseAFalseCurveExit (0 ms)
+[----------] 9 tests from ControlCoreTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 9 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 9 tests.
+
+
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_control_core.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_control_core.gtest.xml'
