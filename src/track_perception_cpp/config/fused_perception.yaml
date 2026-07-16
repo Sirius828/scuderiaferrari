@@ -88,13 +88,15 @@ fused_perception_node:
     ocr_stable_frames: 2
     ocr_branch_wait_timeout_sec: 0.20
     ocr_unknown_maneuver: "straight"
-    ocr_template_ids: ["rough_right", "irony_straight", "phone_straight", "shortcut_right"]
+    ocr_template_ids: ["rough_right", "irony_straight", "phone_straight", "shortcut_right", "right_dead_end_straight", "left_rough_right_flat"]
     ocr_template_texts:
       - "右道真的有点崎岖，但是直道真的走不了"
       - "右道比直道好走多了？才怪！"
       - "他们来电话了，说不让我方向盘往右打！"
       - "我就说三个字：抄近道"
-    ocr_template_maneuvers: ["right", "straight", "straight", "right"]
+      - "右道是一条不归路！"
+      - "左侧道路崎岖，右侧一马平川"
+    ocr_template_maneuvers: ["right", "straight", "straight", "right", "straight", "right"]
     # 以下三项只为兼容旧配置；闭集识别不再用方向规则投票
     ocr_min_score: 0.75
     ocr_crop_padding_ratio: 0.25
@@ -172,7 +174,7 @@ fused_perception_node:
     human_line_margin_px: 5.0
     human_line_sample_count: 5
     human_line_sample_start_ratio: 0.60
-    human_stop_effective_area_ratio: 0.010
+    human_stop_effective_area_ratio: 0.008
     human_stop_confirm_frames: 2
     human_clear_confirm_frames: 3
     enable_car_right_boundary_filter: true

@@ -1,1 +1,4 @@
+/home/orangepi/scuderiaferrari/install/line_follower_control_cpp/share/line_follower_control_cpp/config/stable0.85.yaml
+/home/orangepi/scuderiaferrari/install/line_follower_control_cpp/share/line_follower_control_cpp/config/stable11s.yaml
+/home/orangepi/scuderiaferrari/install/line_follower_control_cpp/share/line_follower_control_cpp/config/notstable1_05.yaml
 /home/orangepi/scuderiaferrari/install/line_follower_control_cpp/share/line_follower_control_cpp/package.dsv

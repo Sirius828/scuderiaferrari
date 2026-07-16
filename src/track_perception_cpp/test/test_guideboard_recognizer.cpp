@@ -11,6 +11,8 @@ std::vector<GuideboardTemplateSpec> templates() {
       {"irony_straight", "右道比直道好走多了？才怪！", "straight"},
       {"phone_straight", "他们来电话了，说不让我方向盘往右打！", "straight"},
       {"shortcut_right", "我就说三个字：抄近道", "right"},
+      {"right_dead_end_straight", "右道是一条不归路！", "straight"},
+      {"left_rough_right_flat", "左侧道路崎岖，右侧一马平川", "right"},
   };
 }
 
@@ -67,6 +69,13 @@ TEST(GuideboardRecognizerTest, ToleratesObservedOcrErrors) {
       {"右道比直道好重条了？才怪！", "irony_straight"},
       {"他们束电遇了，说不让展方向进往右打！", "phone_straight"},
       {"我就说三个字：抄近道", "shortcut_right"},
+      {"右道是一条无归路", "right_dead_end_straight"},
+      {"方则是一条左归路右调是一张不归路", "right_dead_end_straight"},
+      {"在现是一条无归降占调是一族不归始", "right_dead_end_straight"},
+      {"左侧道路崎岖，右侧一马平川", "left_rough_right_flat"},
+      {"左侧道路低岖，右侧一马平川", "left_rough_right_flat"},
+      {"左创道路崎柜，右一马平川", "left_rough_right_flat"},
+      {"定测道路情恒,右测一马平川", "left_rough_right_flat"},
   };
   for (const auto& test : cases) {
     auto recognizer = makeRecognizer();

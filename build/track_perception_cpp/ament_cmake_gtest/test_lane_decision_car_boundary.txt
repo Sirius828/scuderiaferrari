@@ -6,13 +6,13 @@ Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
 [----------] Global test environment set-up.
 [----------] 13 tests from LaneDecisionCarBoundaryTest
 [ RUN      ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit
-[       OK ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit (1 ms)
+[       OK ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit (2 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.RemovesCarSideFarPointsAndKeepsNearLeftPoints
 [       OK ] LaneDecisionCarBoundaryTest.RemovesCarSideFarPointsAndKeepsNearLeftPoints (1 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.AppliesLeftEdgeRuleEvenWhenCarIsInImageLeftHalf
-[       OK ] LaneDecisionCarBoundaryTest.AppliesLeftEdgeRuleEvenWhenCarIsInImageLeftHalf (0 ms)
+[       OK ] LaneDecisionCarBoundaryTest.AppliesLeftEdgeRuleEvenWhenCarIsInImageLeftHalf (1 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.SmoothsBoundaryAndKeepsItAcrossTwoLostFrames
-[       OK ] LaneDecisionCarBoundaryTest.SmoothsBoundaryAndKeepsItAcrossTwoLostFrames (2 ms)
+[       OK ] LaneDecisionCarBoundaryTest.SmoothsBoundaryAndKeepsItAcrossTwoLostFrames (4 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence
 [       OK ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence (22 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.HumanOnRightPassesRegardlessOfAreaAndDoesNotChangeFit
@@ -26,15 +26,15 @@ Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
 [ RUN      ] LaneDecisionCarBoundaryTest.RightHumanClearsLeftMemoryOnlyAfterConfirmation
 [       OK ] LaneDecisionCarBoundaryTest.RightHumanClearsLeftMemoryOnlyAfterConfirmation (1 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.LostFrameResetsRightConfirmationAndDoesNotClearMemory
-[       OK ] LaneDecisionCarBoundaryTest.LostFrameResetsRightConfirmationAndDoesNotClearMemory (3 ms)
+[       OK ] LaneDecisionCarBoundaryTest.LostFrameResetsRightConfirmationAndDoesNotClearMemory (2 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.HumanCannotBeClearedByRightDetectionWithoutValidFit
-[       OK ] LaneDecisionCarBoundaryTest.HumanCannotBeClearedByRightDetectionWithoutValidFit (2 ms)
+[       OK ] LaneDecisionCarBoundaryTest.HumanCannotBeClearedByRightDetectionWithoutValidFit (1 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive
-[       OK ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive (2 ms)
-[----------] 13 tests from LaneDecisionCarBoundaryTest (38 ms total)
+[       OK ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive (1 ms)
+[----------] 13 tests from LaneDecisionCarBoundaryTest (40 ms total)
 
 [----------] Global test environment tear-down
-[==========] 13 tests from 1 test suite ran. (38 ms total)
+[==========] 13 tests from 1 test suite ran. (40 ms total)
 [  PASSED  ] 13 tests.
 
 

@@ -430,15 +430,18 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<std::string>("ocr_unknown_maneuver", "straight");
     declare_parameter<std::vector<std::string>>(
         "ocr_template_ids",
-        {"rough_right", "irony_straight", "phone_straight", "shortcut_right"});
+        {"rough_right", "irony_straight", "phone_straight", "shortcut_right",
+         "right_dead_end_straight", "left_rough_right_flat"});
     declare_parameter<std::vector<std::string>>(
         "ocr_template_texts",
         {"右道真的有点崎岖，但是直道真的走不了",
          "右道比直道好走多了？才怪！",
          "他们来电话了，说不让我方向盘往右打！",
-         "我就说三个字：抄近道"});
+         "我就说三个字：抄近道",
+         "右道是一条不归路！",
+         "左侧道路崎岖，右侧一马平川"});
     declare_parameter<std::vector<std::string>>(
-        "ocr_template_maneuvers", {"right", "straight", "straight", "right"});
+        "ocr_template_maneuvers", {"right", "straight", "straight", "right", "straight", "right"});
     // Legacy parameters remain declared so old config files still load; closed-set OCR does not use them.
     declare_parameter<double>("ocr_min_score", 0.75);
     declare_parameter<double>("ocr_crop_padding_ratio", 0.25);

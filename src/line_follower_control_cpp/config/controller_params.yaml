@@ -1,3 +1,5 @@
+
+
 # C++ 巡线控制器参数。
 #
 # 调车建议按以下顺序进行，每次只改一组参数：
@@ -14,173 +16,88 @@
 
 /**:
   ros__parameters:
-    # ==================== 基础 PD 控制 ====================
-    # 比例增益：增大后回中更快，但过大容易左右摆动。
-    Kp: 0.92
-    # 微分增益：抑制过冲、提前刹住转向；视觉噪声大时不要过大。
-    Kd: 0.17
-
-    # ==================== 速度与底盘标定 ====================
-    # 直道目标最高速度，单位 m/s；低风险时加速到此速度。
-    linear_speed: 1.20
-    # 弯道动态降速的最低速度，单位 m/s；不是停车速度。
-    min_linear_speed: 0.9
-    # 原始误差持续变大时允许短时低于动态速度下限；0 表示关闭。
-    high_error_rescue_speed: 0.6
-    # 原始误差从该值开始渐进救车，到 curve_entry_error_override 时完全降至救车速度。
-    high_error_rescue_start: 0.70
-    # y09 为负表示车辆位于当前验证过的弯心安全侧；仅在该侧提高动态最低速度。
-    inner_side_min_linear_speed: 0.0
-    # y09 小于此值的负数后才启用安全侧最低速度，避免中心附近频繁切换。
-    inner_side_offset_threshold: 0.05
-    # 车轮半径，单位 m，用于 m/s 到轮速 rps 的换算。
-    wheel_radius: 0.032
-    # 舵量的绝对安全上限，范围 [0, 1]。
-    max_steering: 0.85
-
-    # ==================== 动态舵量上限 ====================
-    # 直道最大舵量；小舵量有助于高速直线稳定。
-    straight_max_steering: 0.3
-    # 弯道最大舵量；弯道允许更大修正。
-    curve_max_steering: 0.80
-    # 风险从该值开始放宽最大舵量。
-    steering_offset_start: 0.20
-    # 风险达到该值时放宽到 curve_max_steering。
-    steering_offset_full: 0.60
-    # false 时固定使用 max_steering，便于只调基础 PD。
-    enable_dynamic_steering_limit: true
-    # 入弯时 offset 已给出大误差、但航向尚未确认弯道时的临时舵量上限；0 表示关闭。
-    curve_entry_max_steering: 0.50
-    # 控制误差首次超过该值时触发短时入弯窗口，避免限制直线小修正。
-    curve_entry_error_start: 0.30
-    # 控制误差达到该值立即解除入弯限舵，保留大偏差救车能力。
-    curve_entry_error_override: 0.85
-    # 航向绝对值达到该值后认为弯道方向已确认，解除入弯限舵。
-    curve_entry_heading_confirm: 0.40
-    # 每个弯道第一次设舵由上面的上限渐进放权到正常弯道舵量，单位 s；0 使用旧逻辑。
-    curve_entry_window_time: 0.30
-
-    # ==================== 动态速度 ====================
-    # true：根据近场偏差、航向、曲率和前瞻偏差超量动态调速。
-    # true：直道加速，弯道按风险连续降速。
-    enable_dynamic_speed: true
-    # 风险低于该值时保持 linear_speed。
-    speed_offset_start: 0.08
-    # 风险达到该值时降至 min_linear_speed；提前减速，为宽岔路换向留出修正时间。
-    speed_offset_full: 0.45
-    # 动态减速曲线指数；大于 1 时，中等风险少降速，高风险仍降到原安全下限。
-    speed_slowdown_exponent: 1.00
-    # 控制误差快速变化通常对应出弯反号；仅在高变化率窗口提前减速。
-    speed_error_rate_start: 1.50
-    speed_error_rate_full: 3.00
-    # 加速斜率，单位 m/s^2；限制突然冲刺。
-    speed_accel_rate: 0.55
-    # 减速斜率，单位 m/s^2；越大越快降速。
-    speed_decel_rate: 5.0
-    # 长期 BRANCH 仅表示路径模板锁定，不参与速度决策；保持 0 关闭岔路最高速度覆盖。
-    branch_max_speed: 0.0
-    # 保持 0，使 BRANCH 与普通路段共用 min_linear_speed。
-    branch_min_speed: 0.0
-    # 曲率对速度风险的权重，范围 [0, 1]。
-    curvature_speed_weight: 0.12
-    # 远端 offset 单独参与速度风险；只提前刹车，不改变舵机的多点权重。
-    far_offset_speed_weight: 0.95
-
-    # ==================== 多位置 offset 反馈 ====================
-    # 远处到近处的 offset 权重，控制器会按总和归一化。
-    offset_y07_weight: 0.65
-    offset_y08_weight: 0.30
-    offset_y09_weight: 0.05
-    # true：当近端偏移明显大于远端时，连续切换到下面的中近场权重。
-    enable_adaptive_offset_weights: false
-    # 出弯/偏移直道使用的权重；提高近端反馈，使车辆持续回中而不是延迟后突然修正。
-    near_offset_y07_weight: 0.35
-    near_offset_y08_weight: 0.35
-    near_offset_y09_weight: 0.30
-    # abs(y09)-abs(y07) 从 start 到 full 时，由远端权重连续过渡到中近端权重。
-    near_offset_advantage_start: 0.06
-    near_offset_advantage_full: 0.30
-    # 航向误差增益；控制器按图像 y 轴方向修正符号，用于在弯中保持提前舵量。
-    heading_feedback_gain: 0.33
-    # 出弯时远端 y07 会先于近端 y09 反号；该差分项用于提前换舵，减小直道入口横摆。
-    # 自适应进入中近端模式后，此差分项会同步连续减弱，避免抵消出弯回中量。
-    lookahead_transition_gain: 0.10
-    # 有符号弯道横向偏置：正值目标靠弯外，负值目标靠弯内。
-    curve_outer_bias: -0.02
-    # 航向强度从该值开始逐步施加外线偏置。
-    curve_outer_bias_start: 0.35
-    # 航向强度达到该值时施加完整外线偏置。
-    curve_outer_bias_full: 0.50
-    # 内侧偏置不延时保持，出弯随航向减弱立即释放，避免继续向弯心拉车。
-    curve_outer_bias_hold_time: 0.0
-    # 长期 BRANCH 仅负责模板选择，不能锁住入岔时的弯道偏置方向。
-    lock_branch_outer_bias: false
-    # 出岔后平滑释放锁定偏置，单位 s；仅平滑转向目标，不延长岔路限速。
-    branch_outer_bias_release_time: 0.80
-    # 弯道强度低于该值时，不放宽前瞻偏差的影响。
-    curve_offset_relief_start: 0.15
-    # 弯道强度达到该值时，前瞻偏差不再直接作为风险来源。
-    curve_offset_relief_full: 0.60
-
-    # 弯道 offset 容许区间：用于让合理的弯内前瞻偏差不触发减速。
-    # 弯道强度在 relief_start/full 之间时，容许值从 straight 线性增加到 curve。
-    # 只有 abs(weighted_offset) 超过 allowed_offset，超出部分才进入速度风险。
-    enable_curve_offset_allowance: false
-    # true 时在强弯中减弱前瞻误差，优先使用近场误差稳定车辆。
-    enable_curve_offset_relief: false
-    # Human 避障由 fused 直接调用 /line_follower/start 和 /line_follower/stop；
-    # /race/emergency_stop 仍然保留为独立紧急停车联锁。
-    # 直道允许的前瞻偏差，范围 [0, 1]。
-    straight_allowed_offset: 0.05
-    # 强弯允许的前瞻偏差，范围 [straight_allowed_offset, 1]。
-    curve_allowed_offset: 0.60
-
-    # ==================== 微分与输出平滑 ====================
-    # 微分项绝对限幅，单位 1/s；0 表示不限制。
-    derivative_limit: 1.3
-    # 微分低通滤波系数，范围 [0, 1]；越小越平滑但响应越慢。
-    derivative_filter_alpha: 0.30
-    # 误差已经回落时的额外微分阻尼；只加强刹舵，不放大入弯同向加舵。
-    derivative_brake_gain: 1.15
-    # 舵量变化率上限，单位 1/s；0 表示不限制。
-    steering_slew_rate: 3.5
-    # 出弯回正变化率，单位 1/s；小于加舵变化率可避免突然卸舵后反复修正。
-    steering_return_slew_rate: 3.0
-    # 岔路及出岔保护窗内的双向舵量上限，抑制宽路中心线迁移造成的先右拉再左甩。
-    branch_max_steering: 0.0
-    # 最近一次 BRANCH 消失后继续保持岔路速度/舵角保护的时间，单位 s。
-    branch_exit_hold_time: 0.20
-    # 岔路保护窗内控制误差的最大变化率，单位 1/s；0 表示关闭。
-    branch_error_slew_rate: 2.0
-    # 出岔保护结束后，受限误差追上真实误差的变化率，单位 1/s。
-    branch_error_recovery_rate: 2.00
-
-    # ==================== 感知安全 ====================
-    # offset、is_valid 和几何数据允许的最大年龄，单位 s。
-    offset_timeout: 0.25
-    # 行驶中原始画面采样签名完全不变超过该时间，判定上游重复/冻结画面并停车；0 表示关闭。
-    geometry_stall_timeout: 0.20
-    # geometry_stall 停车后，仅在新的有效道路数据持续恢复时自动重新发车。
-    enable_geometry_stall_auto_resume: true
-    # 新几何数据连续有效达到该时间后才恢复，单位 s。
-    geometry_stall_recovery_time: 0.50
-    # lane_state 置信度低于此值时禁止发车并锁定停车。
-    min_perception_confidence: 0.50
-    # 感知短暂失效时保持的最高速度，单位 m/s。
-    invalid_hold_speed: 0.10
-    # 启动后是否自动尝试发车；false 时必须调用 /line_follower/start。
+    Kd: 0.235
+    Kp: 0.67
     autonomous_enabled_on_start: false
-
-    # ==================== ROS 接口 ====================
-    # 舵量符号：如果车辆修正方向相反，只改为 -1.0。
-    steering_sign: 1.0
-    # 控制循环频率，单位 Hz；启动后不可动态修改。
+    branch_error_recovery_rate: 2.0
+    branch_error_slew_rate: 2.0
+    branch_exit_hold_time: 0.2
+    branch_max_speed: 0.0
+    branch_max_steering: 0.0
+    branch_min_speed: 0.0
+    branch_outer_bias_release_time: 0.8
+    cmd_vel_topic: /cmd_vel
     control_frequency: 50.0
-    # 控制器默认不抢占其它节点的话题，调试时确保只有一个 /cmd_vel 发布者。
-    offset_y07_topic: "/segmentation/offset_y07"
-    offset_y08_topic: "/segmentation/offset_y08"
-    offset_y09_topic: "/segmentation/offset_y09"
-    heading_error_topic: "/segmentation/heading_error"
-    curvature_topic: "/segmentation/curvature"
-    lane_state_topic: "/perception/lane_state"
-    cmd_vel_topic: "/cmd_vel"
+    curvature_speed_weight: 0.12
+    curvature_topic: /segmentation/curvature
+    curve_allowed_offset: 0.6
+    curve_entry_error_override: 0.85
+    curve_entry_error_start: 0.3
+    curve_entry_heading_confirm: 0.4
+    curve_entry_max_steering: 0.5
+    curve_entry_window_time: 0.3
+    curve_max_steering: 0.82
+    curve_offset_relief_full: 0.6
+    curve_offset_relief_start: 0.15
+    curve_outer_bias: -0.02
+    curve_outer_bias_full: 0.5
+    curve_outer_bias_hold_time: 0.0
+    curve_outer_bias_start: 0.35
+    derivative_brake_gain: 1.15
+    derivative_filter_alpha: 0.3
+    derivative_limit: 1.3
+    enable_adaptive_offset_weights: false
+    enable_curve_offset_allowance: false
+    enable_curve_offset_relief: false
+    enable_dynamic_speed: true
+    enable_dynamic_steering_limit: true
+    enable_geometry_stall_auto_resume: true
+    far_offset_speed_weight: 0.95
+    geometry_stall_recovery_time: 0.5
+    geometry_stall_timeout: 0.2
+    heading_error_topic: /segmentation/heading_error
+    heading_feedback_gain: 0.4
+    high_error_rescue_speed: 1.0
+    high_error_rescue_start: 0.7
+    inner_side_min_linear_speed: 0.0
+    inner_side_offset_threshold: 0.05
+    invalid_hold_speed: 0.1
+    lane_state_topic: /perception/lane_state
+    linear_speed: 1.2
+    lock_branch_outer_bias: false
+    lookahead_transition_gain: 0.1
+    max_steering: 0.85
+    min_linear_speed: 1.1
+    min_perception_confidence: 0.5
+    near_offset_advantage_full: 0.3
+    near_offset_advantage_start: 0.06
+    near_offset_y07_weight: 0.55
+    near_offset_y08_weight: 0.4
+    near_offset_y09_weight: 0.25
+    offset_timeout: 0.25
+    offset_y07_topic: /segmentation/offset_y07
+    offset_y07_weight: 0.65
+    offset_y08_topic: /segmentation/offset_y08
+    offset_y08_weight: 0.3
+    offset_y09_topic: /segmentation/offset_y09
+    offset_y09_weight: 0.05
+    qos_overrides./parameter_events.publisher.depth: 1000
+    qos_overrides./parameter_events.publisher.durability: volatile
+    qos_overrides./parameter_events.publisher.history: keep_last
+    qos_overrides./parameter_events.publisher.reliability: reliable
+    speed_accel_rate: 1.0
+    speed_decel_rate: 5.0
+    speed_error_rate_full: 3.0
+    speed_error_rate_start: 1.5
+    speed_offset_full: 0.45
+    speed_offset_start: 0.08
+    speed_slowdown_exponent: 1.0
+    steering_offset_full: 0.6
+    steering_offset_start: 0.2
+    steering_return_slew_rate: 3.0
+    steering_sign: 1.0
+    steering_slew_rate: 3.5
+    straight_allowed_offset: 0.05
+    straight_max_steering: 0.3
+    use_sim_time: false
+    wheel_radius: 0.0275 #0.032
