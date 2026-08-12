@@ -544,3 +544,22 @@ bottom_offset + heading_error + curvature + 实际舵量 + 实际速度
 offset有小值改变的时候没有做出响应导致offset累积形成救车或者大舵的情况
 
 设置大p看出入弯情况，后面长测检查舵量分配和使用比例
+不过以现在的情况有概率会撞到car，我想测试一下另一个方案。膨胀car的框，把在范围内的拟合点都推开，之后在生成拟合线。这样更不容易撞到car。请你把这个功能也设置为一个能开关的参数。膨胀方法看哪个算法消耗资源少，优先扩张左边和下面
+
+orangepi@orangepi5:~$ sudo npm install -g @openai/codex@latest
+[sudo] password for orangepi: 
+npm error code ENOTEMPTY
+npm error syscall rename
+npm error path /usr/lib/node_modules/@openai/codex
+npm error dest /usr/lib/node_modules/@openai/.codex-XCNbUSl9
+npm error errno -39
+npm error ENOTEMPTY: directory not empty, rename '/usr/lib/node_modules/@openai/codex' -> '/usr/lib/node_modules/@openai/.codex-XCNbUSl9'
+npm error A complete log of this run can be found in: /root/.npm/_logs/2026-07-18T17_35_07_373Z-debug-0.log
+
+which codex
+codex --version
+npm list -g --depth=0
+ls -la /usr/lib/node_modules/@openai
+sudo rm -rf /usr/lib/node_modules/@openai/codex
+sudo rm -rf /usr/lib/node_modules/@openai/.codex-*
+sudo npm install -g @openai/codex@latest

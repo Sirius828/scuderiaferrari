@@ -1,0 +1,166 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Release-805e738b70eae49ff931.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8
+					]
+				},
+				{
+					"build" : "gtest",
+					"jsonFile" : "directory-gtest-Release-a2408fe1a73b92c5e636.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.8"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "/opt/ros/humble/src/gtest_vendor",
+					"targetIndexes" : 
+					[
+						1,
+						2
+					]
+				}
+			],
+			"name" : "Release",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "track_perception_cpp",
+					"targetIndexes" : 
+					[
+						0,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "gtest",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						1,
+						2
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "fused_perception_node::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-fused_perception_node-Release-e74cf5fba244d42b679d.json",
+					"name" : "fused_perception_node",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "gtest::@0af4add9fe94340e763e",
+					"jsonFile" : "target-gtest-Release-4e348fb10ad82784f30d.json",
+					"name" : "gtest",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "gtest_main::@0af4add9fe94340e763e",
+					"jsonFile" : "target-gtest_main-Release-d209974883240d0aeb99.json",
+					"name" : "gtest_main",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "test_guideboard_recognizer::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-test_guideboard_recognizer-Release-53e0579bcf8c32139498.json",
+					"name" : "test_guideboard_recognizer",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "test_guideboard_route_policy::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-test_guideboard_route_policy-Release-9f581321f6ae5735372d.json",
+					"name" : "test_guideboard_route_policy",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "test_lane_decision_car_boundary::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-test_lane_decision_car_boundary-Release-4b6c3c801b9cd892463c.json",
+					"name" : "test_lane_decision_car_boundary",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "test_lane_guideboard_wait::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-test_lane_guideboard_wait-Release-12c80d0e625120b7ee80.json",
+					"name" : "test_lane_guideboard_wait",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "track_perception_cpp_uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-track_perception_cpp_uninstall-Release-d8ec140ba75f9ff47a06.json",
+					"name" : "track_perception_cpp_uninstall",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-uninstall-Release-e95413a1b57a7d847ed8.json",
+					"name" : "uninstall",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/orangepi/scuderiaferrari/build/track_perception_cpp",
+		"source" : "/home/orangepi/scuderiaferrari/src/track_perception_cpp"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

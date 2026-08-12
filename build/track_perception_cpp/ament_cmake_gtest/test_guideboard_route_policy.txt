@@ -1,0 +1,27 @@
+-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/track_perception_cpp':
+ - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_guideboard_route_policy --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_route_policy.gtest.xml
+
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 5 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 5 tests from GuideboardRoutePolicyTest
+[ RUN      ] GuideboardRoutePolicyTest.FirstStraightMakesSecondRightWithoutRecognition
+[       OK ] GuideboardRoutePolicyTest.FirstStraightMakesSecondRightWithoutRecognition (0 ms)
+[ RUN      ] GuideboardRoutePolicyTest.FirstRightMakesSecondStraightWithoutRecognition
+[       OK ] GuideboardRoutePolicyTest.FirstRightMakesSecondStraightWithoutRecognition (0 ms)
+[ RUN      ] GuideboardRoutePolicyTest.FirstFailureRequiresSecondRecoveryRecognition
+[       OK ] GuideboardRoutePolicyTest.FirstFailureRequiresSecondRecoveryRecognition (0 ms)
+[ RUN      ] GuideboardRoutePolicyTest.SecondRecoveryFailureFallsBackStraightAndFinishes
+[       OK ] GuideboardRoutePolicyTest.SecondRecoveryFailureFallsBackStraightAndFinishes (0 ms)
+[ RUN      ] GuideboardRoutePolicyTest.DetectionAloneNeverAdvancesRoutePhase
+[       OK ] GuideboardRoutePolicyTest.DetectionAloneNeverAdvancesRoutePhase (0 ms)
+[----------] 5 tests from GuideboardRoutePolicyTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 5 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 5 tests.
+
+
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_route_policy.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_route_policy.gtest.xml'

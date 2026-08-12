@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="(empty)"
+	BuildStamp="20260811-1736-Experimental"
+	Name="orangepi5"
+	Generator="ctest-3.22.1"
+	CompilerName="/usr/bin/c++"
+	CompilerVersion="11.4.0"
+	OSName="Linux"
+	Hostname="orangepi5"
+	OSRelease="6.1.99-rockchip-rk3588"
+	OSVersion="#1.2.2 SMP Thu Jun 26 14:42:53 CST 2025"
+	OSPlatform="aarch64"
+	Is64Bits="1"
+	VendorString=""
+	VendorID="Unknown Manufacturer"
+	FamilyID="8"
+	ModelID="0"
+	ProcessorCacheSize="0"
+	NumberOfLogicalCPU="8"
+	NumberOfPhysicalCPU="1"
+	TotalVirtualMemory="3967"
+	TotalPhysicalMemory="7934"
+	LogicalProcessorsPerPhysical="8"
+	ProcessorClockFrequency="0"
+	>
+	<Testing>
+		<StartDateTime>Aug 12 01:36 CST</StartDateTime>
+		<StartTestTime>1786469774</StartTestTime>
+		<TestList>
+			<Test>./test_guideboard_recognizer</Test>
+			<Test>./test_guideboard_route_policy</Test>
+			<Test>./test_lane_guideboard_wait</Test>
+			<Test>./test_lane_decision_car_boundary</Test>
+		</TestList>
+		<Test Status="passed">
+			<Name>test_guideboard_recognizer</Name>
+			<Path>.</Path>
+			<FullName>./test_guideboard_recognizer</FullName>
+			<FullCommandLine>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_recognizer.gtest.xml" "--package-name" "track_perception_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/ament_cmake_gtest/test_guideboard_recognizer.txt" "--command" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_guideboard_recognizer" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_recognizer.gtest.xml"</FullCommandLine>
+			<Results>
+				<NamedMeasurement type="numeric/double" name="Execution Time">
+					<Value>0.17416</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="numeric/double" name="Processors">
+					<Value>1</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Completion Status">
+					<Value>Completed</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Command Line">
+					<Value>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_recognizer.gtest.xml" "--package-name" "track_perception_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/ament_cmake_gtest/test_guideboard_recognizer.txt" "--command" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_guideboard_recognizer" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_recognizer.gtest.xml"</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Environment">
+					<Value>#CTEST_RESOURCE_GROUP_COUNT=</Value>
+				</NamedMeasurement>
+				<Measurement>
+					<Value>-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/track_perception_cpp':
+ - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_guideboard_recognizer --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_recognizer.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 8 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 8 tests from GuideboardRecognizerTest
+[ RUN      ] GuideboardRecognizerTest.NormalizesUtf8AndPunctuation
+[       OK ] GuideboardRecognizerTest.NormalizesUtf8AndPunctuation (0 ms)
+[ RUN      ] GuideboardRecognizerTest.ComputesLcsByUnicodeCodepoint
+[       OK ] GuideboardRecognizerTest.ComputesLcsByUnicodeCodepoint (0 ms)
+[ RUN      ] GuideboardRecognizerTest.ExactTemplateHasUniqueCharacterBigrams
+[       OK ] GuideboardRecognizerTest.ExactTemplateHasUniqueCharacterBigrams (0 ms)
+[ RUN      ] GuideboardRecognizerTest.ClassifiesAllExactTemplatesAfterTwoFrames
+[       OK ] GuideboardRecognizerTest.ClassifiesAllExactTemplatesAfterTwoFrames (0 ms)
+[ RUN      ] GuideboardRecognizerTest.ToleratesObservedOcrErrors
+[       OK ] GuideboardRecognizerTest.ToleratesObservedOcrErrors (1 ms)
+[ RUN      ] GuideboardRecognizerTest.CommonOrWeakTextRemainsUnknown
+[       OK ] GuideboardRecognizerTest.CommonOrWeakTextRemainsUnknown (0 ms)
+[ RUN      ] GuideboardRecognizerTest.ResetClearsStableEvidence
+[       OK ] GuideboardRecognizerTest.ResetClearsStableEvidence (0 ms)
+[ RUN      ] GuideboardRecognizerTest.RejectsInvalidConfiguration
+[       OK ] GuideboardRecognizerTest.RejectsInvalidConfiguration (0 ms)
+[----------] 8 tests from GuideboardRecognizerTest (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 8 tests from 1 test suite ran. (1 ms total)
+[  PASSED  ] 8 tests.
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_recognizer.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_recognizer.gtest.xml'
+</Value>
+				</Measurement>
+			</Results>
+			<Labels>
+				<Label>gtest</Label>
+			</Labels>
+		</Test>
+		<Test Status="passed">
+			<Name>test_guideboard_route_policy</Name>
+			<Path>.</Path>
+			<FullName>./test_guideboard_route_policy</FullName>
+			<FullCommandLine>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_route_policy.gtest.xml" "--package-name" "track_perception_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/ament_cmake_gtest/test_guideboard_route_policy.txt" "--command" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_guideboard_route_policy" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_route_policy.gtest.xml"</FullCommandLine>
+			<Results>
+				<NamedMeasurement type="numeric/double" name="Execution Time">
+					<Value>0.117762</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="numeric/double" name="Processors">
+					<Value>1</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Completion Status">
+					<Value>Completed</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Command Line">
+					<Value>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_route_policy.gtest.xml" "--package-name" "track_perception_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/ament_cmake_gtest/test_guideboard_route_policy.txt" "--command" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_guideboard_route_policy" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_route_policy.gtest.xml"</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Environment">
+					<Value>#CTEST_RESOURCE_GROUP_COUNT=</Value>
+				</NamedMeasurement>
+				<Measurement>
+					<Value>-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/track_perception_cpp':
+ - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_guideboard_route_policy --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_route_policy.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 5 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 5 tests from GuideboardRoutePolicyTest
+[ RUN      ] GuideboardRoutePolicyTest.FirstStraightMakesSecondRightWithoutRecognition
+[       OK ] GuideboardRoutePolicyTest.FirstStraightMakesSecondRightWithoutRecognition (0 ms)
+[ RUN      ] GuideboardRoutePolicyTest.FirstRightMakesSecondStraightWithoutRecognition
+[       OK ] GuideboardRoutePolicyTest.FirstRightMakesSecondStraightWithoutRecognition (0 ms)
+[ RUN      ] GuideboardRoutePolicyTest.FirstFailureRequiresSecondRecoveryRecognition
+[       OK ] GuideboardRoutePolicyTest.FirstFailureRequiresSecondRecoveryRecognition (0 ms)
+[ RUN      ] GuideboardRoutePolicyTest.SecondRecoveryFailureFallsBackStraightAndFinishes
+[       OK ] GuideboardRoutePolicyTest.SecondRecoveryFailureFallsBackStraightAndFinishes (0 ms)
+[ RUN      ] GuideboardRoutePolicyTest.DetectionAloneNeverAdvancesRoutePhase
+[       OK ] GuideboardRoutePolicyTest.DetectionAloneNeverAdvancesRoutePhase (0 ms)
+[----------] 5 tests from GuideboardRoutePolicyTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 5 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 5 tests.
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_route_policy.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_route_policy.gtest.xml'
+</Value>
+				</Measurement>
+			</Results>
+			<Labels>
+				<Label>gtest</Label>
+			</Labels>
+		</Test>
+		<Test Status="passed">
+			<Name>test_lane_guideboard_wait</Name>
+			<Path>.</Path>
+			<FullName>./test_lane_guideboard_wait</FullName>
+			<FullCommandLine>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_guideboard_wait.gtest.xml" "--package-name" "track_perception_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/ament_cmake_gtest/test_lane_guideboard_wait.txt" "--command" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_guideboard_wait" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_guideboard_wait.gtest.xml"</FullCommandLine>
+			<Results>
+				<NamedMeasurement type="numeric/double" name="Execution Time">
+					<Value>0.21249</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="numeric/double" name="Processors">
+					<Value>1</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Completion Status">
+					<Value>Completed</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Command Line">
+					<Value>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_guideboard_wait.gtest.xml" "--package-name" "track_perception_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/ament_cmake_gtest/test_lane_guideboard_wait.txt" "--command" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_guideboard_wait" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_guideboard_wait.gtest.xml"</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Environment">
+					<Value>#CTEST_RESOURCE_GROUP_COUNT=</Value>
+				</NamedMeasurement>
+				<Measurement>
+					<Value>-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/track_perception_cpp':
+ - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_guideboard_wait --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_guideboard_wait.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from LaneGuideboardWaitTest
+[ RUN      ] LaneGuideboardWaitTest.WaitsForHintThenFallsBackStraight
+[       OK ] LaneGuideboardWaitTest.WaitsForHintThenFallsBackStraight (36 ms)
+[ RUN      ] LaneGuideboardWaitTest.StableHintLocksImmediately
+[       OK ] LaneGuideboardWaitTest.StableHintLocksImmediately (0 ms)
+[ RUN      ] LaneGuideboardWaitTest.NoGuideboardLocksStraightWithoutHintWait
+[       OK ] LaneGuideboardWaitTest.NoGuideboardLocksStraightWithoutHintWait (0 ms)
+[ RUN      ] LaneGuideboardWaitTest.UsesLateHintAfterGuideboardLeavesRoi
+[       OK ] LaneGuideboardWaitTest.UsesLateHintAfterGuideboardLeavesRoi (0 ms)
+[ RUN      ] LaneGuideboardWaitTest.PropagatesRouteDecisionSource
+[       OK ] LaneGuideboardWaitTest.PropagatesRouteDecisionSource (0 ms)
+[ RUN      ] LaneGuideboardWaitTest.RearmsOnlyAfterHoldEndsAndBranchClears
+[       OK ] LaneGuideboardWaitTest.RearmsOnlyAfterHoldEndsAndBranchClears (0 ms)
+[----------] 6 tests from LaneGuideboardWaitTest (36 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (36 ms total)
+[  PASSED  ] 6 tests.
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_guideboard_wait.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_guideboard_wait.gtest.xml'
+</Value>
+				</Measurement>
+			</Results>
+			<Labels>
+				<Label>gtest</Label>
+			</Labels>
+		</Test>
+		<Test Status="passed">
+			<Name>test_lane_decision_car_boundary</Name>
+			<Path>.</Path>
+			<FullName>./test_lane_decision_car_boundary</FullName>
+			<FullCommandLine>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml" "--package-name" "track_perception_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/ament_cmake_gtest/test_lane_decision_car_boundary.txt" "--command" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_decision_car_boundary" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml"</FullCommandLine>
+			<Results>
+				<NamedMeasurement type="numeric/double" name="Execution Time">
+					<Value>0.212902</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="numeric/double" name="Processors">
+					<Value>1</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Completion Status">
+					<Value>Completed</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Command Line">
+					<Value>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml" "--package-name" "track_perception_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/ament_cmake_gtest/test_lane_decision_car_boundary.txt" "--command" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_decision_car_boundary" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml"</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Environment">
+					<Value>#CTEST_RESOURCE_GROUP_COUNT=</Value>
+				</NamedMeasurement>
+				<Measurement>
+					<Value>-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/track_perception_cpp':
+ - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_decision_car_boundary --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 22 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 22 tests from LaneDecisionCarBoundaryTest
+[ RUN      ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit
+[       OK ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RemovesCarSideFarPointsAndKeepsNearLeftPoints
+[       OK ] LaneDecisionCarBoundaryTest.RemovesCarSideFarPointsAndKeepsNearLeftPoints (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.AppliesLeftEdgeRuleEvenWhenCarIsInImageLeftHalf
+[       OK ] LaneDecisionCarBoundaryTest.AppliesLeftEdgeRuleEvenWhenCarIsInImageLeftHalf (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.PushesExpandedCarPointsAndDeletesOutsideFarPoints
+[       OK ] LaneDecisionCarBoundaryTest.PushesExpandedCarPointsAndDeletesOutsideFarPoints (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.PushModeIsSwitchableAndDoesNotStackLegacyDeletion
+[       OK ] LaneDecisionCarBoundaryTest.PushModeIsSwitchableAndDoesNotStackLegacyDeletion (2 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.SmoothsBoundaryAndKeepsItAcrossTwoLostFrames
+[       OK ] LaneDecisionCarBoundaryTest.SmoothsBoundaryAndKeepsItAcrossTwoLostFrames (4 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence
+[       OK ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence (24 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.HumanOnRightPassesRegardlessOfAreaAndDoesNotChangeFit
+[       OK ] LaneDecisionCarBoundaryTest.HumanOnRightPassesRegardlessOfAreaAndDoesNotChangeFit (0 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.HumanAtRightEdgePassesEvenWhenFitLineLeavesNoRightSpace
+[       OK ] LaneDecisionCarBoundaryTest.HumanAtRightEdgePassesEvenWhenFitLineLeavesNoRightSpace (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RightEdgeBoundaryIsInclusiveAndOutsideStillUsesFitLine
+[       OK ] LaneDecisionCarBoundaryTest.RightEdgeBoundaryIsInclusiveAndOutsideStillUsesFitLine (0 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RightEdgePassesWhenFitIsInvalid
+[       OK ] LaneDecisionCarBoundaryTest.RightEdgePassesWhenFitIsInvalid (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.LeftHumanLatchesWithoutStoppingBelowAreaThreshold
+[       OK ] LaneDecisionCarBoundaryTest.LeftHumanLatchesWithoutStoppingBelowAreaThreshold (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.HumanNeverEntersLegacyBandExclusionPath
+[       OK ] LaneDecisionCarBoundaryTest.HumanNeverEntersLegacyBandExclusionPath (0 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.LargeLeftHumanStopsAndLostDetectionDoesNotReleaseStop
+[       OK ] LaneDecisionCarBoundaryTest.LargeLeftHumanStopsAndLostDetectionDoesNotReleaseStop (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RightHumanClearsLeftMemoryOnlyAfterConfirmation
+[       OK ] LaneDecisionCarBoundaryTest.RightHumanClearsLeftMemoryOnlyAfterConfirmation (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RightEdgeHumanClearsLeftMemoryImmediately
+[       OK ] LaneDecisionCarBoundaryTest.RightEdgeHumanClearsLeftMemoryImmediately (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RightEdgeHumanReleasesActiveStop
+[       OK ] LaneDecisionCarBoundaryTest.RightEdgeHumanReleasesActiveStop (0 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.NonpassableHumanBlocksRightEdgeClear
+[       OK ] LaneDecisionCarBoundaryTest.NonpassableHumanBlocksRightEdgeClear (6 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.DisablingRightEdgePassRestoresFitLineJudgement
+[       OK ] LaneDecisionCarBoundaryTest.DisablingRightEdgePassRestoresFitLineJudgement (0 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.LostFrameResetsRightConfirmationAndDoesNotClearMemory
+[       OK ] LaneDecisionCarBoundaryTest.LostFrameResetsRightConfirmationAndDoesNotClearMemory (2 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.HumanCannotBeClearedByRightDetectionWithoutValidFit
+[       OK ] LaneDecisionCarBoundaryTest.HumanCannotBeClearedByRightDetectionWithoutValidFit (0 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive
+[       OK ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive (2 ms)
+[----------] 22 tests from LaneDecisionCarBoundaryTest (50 ms total)
+
+[----------] Global test environment tear-down
+[==========] 22 tests from 1 test suite ran. (50 ms total)
+[  PASSED  ] 22 tests.
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml'
+</Value>
+				</Measurement>
+			</Results>
+			<Labels>
+				<Label>gtest</Label>
+			</Labels>
+		</Test>
+		<EndDateTime>Aug 12 01:36 CST</EndDateTime>
+		<EndTestTime>1786469775</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>

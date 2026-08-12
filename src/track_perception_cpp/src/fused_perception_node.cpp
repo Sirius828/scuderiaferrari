@@ -4,6 +4,8 @@
 #include <chrono>
 #include <cctype>
 #include <cmath>
+#include <cstdlib>
+#include <deque>
 #include <filesystem>
 #include <future>
 #include <memory>
@@ -25,7 +27,9 @@
 #include <opencv2/opencv.hpp>
 
 #include "ppocr_direction_system.h"
+#include "track_perception_cpp/guideboard_api_client.hpp"
 #include "track_perception_cpp/guideboard_recognizer.hpp"
+#include "track_perception_cpp/guideboard_route_policy.hpp"
 #include "track_perception_cpp/lane_decision.hpp"
 #include "track_perception_cpp/shm_reader.hpp"
 #include "track_perception_cpp/yolo_detector.hpp"
@@ -213,6 +217,16 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"car_left_x\":" << debug_info.car_left_x << ","
      << "\"car_filtered_point_count\":" << debug_info.car_filtered_point_count << ","
      << "\"car_boundary_lost_count\":" << debug_info.car_boundary_lost_count << ","
+     << "\"car_push_active\":" << (debug_info.car_push_active ? "true" : "false") << ","
+     << "\"car_push_target_x\":" << debug_info.car_push_target_x << ","
+     << "\"car_push_expand_bottom_y\":" << debug_info.car_push_expand_bottom_y << ","
+     << "\"car_pushed_point_count\":" << debug_info.car_pushed_point_count << ","
+     << "\"car_deleted_point_count\":" << debug_info.car_deleted_point_count << ","
+     << "\"car_bbox\":[" << debug_info.car_bbox.x << "," << debug_info.car_bbox.y << ","
+     << debug_info.car_bbox.width << "," << debug_info.car_bbox.height << "],"
+     << "\"car_expanded_bbox\":[" << debug_info.car_expanded_bbox.x << ","
+     << debug_info.car_expanded_bbox.y << "," << debug_info.car_expanded_bbox.width << ","
+     << debug_info.car_expanded_bbox.height << "],"
      << "\"human_left_seen_latched\":" << (debug_info.human_left_seen_latched ? "true" : "false") << ","
      << "\"human_passable\":" << (debug_info.human_passable ? "true" : "false") << ","
      << "\"human_right_clear_confirming\":"
@@ -221,6 +235,10 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"human_effective_left_x\":" << debug_info.human_effective_left_x << ","
      << "\"human_fit_line_limit_x\":" << debug_info.human_fit_line_limit_x << ","
      << "\"human_effective_area_ratio\":" << debug_info.human_effective_area_ratio << ","
+     << "\"human_right_edge_passable\":"
+     << (debug_info.human_right_edge_passable ? "true" : "false") << ","
+     << "\"human_right_edge_limit_x\":" << debug_info.human_right_edge_limit_x << ","
+     << "\"human_right_edge_pass_count\":" << debug_info.human_right_edge_pass_count << ","
      << "\"human_state\":\"" << jsonEscape(debug_info.human_state) << "\","
      << "\"human_right_clear_confirm_count\":" << debug_info.human_right_clear_confirm_count << ","
      << "\"human_stop_confirm_count\":" << debug_info.human_stop_confirm_count << ","
@@ -233,6 +251,19 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"guideboard_waiting_for_hint\":"
      << (debug_info.guideboard_waiting_for_hint ? "true" : "false") << ","
      << "\"guideboard_hint_wait_elapsed\":" << debug_info.guideboard_hint_wait_elapsed << ","
+     << "\"guideboard_seen_latched\":"
+     << (debug_info.guideboard_seen_latched ? "true" : "false") << ","
+     << "\"branch_event_armed\":"
+     << (debug_info.branch_event_armed ? "true" : "false") << ","
+     << "\"branch_event_rearmed\":"
+     << (debug_info.branch_event_rearmed ? "true" : "false") << ","
+     << "\"branch_lock_event\":"
+     << (debug_info.branch_lock_event ? "true" : "false") << ","
+     << "\"branch_lock_guideboard\":"
+     << (debug_info.branch_lock_guideboard ? "true" : "false") << ","
+     << "\"branch_event_id\":" << debug_info.branch_event_id << ","
+     << "\"branch_decision_source\":\""
+     << jsonEscape(debug_info.branch_decision_source) << "\","
      << "\"encoder_hold\":" << (debug_info.encoder_hold ? "true" : "false") << ","
      << "\"encoder_hold_side\":\"" << jsonEscape(debug_info.encoder_hold_side) << "\","
      << "\"encoder_count\":" << debug_info.encoder_count << ","
@@ -294,6 +325,14 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
     const auto& point = debug_info.removed_fit_points[i];
     ss << "[" << point.x << "," << point.y << "," << point.z << "]";
   }
+  ss << "],\"pushed_fit_points\":[";
+  for (size_t i = 0; i < debug_info.pushed_fit_points.size(); ++i) {
+    if (i > 0) {
+      ss << ",";
+    }
+    const auto& point = debug_info.pushed_fit_points[i];
+    ss << "[" << point.x << "," << point.y << "," << point.z << "]";
+  }
   ss << "],\"fit_coeffs\":[";
   for (size_t i = 0; i < debug_info.fit_coeffs.size(); ++i) {
     if (i > 0) {
@@ -316,6 +355,7 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
        << "\"fit_line_limit_x\":" << human.fit_line_limit_x << ","
        << "\"effective_area_ratio\":" << human.effective_area_ratio << ","
        << "\"fit_available\":" << (human.fit_available ? "true" : "false") << ","
+       << "\"right_edge_passable\":" << (human.right_edge_passable ? "true" : "false") << ","
        << "\"passable\":" << (human.passable ? "true" : "false") << ","
        << "\"stop_candidate\":" << (human.stop_candidate ? "true" : "false")
        << "}";
@@ -339,6 +379,7 @@ class FusedPerceptionNode : public rclcpp::Node {
 
   ~FusedPerceptionNode() override {
     waitForGuideboardOcr();
+    waitForGuideboardApi();
   }
 
  private:
@@ -348,8 +389,18 @@ class FusedPerceptionNode : public rclcpp::Node {
     int crop_width{0};
     int crop_height{0};
     uint64_t track_id{0};
+    uint64_t route_session_id{0};
+    uint64_t branch_event_id{0};
     std::string pipeline;
     std::string fallback_reason;
+  };
+
+  struct GuideboardApiTaskResult {
+    uint64_t track_id{0};
+    uint64_t route_session_id{0};
+    uint64_t branch_event_id{0};
+    int attempt{0};
+    GuideboardApiResult result;
   };
 
   void declareParameters() {
@@ -407,14 +458,25 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("branch_detect_far_band_ratio", 0.7);
     declare_parameter<bool>("enable_encoder_branch_hold", true);
     declare_parameter<std::string>("encoder_count_topic", "/chassis/encoder_count");
-    declare_parameter<int64_t>("encoder_hold_counts", 5000);
+    declare_parameter<int64_t>("encoder_hold_counts", 9000);
     declare_parameter<int64_t>("encoder_hold_right_counts", 20000);
     declare_parameter<double>("encoder_feedback_timeout_sec", 0.30);
     declare_parameter<bool>("enable_guideboard_branch_selection", true);
-    declare_parameter<std::string>("guideboard_branch", "right");
     declare_parameter<double>("guideboard_detect_y0_ratio", 0.2);
     declare_parameter<double>("guideboard_detect_y1_ratio", 0.7);
     declare_parameter<bool>("enable_guideboard_ocr", true);
+    declare_parameter<bool>("enable_guideboard_api", true);
+    declare_parameter<std::string>("guideboard_api_key", "");
+    declare_parameter<std::string>("guideboard_api_url",
+                                   "https://qianfan.baidubce.com/v2/chat/completions");
+    declare_parameter<std::string>("guideboard_api_model", "ernie-4.5-turbo-20260402");
+    declare_parameter<double>("guideboard_api_timeout_sec", 1.5);
+    declare_parameter<int>("guideboard_api_text_history_size", 3);
+    declare_parameter<double>("guideboard_api_text_similarity", 0.70);
+    declare_parameter<int>("guideboard_api_force_ocr_count_after_stop", 2);
+    declare_parameter<double>("guideboard_api_stop_height_ratio", 0.20);
+    declare_parameter<bool>("guideboard_api_retry_on_transport_failure", true);
+    declare_parameter<int>("guideboard_api_max_attempts", 2);
     declare_parameter<std::string>("ocr_det_model_path", "model/ppocrv4_det.rknn");
     declare_parameter<std::string>("ocr_rec_model_path", "model/ppocrv4_rec.rknn");
     declare_parameter<std::string>("ocr_pipeline_mode", "rec_then_det");
@@ -470,17 +532,23 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("human_left_expand_px", 25.0);
     declare_parameter<double>("human_left_expand_width_ratio", 0.50);
     declare_parameter<double>("human_line_margin_px", 5.0);
-    declare_parameter<int>("human_line_sample_count", 5);
-    declare_parameter<double>("human_line_sample_start_ratio", 0.60);
     declare_parameter<double>("human_stop_effective_area_ratio", 0.020);
     declare_parameter<int>("human_stop_confirm_frames", 2);
     declare_parameter<int>("human_clear_confirm_frames", 3);
+    declare_parameter<bool>("enable_human_right_edge_pass", true);
+    declare_parameter<double>("human_right_edge_pass_margin_px", 45.0);
     declare_parameter<bool>("enable_car_right_boundary_filter", true);
     declare_parameter<double>("car_boundary_x_margin_px", 0.0);
     declare_parameter<double>("car_boundary_y_margin_px", 0.0);
     declare_parameter<double>("car_boundary_smoothing_alpha", 0.5);
     declare_parameter<int>("car_boundary_lost_frames", 3);
     declare_parameter<double>("car_fit_hold_timeout_sec", 0.20);
+    declare_parameter<bool>("enable_car_point_push_avoidance", false);
+    declare_parameter<double>("car_push_expand_left_px", 40.0);
+    declare_parameter<double>("car_push_expand_bottom_px", 20.0);
+    declare_parameter<double>("car_push_expand_right_px", 0.0);
+    declare_parameter<double>("car_push_expand_top_px", 0.0);
+    declare_parameter<double>("car_push_clearance_px", 3.0);
     declare_parameter<bool>("enable_finish_stop", true);
     declare_parameter<double>("finish_stop_min_confidence", 0.45);
     declare_parameter<double>("finish_stop_arm_y_ratio", 0.70);
@@ -503,6 +571,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<std::string>("outer_side", "left");
     declare_parameter<bool>("enable_result_log", true);
     declare_parameter<bool>("enable_data_log", false);
+    declare_parameter<bool>("guideboard_log_only", true);
     declare_parameter<bool>("publish_lane_state", true);
     declare_parameter<std::string>("line_follower_start_service", "/line_follower/start");
     declare_parameter<std::string>("line_follower_stop_service", "/line_follower/stop");
@@ -527,6 +596,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     publish_lane_state_ = get_parameter("publish_lane_state").as_bool();
     enable_result_log_ = get_parameter("enable_result_log").as_bool();
     enable_data_log_ = get_parameter("enable_data_log").as_bool();
+    guideboard_log_only_ = get_parameter("guideboard_log_only").as_bool();
     line_follower_start_service_ = get_parameter("line_follower_start_service").as_string();
     line_follower_stop_service_ = get_parameter("line_follower_stop_service").as_string();
     human_service_retry_interval_sec_ = std::max(
@@ -540,9 +610,36 @@ class FusedPerceptionNode : public rclcpp::Node {
       throw std::runtime_error("ocr_pipeline_mode must be rec_only, det_rec, or rec_then_det");
     }
     ocr_apply_to_control_ = get_parameter("ocr_apply_to_control").as_bool();
+    enable_guideboard_api_ = get_parameter("enable_guideboard_api").as_bool();
+    guideboard_api_url_ = get_parameter("guideboard_api_url").as_string();
+    guideboard_api_model_ = get_parameter("guideboard_api_model").as_string();
+    guideboard_api_timeout_sec_ = std::max(
+        0.1, get_parameter("guideboard_api_timeout_sec").as_double());
+    guideboard_api_text_history_size_ = std::max(
+        2, static_cast<int>(get_parameter("guideboard_api_text_history_size").as_int()));
+    guideboard_api_text_similarity_ = std::clamp(
+        get_parameter("guideboard_api_text_similarity").as_double(), 0.0, 1.0);
+    guideboard_api_force_ocr_count_after_stop_ = std::max(
+        1, static_cast<int>(get_parameter("guideboard_api_force_ocr_count_after_stop").as_int()));
+    guideboard_api_stop_height_ratio_ = std::clamp(
+        get_parameter("guideboard_api_stop_height_ratio").as_double(), 0.0, 1.0);
+    guideboard_api_retry_on_transport_failure_ =
+        get_parameter("guideboard_api_retry_on_transport_failure").as_bool();
+    guideboard_api_max_attempts_ = std::clamp(
+        static_cast<int>(get_parameter("guideboard_api_max_attempts").as_int()), 1, 2);
+    const std::string configured_api_key = get_parameter("guideboard_api_key").as_string();
+    const char* environment_api_key = std::getenv("QIANFAN_API_KEY");
+    api_key_ = !configured_api_key.empty()
+                   ? configured_api_key
+                   : (environment_api_key == nullptr ? "" : environment_api_key);
+    if (enable_guideboard_api_ && api_key_.empty()) {
+      RCLCPP_WARN(get_logger(),
+                  "GUIDEBOARD_API_CONFIG missing QIANFAN_API_KEY; first signed guide will use fallback");
+    }
     ocr_rec_interval_sec_ = std::max(0.0, get_parameter("ocr_rec_interval_sec").as_double());
     ocr_fallback_uncertain_count_ =
         std::max(1, static_cast<int>(get_parameter("ocr_fallback_uncertain_count").as_int()));
+    ocr_min_text_score_ = static_cast<float>(get_parameter("ocr_min_text_score").as_double());
     ocr_branch_wait_timeout_sec_ =
         std::max(0.0, get_parameter("ocr_branch_wait_timeout_sec").as_double());
     ocr_unknown_maneuver_ = get_parameter("ocr_unknown_maneuver").as_string();
@@ -550,34 +647,6 @@ class FusedPerceptionNode : public rclcpp::Node {
       throw std::runtime_error("ocr_unknown_maneuver must be straight or right");
     }
     ocr_crop_padding_ratio_ = static_cast<float>(get_parameter("ocr_crop_padding_ratio").as_double());
-    const auto template_ids = get_parameter("ocr_template_ids").as_string_array();
-    const auto template_texts = get_parameter("ocr_template_texts").as_string_array();
-    const auto template_maneuvers = get_parameter("ocr_template_maneuvers").as_string_array();
-    if (template_ids.size() != template_texts.size() ||
-        template_ids.size() != template_maneuvers.size()) {
-      throw std::runtime_error("OCR template id/text/maneuver arrays must have equal lengths");
-    }
-    std::vector<GuideboardTemplateSpec> template_specs;
-    template_specs.reserve(template_ids.size());
-    for (size_t i = 0; i < template_ids.size(); ++i) {
-      template_specs.push_back({template_ids[i], template_texts[i], template_maneuvers[i]});
-    }
-    GuideboardRecognizerConfig recognizer_cfg;
-    recognizer_cfg.min_text_score =
-        static_cast<float>(get_parameter("ocr_min_text_score").as_double());
-    recognizer_cfg.evidence_decay =
-        static_cast<float>(get_parameter("ocr_evidence_decay").as_double());
-    recognizer_cfg.stable_min_evidence =
-        static_cast<float>(get_parameter("ocr_stable_min_evidence").as_double());
-    recognizer_cfg.stable_min_margin =
-        static_cast<float>(get_parameter("ocr_stable_min_margin").as_double());
-    recognizer_cfg.stable_frames =
-        static_cast<int>(get_parameter("ocr_stable_frames").as_int());
-    std::string recognizer_error;
-    if (!guideboard_recognizer_.configure(template_specs, recognizer_cfg, &recognizer_error)) {
-      throw std::runtime_error("invalid guideboard OCR templates: " + recognizer_error);
-    }
-
     det_model_path_ = resolveTrackPerceptionPath(get_parameter("det_model_path").as_string());
     label_list_path_ = resolveTrackPerceptionPath(get_parameter("label_list_path").as_string());
     det_core_id_ = static_cast<int>(get_parameter("det_core_id").as_int());
@@ -622,12 +691,15 @@ class FusedPerceptionNode : public rclcpp::Node {
     encoder_count_topic_ = get_parameter("encoder_count_topic").as_string();
     lane_cfg.outer_side = get_parameter("outer_side").as_string();
     lane_cfg.enable_guideboard_branch_selection = get_parameter("enable_guideboard_branch_selection").as_bool();
-    lane_cfg.guideboard_branch = get_parameter("guideboard_branch").as_string();
     lane_cfg.guideboard_detect_y0_ratio = static_cast<float>(get_parameter("guideboard_detect_y0_ratio").as_double());
     lane_cfg.guideboard_detect_y1_ratio = static_cast<float>(get_parameter("guideboard_detect_y1_ratio").as_double());
     lane_cfg.guideboard_require_hint = enable_guideboard_ocr_ && ocr_apply_to_control_;
     lane_cfg.guideboard_unknown_branch = maneuverToBranch(ocr_unknown_maneuver_);
-    lane_cfg.guideboard_hint_wait_timeout_sec = ocr_branch_wait_timeout_sec_;
+    // Only a signed branch waits. Give its asynchronous OCR/API round and
+    // single transport retry enough time before the safe straight fallback.
+    lane_cfg.guideboard_hint_wait_timeout_sec = std::max(
+        ocr_branch_wait_timeout_sec_,
+        guideboard_api_timeout_sec_ * guideboard_api_max_attempts_ + 0.5);
     lane_guideboard_y0_ratio_ = lane_cfg.guideboard_detect_y0_ratio;
     lane_guideboard_y1_ratio_ = lane_cfg.guideboard_detect_y1_ratio;
     lane_cfg.fit_min_points = static_cast<int>(get_parameter("fit_min_points").as_int());
@@ -672,14 +744,15 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.human_left_expand_width_ratio =
         static_cast<float>(get_parameter("human_left_expand_width_ratio").as_double());
     lane_cfg.human_line_margin_px = static_cast<float>(get_parameter("human_line_margin_px").as_double());
-    lane_cfg.human_line_sample_count = static_cast<int>(get_parameter("human_line_sample_count").as_int());
-    lane_cfg.human_line_sample_start_ratio =
-        static_cast<float>(get_parameter("human_line_sample_start_ratio").as_double());
     lane_cfg.human_stop_effective_area_ratio =
         static_cast<float>(get_parameter("human_stop_effective_area_ratio").as_double());
     lane_cfg.human_stop_confirm_frames = static_cast<int>(get_parameter("human_stop_confirm_frames").as_int());
     lane_cfg.human_clear_confirm_frames =
         static_cast<int>(get_parameter("human_clear_confirm_frames").as_int());
+    lane_cfg.enable_human_right_edge_pass =
+        get_parameter("enable_human_right_edge_pass").as_bool();
+    lane_cfg.human_right_edge_pass_margin_px =
+        static_cast<float>(get_parameter("human_right_edge_pass_margin_px").as_double());
     lane_cfg.enable_car_right_boundary_filter =
         get_parameter("enable_car_right_boundary_filter").as_bool();
     lane_cfg.car_boundary_x_margin_px =
@@ -691,6 +764,18 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.car_boundary_lost_frames =
         static_cast<int>(get_parameter("car_boundary_lost_frames").as_int());
     lane_cfg.car_fit_hold_timeout_sec = get_parameter("car_fit_hold_timeout_sec").as_double();
+    lane_cfg.enable_car_point_push_avoidance =
+        get_parameter("enable_car_point_push_avoidance").as_bool();
+    lane_cfg.car_push_expand_left_px =
+        static_cast<float>(get_parameter("car_push_expand_left_px").as_double());
+    lane_cfg.car_push_expand_bottom_px =
+        static_cast<float>(get_parameter("car_push_expand_bottom_px").as_double());
+    lane_cfg.car_push_expand_right_px =
+        static_cast<float>(get_parameter("car_push_expand_right_px").as_double());
+    lane_cfg.car_push_expand_top_px =
+        static_cast<float>(get_parameter("car_push_expand_top_px").as_double());
+    lane_cfg.car_push_clearance_px =
+        static_cast<float>(get_parameter("car_push_clearance_px").as_double());
     lane_cfg.enable_finish_stop = get_parameter("enable_finish_stop").as_bool();
     lane_cfg.finish_stop_min_confidence = static_cast<float>(get_parameter("finish_stop_min_confidence").as_double());
     lane_cfg.finish_stop_arm_y_ratio = static_cast<float>(get_parameter("finish_stop_arm_y_ratio").as_double());
@@ -756,6 +841,28 @@ class FusedPerceptionNode : public rclcpp::Node {
     return maneuver == "right" ? "right" : "left";
   }
 
+  void logGuideboardApiEvent(const std::string& event, const std::string& reason,
+                             const std::string& text, double score,
+                             const std::string& current_maneuver,
+                             const std::string& corrected_text, bool is_opposite) {
+    if (!enable_data_log_) {
+      return;
+    }
+    RCLCPP_INFO(
+        get_logger(),
+        "%s track_id=%lu sequence=%lu height_ratio=%.3f ocr_history=%s "
+        "ocr_score=%.3f api_attempts=%d api_latency_ms=%.1f http_status=%d "
+        "route_phase=%s encounter=%d current=%s opposite=%d corrected_text=%s "
+        "stop_wait_active=%d trigger_reason=%s fallback=%d route_session=%lu",
+        event.c_str(), static_cast<unsigned long>(guideboard_track_id_),
+        static_cast<unsigned long>(guideboard_sequence_), last_guideboard_height_ratio_,
+        text.c_str(), score, api_attempt_count_, last_api_latency_ms_,
+        last_api_http_status_, guideboard_route_policy_.phaseName(),
+        guideboard_route_policy_.signedEncounterIndex(), current_maneuver.c_str(),
+        is_opposite, corrected_text.c_str(), guideboard_stop_wait_active_, reason.c_str(),
+        api_fallback_, static_cast<unsigned long>(guideboard_route_session_id_));
+  }
+
   const char* ocrControlMode() const {
     return ocr_apply_to_control_ ? "ocr" : "shadow";
   }
@@ -777,22 +884,40 @@ class FusedPerceptionNode : public rclcpp::Node {
                 latency_ms, ocrControlMode(), reason.c_str());
   }
 
-  void resetGuideboardTrack(bool invalidate_pending = true) {
-    if (invalidate_pending) {
+  void resetGuideboardTrack(bool create_new_track_id = true) {
+    if (create_new_track_id) {
       ++guideboard_track_id_;
     }
     has_guideboard_track_ = false;
+    guideboard_track_route_eligible_ = false;
     tracked_guideboard_bbox_ = cv::Rect2f{};
     guideboard_last_seen_sec_ = 0.0;
+    last_guideboard_height_ratio_ = 0.0;
+  }
+
+  void resetGuideboardRecognitionSession() {
+    ++guideboard_route_session_id_;
+    active_guideboard_branch_event_id_ = 0;
     guideboard_uncertain_count_ = 0;
     guideboard_fallback_used_ = false;
-    stable_guideboard_branch_.clear();
-    stable_result_logged_track_id_ = 0;
+    current_guideboard_maneuver_.clear();
+    current_guideboard_branch_.clear();
+    current_guideboard_decision_source_.clear();
+    current_guideboard_decision_valid_ = false;
+    current_guideboard_opposite_ = false;
     guideboard_decision_start_sec_ = 0.0;
     stable_decision_latency_ms_ = -1.0;
     last_guideboard_ocr_sec_ = 0.0;
-    guideboard_recognizer_.reset();
-    last_guideboard_match_ = guideboard_recognizer_.lastMatch();
+    guideboard_api_ocr_history_.clear();
+    guideboard_api_force_ocr_count_ = 0;
+    api_session_attempted_ = false;
+    api_fallback_ = false;
+    api_trigger_reason_.clear();
+    api_attempt_count_ = 0;
+    last_api_latency_ms_ = -1.0;
+    last_api_http_status_ = 0;
+    last_api_corrected_text_.clear();
+    lane_decision_.setGuideboardBranchHint("", false);
   }
 
   void startGuideboardTrack(const cv::Rect2f& bbox, double now) {
@@ -800,8 +925,25 @@ class FusedPerceptionNode : public rclcpp::Node {
     has_guideboard_track_ = true;
     tracked_guideboard_bbox_ = bbox;
     guideboard_last_seen_sec_ = now;
-    logGuideboardResult("track_new", guideboard_track_id_, "unknown", "unknown", "pending",
-                        "guideboard_detected", -1.0, 0.0, 0.0, -1.0);
+    ++guideboard_sequence_;
+    guideboard_track_route_eligible_ = accept_guideboard_for_route_ &&
+                                       lane_decision_.branchEventArmed();
+    if (guideboard_track_route_eligible_ &&
+        guideboard_route_policy_.prepareKnownDecision()) {
+      setCurrentGuideboardDecision(guideboard_route_policy_.preparedAction(),
+                                   guideboard_route_policy_.decisionSource());
+    }
+    if (guideboard_track_route_eligible_) {
+      active_guideboard_branch_event_id_ = lane_decision_.branchEventId();
+    }
+    logGuideboardResult("track_new", guideboard_track_id_, "unknown",
+                        current_guideboard_decision_valid_
+                            ? current_guideboard_maneuver_
+                            : "unknown",
+                        current_guideboard_decision_valid_
+                            ? current_guideboard_branch_
+                            : "pending",
+                        guideboard_route_policy_.phaseName(), -1.0, 0.0, 0.0, -1.0);
   }
 
   void updateGuideboardTrack(const cv::Rect2f& bbox, double now) {
@@ -912,30 +1054,110 @@ class FusedPerceptionNode : public rclcpp::Node {
   }
 
   void applyGuideboardHint() {
-    const bool valid = ocr_apply_to_control_ && has_guideboard_track_ &&
-                       last_guideboard_match_.stable;
-    lane_decision_.setGuideboardBranchHint(valid ? stable_guideboard_branch_ : "", valid);
+    const bool valid = ocr_apply_to_control_ && current_guideboard_decision_valid_ &&
+                       accept_guideboard_for_route_;
+    lane_decision_.setGuideboardBranchHint(valid ? current_guideboard_branch_ : "", valid,
+                                           current_guideboard_decision_source_);
   }
 
-  std::string guideboardRecognitionJson(const OcrTaskResult& task,
-                                        const GuideboardMatch& match) const {
+  void publishGuideboardRouteEvent(const std::string& event, uint64_t branch_event_id,
+                                   const std::string& source,
+                                   const std::string& action,
+                                   const std::string& branch) {
+    std::ostringstream ss;
+    ss << "{\"event\":\"" << jsonEscape(event) << "\""
+       << ",\"track_id\":" << guideboard_track_id_
+       << ",\"guideboard_sequence\":" << guideboard_sequence_
+       << ",\"pipeline\":\"route_policy\""
+       << ",\"text\":\"" << jsonEscape(last_ocr_text_) << "\""
+       << ",\"model_score\":" << last_ocr_score_
+       << ",\"route_phase\":\"" << guideboard_route_policy_.phaseName() << "\""
+       << ",\"signed_encounter_index\":"
+       << guideboard_route_policy_.signedEncounterIndex()
+       << ",\"first_action\":\"" << jsonEscape(guideboard_route_policy_.firstAction())
+       << "\""
+       << ",\"pending_second_action\":\""
+       << jsonEscape(guideboard_route_policy_.pendingSecondAction()) << "\""
+       << ",\"branch_event_id\":" << branch_event_id
+       << ",\"route_session_id\":" << guideboard_route_session_id_
+       << ",\"decision_source\":\"" << jsonEscape(source) << "\""
+       << ",\"action\":\"" << jsonEscape(action) << "\""
+       << ",\"branch\":\"" << jsonEscape(branch) << "\""
+       << ",\"control_enabled\":" << (ocr_apply_to_control_ ? "true" : "false")
+       << ",\"api_attempt_count\":" << api_attempt_count_
+       << ",\"api_latency_ms\":" << last_api_latency_ms_
+       << ",\"api_http_status\":" << last_api_http_status_
+       << ",\"ocr_history\":" << guideboardOcrHistoryJson() << "}";
+    std_msgs::msg::String recognition_msg;
+    recognition_msg.data = ss.str();
+    guideboard_recognition_pub_->publish(recognition_msg);
+  }
+
+  void setCurrentGuideboardDecision(const std::string& maneuver,
+                                    const std::string& reason) {
+    if (maneuver != "straight" && maneuver != "right") {
+      return;
+    }
+    const bool is_new_decision = !current_guideboard_decision_valid_ ||
+                                 current_guideboard_maneuver_ != maneuver ||
+                                 current_guideboard_decision_source_ != reason;
+    current_guideboard_maneuver_ = maneuver;
+    current_guideboard_branch_ = maneuverToBranch(current_guideboard_maneuver_);
+    current_guideboard_decision_source_ = reason;
+    current_guideboard_opposite_ = reason == "second_opposite";
+    current_guideboard_decision_valid_ = true;
+    if (stable_decision_latency_ms_ < 0.0 && guideboard_decision_start_sec_ > 0.0) {
+      stable_decision_latency_ms_ =
+          std::max(0.0, (nowSeconds() - guideboard_decision_start_sec_) * 1000.0);
+      sum_ocr_decision_ms_ += stable_decision_latency_ms_;
+      ++ocr_decision_count_;
+      ocr_decision_latencies_ms_.push_back(stable_decision_latency_ms_);
+    }
+    if (is_new_decision) {
+      logGuideboardResult("decision", guideboard_track_id_, "api",
+                          current_guideboard_maneuver_, current_guideboard_branch_, reason,
+                          last_ocr_score_, 1.0, 0.0, stable_decision_latency_ms_);
+      publishGuideboardRouteEvent("decision_ready", lane_decision_.branchEventId(),
+                                  reason, current_guideboard_maneuver_,
+                                  current_guideboard_branch_);
+    }
+    applyGuideboardHint();
+  }
+
+  std::string guideboardOcrHistoryJson() const {
+    std::ostringstream ss;
+    ss << "[";
+    for (size_t i = 0; i < guideboard_api_ocr_history_.size(); ++i) {
+      if (i > 0) {
+        ss << ",";
+      }
+      ss << "{\"text\":\"" << jsonEscape(guideboard_api_ocr_history_[i].text)
+         << "\",\"score\":" << guideboard_api_ocr_history_[i].score << "}";
+    }
+    ss << "]";
+    return ss.str();
+  }
+
+  std::string guideboardRecognitionJson(const OcrTaskResult& task) const {
     std::ostringstream ss;
     ss << "{\"track_id\":" << task.track_id
+       << ",\"guideboard_sequence\":" << guideboard_sequence_
        << ",\"pipeline\":\"" << jsonEscape(task.pipeline) << "\""
        << ",\"text\":\"" << jsonEscape(task.result.text) << "\""
-       << ",\"normalized_text\":\"" << jsonEscape(match.normalized_text) << "\""
+       << ",\"normalized_text\":\""
+       << jsonEscape(GuideboardRecognizer::normalizeUtf8(task.result.text)) << "\""
        << ",\"model_score\":" << task.result.ocr_score
-       << ",\"sign\":\"" << jsonEscape(match.best_id) << "\""
-       << ",\"maneuver\":\"" << jsonEscape(match.maneuver) << "\""
-       << ",\"stable_template\":\""
-       << jsonEscape(match.stable ? match.best_id : "") << "\""
-       << ",\"action\":\""
-       << jsonEscape(match.stable ? match.maneuver : "unknown") << "\""
-       << ",\"eligible\":" << (match.eligible ? "true" : "false")
-       << ",\"stable\":" << (match.stable ? "true" : "false")
-       << ",\"best_score\":" << match.best_score
-       << ",\"margin\":" << match.margin
-       << ",\"reason\":\"" << jsonEscape(match.reason) << "\""
+       << ",\"sign\":\"api_guideboard\""
+       << ",\"maneuver\":\"" << jsonEscape(current_guideboard_maneuver_) << "\""
+       << ",\"stable_template\":\"\""
+       << ",\"action\":\"" << jsonEscape(current_guideboard_decision_valid_
+                                                    ? current_guideboard_maneuver_
+                                                    : "unknown") << "\""
+       << ",\"eligible\":" << (!guideboard_api_ocr_history_.empty() ? "true" : "false")
+       << ",\"stable\":" << (current_guideboard_decision_valid_ ? "true" : "false")
+       << ",\"best_score\":0.0"
+       << ",\"margin\":0.0"
+       << ",\"reason\":\"" << jsonEscape(api_trigger_reason_) << "\""
        << ",\"fallback_reason\":\"" << jsonEscape(task.fallback_reason) << "\""
        << ",\"latency_ms\":" << task.result.time_ms
        << ",\"decision_latency_ms\":" << stable_decision_latency_ms_
@@ -943,28 +1165,29 @@ class FusedPerceptionNode : public rclcpp::Node {
        << ",\"return_code\":" << task.ret
        << ",\"status\":" << task.result.status
        << ",\"legacy_raw_direction\":" << task.result.raw_direction
-       << ",\"template_ids\":[";
-    const auto& templates = guideboard_recognizer_.templates();
-    for (size_t i = 0; i < templates.size(); ++i) {
-      if (i > 0) ss << ",";
-      ss << "\"" << jsonEscape(templates[i].id) << "\"";
-    }
-    ss << "],\"hits\":[";
-    for (size_t i = 0; i < match.unique_bigram_hits.size(); ++i) {
-      if (i > 0) ss << ",";
-      ss << match.unique_bigram_hits[i];
-    }
-    ss << "],\"frame_scores\":[";
-    for (size_t i = 0; i < match.frame_scores.size(); ++i) {
-      if (i > 0) ss << ",";
-      ss << match.frame_scores[i];
-    }
-    ss << "],\"evidence\":[";
-    for (size_t i = 0; i < match.evidence.size(); ++i) {
-      if (i > 0) ss << ",";
-      ss << match.evidence[i];
-    }
-    ss << "]}";
+       << ",\"route_phase\":\"" << guideboard_route_policy_.phaseName() << "\""
+       << ",\"signed_encounter_index\":"
+       << guideboard_route_policy_.signedEncounterIndex()
+       << ",\"first_action\":\"" << jsonEscape(guideboard_route_policy_.firstAction()) << "\""
+       << ",\"pending_second_action\":\""
+       << jsonEscape(guideboard_route_policy_.pendingSecondAction()) << "\""
+       << ",\"branch_event_id\":" << task.branch_event_id
+       << ",\"route_session_id\":" << task.route_session_id
+       << ",\"decision_source\":\"" << jsonEscape(current_guideboard_decision_source_)
+       << "\""
+       << ",\"current_maneuver\":\"" << jsonEscape(current_guideboard_maneuver_)
+       << "\""
+       << ",\"is_opposite_decision\":"
+       << (current_guideboard_opposite_ ? "true" : "false")
+       << ",\"api_attempt_count\":" << api_attempt_count_
+       << ",\"api_trigger_reason\":\"" << jsonEscape(api_trigger_reason_) << "\""
+       << ",\"api_latency_ms\":" << last_api_latency_ms_
+       << ",\"api_http_status\":" << last_api_http_status_
+       << ",\"api_fallback\":" << (api_fallback_ ? "true" : "false")
+       << ",\"stop_wait_active\":"
+       << (guideboard_stop_wait_active_ ? "true" : "false")
+       << ",\"ocr_history\":" << guideboardOcrHistoryJson() << "}"
+       ;
     return ss.str();
   }
 
@@ -1009,55 +1232,52 @@ class FusedPerceptionNode : public rclcpp::Node {
         ocr_det_rec_latencies_ms_.push_back(result.time_ms);
       }
     }
-    if (task.track_id != guideboard_track_id_ || !has_guideboard_track_) {
+    // A detector track may be rebuilt while approaching the same signed branch.
+    // Route sessions, rather than bounding-box track ids, own OCR/API evidence.
+    if (task.route_session_id != guideboard_route_session_id_ ||
+        task.branch_event_id != active_guideboard_branch_event_id_ ||
+        !guideboard_route_policy_.recognitionRequired()) {
       return;
     }
 
-    last_guideboard_match_ = guideboard_recognizer_.update(result.text, result.ocr_score);
     if (task.pipeline == "rec") {
-      if (task.ret == 0 && last_guideboard_match_.eligible) {
+      if (task.ret == 0 && result.ocr_score >= ocr_min_text_score_ && !result.text.empty()) {
         guideboard_uncertain_count_ = 0;
       } else {
         ++guideboard_uncertain_count_;
       }
     }
-    if (last_guideboard_match_.stable) {
-      stable_guideboard_branch_ = maneuverToBranch(last_guideboard_match_.maneuver);
-      if (stable_decision_latency_ms_ < 0.0 && guideboard_decision_start_sec_ > 0.0) {
-        stable_decision_latency_ms_ =
-            std::max(0.0, (nowSeconds() - guideboard_decision_start_sec_) * 1000.0);
-        sum_ocr_decision_ms_ += stable_decision_latency_ms_;
-        ++ocr_decision_count_;
-        ocr_decision_latencies_ms_.push_back(stable_decision_latency_ms_);
-      }
-      if (stable_result_logged_track_id_ != task.track_id) {
-        stable_result_logged_track_id_ = task.track_id;
-        logGuideboardResult(
-            "stable", task.track_id, last_guideboard_match_.best_id,
-            last_guideboard_match_.maneuver, "pending", last_guideboard_match_.reason,
-            result.ocr_score, last_guideboard_match_.best_score,
-            last_guideboard_match_.margin, stable_decision_latency_ms_);
+    if (guideboard_stop_wait_active_) {
+      // Count OCR completions, not only non-empty strings: the stop policy is
+      // explicitly based on two new local OCR attempts.
+      ++guideboard_api_force_ocr_count_;
+    }
+    if (!result.text.empty()) {
+      guideboard_api_ocr_history_.push_back({result.text, result.ocr_score});
+      while (guideboard_api_ocr_history_.size() >
+             static_cast<size_t>(guideboard_api_text_history_size_)) {
+        guideboard_api_ocr_history_.pop_front();
       }
     }
 
     std_msgs::msg::String recognition_msg;
-    recognition_msg.data = guideboardRecognitionJson(task, last_guideboard_match_);
+    recognition_msg.data = guideboardRecognitionJson(task);
     guideboard_recognition_pub_->publish(recognition_msg);
 
     if (enable_data_log_) {
       RCLCPP_INFO(
           get_logger(),
-          "GuideBoard OCR track=%lu pipeline=%s ret=%d text=%s model=%.2f sign=%s "
-          "maneuver=%s eligible=%d stable=%d best=%.2f margin=%.2f reason=%s "
-          "time=%.1fms crop=%dx%d fallback=%s error=%s",
-          static_cast<unsigned long>(task.track_id), task.pipeline.c_str(), task.ret,
-          last_ocr_text_.c_str(), last_ocr_score_, last_guideboard_match_.best_id.c_str(),
-          last_guideboard_match_.maneuver.c_str(), last_guideboard_match_.eligible,
-          last_guideboard_match_.stable, last_guideboard_match_.best_score,
-          last_guideboard_match_.margin, last_guideboard_match_.reason.c_str(),
+          "GUIDEBOARD_OCR track_id=%lu sequence=%lu pipeline=%s ret=%d text=%s score=%.3f "
+          "history=%s current_maneuver=%s api_attempts=%d stop_wait=%d time_ms=%.1f "
+          "crop=%dx%d fallback=%s error=%s",
+          static_cast<unsigned long>(task.track_id),
+          static_cast<unsigned long>(guideboard_sequence_), task.pipeline.c_str(), task.ret,
+          last_ocr_text_.c_str(), last_ocr_score_, guideboardOcrHistoryJson().c_str(),
+          current_guideboard_maneuver_.c_str(), api_attempt_count_, guideboard_stop_wait_active_,
           last_ocr_time_ms_, task.crop_width, task.crop_height,
           task.fallback_reason.c_str(), result.error.c_str());
     }
+    maybeTriggerGuideboardApi();
     applyGuideboardHint();
   }
 
@@ -1072,37 +1292,408 @@ class FusedPerceptionNode : public rclcpp::Node {
     }
   }
 
+  void waitForGuideboardApi() {
+    if (!guideboard_api_future_.valid()) {
+      return;
+    }
+    try {
+      guideboard_api_future_.wait();
+      guideboard_api_future_.get();
+    } catch (...) {
+    }
+  }
+
+  bool guideboardTextStable() const {
+    if (guideboard_api_ocr_history_.size() < 2) {
+      return false;
+    }
+    for (size_t i = 0; i < guideboard_api_ocr_history_.size(); ++i) {
+      if (guideboard_api_ocr_history_[i].score < ocr_min_text_score_ ||
+          guideboard_api_ocr_history_[i].text.empty()) {
+        continue;
+      }
+      for (size_t j = i + 1; j < guideboard_api_ocr_history_.size(); ++j) {
+        if (guideboard_api_ocr_history_[j].score < ocr_min_text_score_ ||
+            guideboard_api_ocr_history_[j].text.empty()) {
+          continue;
+        }
+        if (GuideboardRecognizer::normalizedLcsRatio(
+                guideboard_api_ocr_history_[i].text,
+                guideboard_api_ocr_history_[j].text) >= guideboard_api_text_similarity_) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  std::vector<GuideboardApiSample> guideboardApiSamples() const {
+    std::vector<GuideboardApiSample> samples;
+    samples.reserve(guideboard_api_ocr_history_.size());
+    for (const auto& sample : guideboard_api_ocr_history_) {
+      samples.push_back({sample.text, sample.score});
+    }
+    return samples;
+  }
+
+  void requestGuideboardStop() {
+    if (guideboard_stop_active_ || guideboard_stop_call_pending_) {
+      return;
+    }
+    guideboard_stop_wait_active_ = true;
+    guideboard_start_after_stop_ = false;
+    logGuideboardApiEvent("GUIDEBOARD_STOP_REQUEST", "bbox_height_reached", last_ocr_text_,
+                          last_ocr_score_, current_guideboard_maneuver_, "",
+                          current_guideboard_opposite_);
+    if (!guideboard_stop_client_->service_is_ready()) {
+      RCLCPP_WARN(get_logger(),
+                  "GUIDEBOARD_STOP_REQUEST service not ready: %s; continue OCR/API without pause",
+                  guideboard_stop_service_.c_str());
+      return;
+    }
+    guideboard_stop_call_pending_ = true;
+    auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
+    guideboard_stop_client_->async_send_request(
+        request,
+        [this](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
+          guideboard_stop_call_pending_ = false;
+          try {
+            const auto response = future.get();
+            if (response->success) {
+              guideboard_stop_active_ = true;
+              RCLCPP_INFO(get_logger(), "GUIDEBOARD_STOP_REQUEST completed: %s",
+                          response->message.c_str());
+              if (guideboard_start_after_stop_) {
+                requestGuideboardStart();
+              }
+            } else {
+              RCLCPP_WARN(get_logger(), "GUIDEBOARD_STOP_REQUEST rejected: %s",
+                          response->message.c_str());
+            }
+          } catch (const std::exception& e) {
+            RCLCPP_WARN(get_logger(), "GUIDEBOARD_STOP_REQUEST failed: %s", e.what());
+          }
+        });
+  }
+
+  void requestGuideboardStart() {
+    guideboard_start_after_stop_ = true;
+    logGuideboardApiEvent("GUIDEBOARD_START_REQUEST", "api_result_ready", last_ocr_text_,
+                          last_ocr_score_, current_guideboard_maneuver_, last_api_corrected_text_,
+                          current_guideboard_opposite_);
+    if (guideboard_stop_call_pending_) {
+      return;
+    }
+    if (!guideboard_stop_active_) {
+      guideboard_stop_wait_active_ = false;
+      return;
+    }
+    if (guideboard_start_call_pending_) {
+      return;
+    }
+    if (!guideboard_start_client_->service_is_ready()) {
+      RCLCPP_WARN(get_logger(),
+                  "GUIDEBOARD_START_REQUEST service not ready: %s; vehicle remains paused",
+                  guideboard_start_service_.c_str());
+      return;
+    }
+    guideboard_start_call_pending_ = true;
+    auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
+    guideboard_start_client_->async_send_request(
+        request,
+        [this](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
+          guideboard_start_call_pending_ = false;
+          try {
+            const auto response = future.get();
+            if (response->success) {
+              guideboard_stop_active_ = false;
+              guideboard_stop_wait_active_ = false;
+              guideboard_start_after_stop_ = false;
+              RCLCPP_INFO(get_logger(), "GUIDEBOARD_START_REQUEST completed: %s",
+                          response->message.c_str());
+            } else {
+              RCLCPP_WARN(get_logger(), "GUIDEBOARD_START_REQUEST rejected: %s",
+                          response->message.c_str());
+            }
+          } catch (const std::exception& e) {
+            RCLCPP_WARN(get_logger(), "GUIDEBOARD_START_REQUEST failed: %s", e.what());
+          }
+        });
+  }
+
+  void retryGuideboardStartIfNeeded() {
+    if (guideboard_start_after_stop_ && guideboard_stop_active_ &&
+        !guideboard_stop_call_pending_ && !guideboard_start_call_pending_) {
+      requestGuideboardStart();
+    }
+  }
+
+  void handleGuideboardBranchEvent(const LaneState& lane_state,
+                                   const LaneDebugInfo& debug_info) {
+    if (debug_info.branch_event_rearmed) {
+      accept_guideboard_for_route_ = true;
+      guideboard_track_route_eligible_ = false;
+      active_guideboard_branch_event_id_ = 0;
+      if (has_guideboard_track_) {
+        // A sign track that survived the previous branch cannot represent the
+        // next signed encounter. The route session itself remains untouched.
+        resetGuideboardTrack(true);
+      }
+      if (enable_data_log_) {
+        RCLCPP_INFO(get_logger(),
+                    "BRANCH_EVENT_REARMED event_id=%lu route_phase=%s",
+                    static_cast<unsigned long>(debug_info.branch_event_id),
+                    guideboard_route_policy_.phaseName());
+      }
+    }
+    if (!debug_info.branch_lock_event) {
+      return;
+    }
+
+    accept_guideboard_for_route_ = false;
+    guideboard_track_route_eligible_ = false;
+    active_guideboard_branch_event_id_ = 0;
+    if (!debug_info.branch_lock_guideboard) {
+      logGuideboardResult("branch_lock", guideboard_track_id_, "none", "straight",
+                          lane_state.branch_side.empty() ? "left" : lane_state.branch_side,
+                          "no_guideboard_default", -1.0, 0.0, 0.0, -1.0);
+      publishGuideboardRouteEvent(
+          "branch_locked", debug_info.branch_event_id,
+          "no_guideboard_default", "straight",
+          lane_state.branch_side.empty() ? "left" : lane_state.branch_side);
+      return;
+    }
+
+    if (!guideboard_route_policy_.hasPreparedDecision()) {
+      guideboard_route_policy_.prepareRecognitionFailure();
+      setCurrentGuideboardDecision(guideboard_route_policy_.preparedAction(),
+                                   guideboard_route_policy_.decisionSource());
+    }
+    const std::string action = guideboard_route_policy_.hasPreparedDecision()
+                                   ? guideboard_route_policy_.preparedAction()
+                                   : "straight";
+    const std::string source = guideboard_route_policy_.decisionSource().empty()
+                                   ? "signed_default_straight"
+                                   : guideboard_route_policy_.decisionSource();
+    logGuideboardResult("branch_lock", guideboard_track_id_, "guideboard", action,
+                        lane_state.branch_side.empty() ? maneuverToBranch(action)
+                                                       : lane_state.branch_side,
+                        source, last_ocr_score_, 1.0, 0.0,
+                        stable_decision_latency_ms_);
+
+    if (guideboard_route_policy_.commitSignedEncounter()) {
+      publishGuideboardRouteEvent(
+          "branch_locked", debug_info.branch_event_id, source, action,
+          lane_state.branch_side.empty() ? maneuverToBranch(action)
+                                         : lane_state.branch_side);
+      requestGuideboardStart();
+      resetGuideboardRecognitionSession();
+    }
+  }
+
+  void beginGuideboardApiRequest(const std::string& trigger_reason) {
+    if (guideboard_api_request_in_flight_ || api_fallback_ ||
+        api_attempt_count_ >= guideboard_api_max_attempts_) {
+      return;
+    }
+    if (!guideboard_route_policy_.recognitionRequired() ||
+        !guideboard_track_route_eligible_) {
+      return;
+    }
+    api_session_attempted_ = true;
+    api_trigger_reason_ = trigger_reason;
+    ++api_attempt_count_;
+    const int attempt = api_attempt_count_;
+    const uint64_t task_track_id = guideboard_track_id_;
+    const uint64_t task_route_session_id = guideboard_route_session_id_;
+    const uint64_t task_branch_event_id = active_guideboard_branch_event_id_;
+    const auto samples = guideboardApiSamples();
+    logGuideboardApiEvent("GUIDEBOARD_API_TRIGGER", trigger_reason, last_ocr_text_,
+                          last_ocr_score_, current_guideboard_maneuver_, "",
+                          current_guideboard_opposite_);
+    if (attempt > 1) {
+      logGuideboardApiEvent("GUIDEBOARD_API_RETRY", trigger_reason, last_ocr_text_,
+                            last_ocr_score_, current_guideboard_maneuver_, "",
+                            current_guideboard_opposite_);
+    }
+    if (enable_data_log_) {
+      RCLCPP_INFO(get_logger(),
+                  "GUIDEBOARD_API_REQUEST track_id=%lu sequence=%lu attempt=%d "
+                  "model=%s timeout_sec=%.2f history=%s stop_wait_active=%d",
+                  static_cast<unsigned long>(task_track_id),
+                  static_cast<unsigned long>(guideboard_sequence_), attempt,
+                  guideboard_api_model_.c_str(), guideboard_api_timeout_sec_,
+                  guideboardOcrHistoryJson().c_str(), guideboard_stop_wait_active_);
+    }
+    guideboard_api_request_in_flight_ = true;
+    guideboard_api_future_ = std::async(
+        std::launch::async,
+        [url = guideboard_api_url_, key = api_key_, model = guideboard_api_model_, samples,
+         timeout_sec = guideboard_api_timeout_sec_, task_track_id,
+         task_route_session_id, task_branch_event_id, attempt]() {
+          GuideboardApiTaskResult task;
+          task.track_id = task_track_id;
+          task.route_session_id = task_route_session_id;
+          task.branch_event_id = task_branch_event_id;
+          task.attempt = attempt;
+          task.result = GuideboardApiClient::request(url, key, model, samples, timeout_sec);
+          return task;
+        });
+  }
+
+  void finalizeGuideboardApiFailure(const std::string& reason) {
+    api_fallback_ = true;
+    api_trigger_reason_ = reason;
+    if (guideboard_route_policy_.prepareRecognitionFailure()) {
+      setCurrentGuideboardDecision(guideboard_route_policy_.preparedAction(),
+                                   guideboard_route_policy_.decisionSource());
+    }
+    logGuideboardApiEvent("GUIDEBOARD_API_FALLBACK", reason, last_ocr_text_, last_ocr_score_,
+                          current_guideboard_maneuver_, "", false);
+    requestGuideboardStart();
+    applyGuideboardHint();
+  }
+
+  void consumeGuideboardApiResult() {
+    if (!guideboard_api_future_.valid() ||
+        guideboard_api_future_.wait_for(0ms) != std::future_status::ready) {
+      return;
+    }
+    GuideboardApiTaskResult task;
+    try {
+      task = guideboard_api_future_.get();
+    } catch (const std::exception& e) {
+      task.result.error = e.what();
+    } catch (...) {
+      task.result.error = "unknown API async exception";
+    }
+    guideboard_api_request_in_flight_ = false;
+    if (task.route_session_id != guideboard_route_session_id_ ||
+        task.branch_event_id != active_guideboard_branch_event_id_ ||
+        !guideboard_route_policy_.recognitionRequired()) {
+      if (enable_data_log_) {
+        RCLCPP_INFO(get_logger(),
+                    "GUIDEBOARD_API_STALE task_session=%lu current_session=%lu track=%lu",
+                    static_cast<unsigned long>(task.route_session_id),
+                    static_cast<unsigned long>(guideboard_route_session_id_),
+                    static_cast<unsigned long>(task.track_id));
+      }
+      return;
+    }
+    last_api_latency_ms_ = task.result.latency_ms;
+    last_api_http_status_ = task.result.http_status;
+    last_api_corrected_text_ = task.result.corrected_text;
+    if (enable_data_log_) {
+      RCLCPP_INFO(get_logger(),
+                  "GUIDEBOARD_API_RESPONSE track_id=%lu sequence=%lu attempt=%d valid=%d "
+                  "uncertain=%d maneuver=%s confidence=%.3f corrected_text=%s "
+                  "latency_ms=%.1f http_status=%d error=%s",
+                  static_cast<unsigned long>(task.track_id),
+                  static_cast<unsigned long>(guideboard_sequence_), task.attempt,
+                  task.result.valid, task.result.uncertain, task.result.maneuver.c_str(),
+                  task.result.confidence, task.result.corrected_text.c_str(),
+                  task.result.latency_ms, task.result.http_status, task.result.error.c_str());
+    }
+
+    if (task.result.valid) {
+      api_fallback_ = false;
+      api_session_attempted_ = true;
+      if (guideboard_route_policy_.prepareRecognitionSuccess(task.result.maneuver)) {
+        setCurrentGuideboardDecision(guideboard_route_policy_.preparedAction(),
+                                     guideboard_route_policy_.decisionSource());
+      }
+      logGuideboardApiEvent("GUIDEBOARD_API_DECISION_READY", "success", last_ocr_text_,
+                            last_ocr_score_, current_guideboard_maneuver_,
+                            task.result.corrected_text, current_guideboard_opposite_);
+      requestGuideboardStart();
+      applyGuideboardHint();
+      return;
+    }
+
+    const bool retryable = !task.result.uncertain &&
+                           guideboard_api_retry_on_transport_failure_ &&
+                           api_attempt_count_ < guideboard_api_max_attempts_;
+    if (retryable) {
+      beginGuideboardApiRequest("transport_or_parse_retry");
+      return;
+    }
+    finalizeGuideboardApiFailure(task.result.error.empty() ? "api_invalid_result"
+                                                            : task.result.error);
+  }
+
+  void maybeTriggerGuideboardApi() {
+    if (!enable_guideboard_api_ || !has_guideboard_track_ ||
+        !guideboard_track_route_eligible_ ||
+        !guideboard_route_policy_.recognitionRequired() || api_session_attempted_ ||
+        api_fallback_ || guideboard_api_request_in_flight_) {
+      return;
+    }
+    const bool stable = guideboardTextStable();
+    if (guideboard_stop_wait_active_) {
+      if (guideboard_api_force_ocr_count_ >= guideboard_api_force_ocr_count_after_stop_) {
+        beginGuideboardApiRequest("forced_after_stop_ocr");
+      }
+      return;
+    }
+    if (stable) {
+      beginGuideboardApiRequest("stable_text");
+      return;
+    }
+    if (last_guideboard_height_ratio_ >= guideboard_api_stop_height_ratio_) {
+      requestGuideboardStop();
+    }
+  }
+
   void updateGuideboardOcr(const cv::Mat& frame_rgb, const std::vector<Detection>& detections) {
+    retryGuideboardStartIfNeeded();
     if (!enable_guideboard_ocr_ || !guideboard_ocr_ready_ || frame_rgb.empty()) {
       lane_decision_.setGuideboardBranchHint("", false);
       return;
     }
 
+    consumeGuideboardApiResult();
     consumeGuideboardOcrResult();
 
     const Detection* guideboard = selectGuideboardForOcr(detections, frame_rgb.rows);
     const double now = nowSeconds();
     if (guideboard == nullptr) {
       if (has_guideboard_track_ && now - guideboard_last_seen_sec_ > 0.25) {
-        logGuideboardResult(
-            "track_lost", guideboard_track_id_,
-            last_guideboard_match_.best_id.empty() ? "unknown" : last_guideboard_match_.best_id,
-            last_guideboard_match_.stable ? last_guideboard_match_.maneuver : "unknown", "pending",
-            "guideboard_missing_0.25s", last_ocr_score_, last_guideboard_match_.best_score,
-            last_guideboard_match_.margin, stable_decision_latency_ms_);
+        logGuideboardApiEvent("GUIDEBOARD_TRACK_LOST", "guideboard_missing_0.25s",
+                              last_ocr_text_, last_ocr_score_, current_guideboard_maneuver_,
+                              last_api_corrected_text_, current_guideboard_opposite_);
+        logGuideboardResult("track_lost", guideboard_track_id_, "unknown",
+                            current_guideboard_decision_valid_
+                                ? current_guideboard_maneuver_
+                                : "unknown",
+                            "pending", "guideboard_missing_0.25s", last_ocr_score_,
+                            0.0, 0.0, -1.0);
         resetGuideboardTrack(true);
       }
       applyGuideboardHint();
       return;
     }
     updateGuideboardTrack(guideboard->bbox, now);
+    if (!guideboard_track_route_eligible_ && accept_guideboard_for_route_ &&
+        lane_decision_.branchEventArmed()) {
+      guideboard_track_route_eligible_ = true;
+      active_guideboard_branch_event_id_ = lane_decision_.branchEventId();
+    }
+    last_guideboard_height_ratio_ =
+        frame_rgb.rows > 0 ? static_cast<double>(guideboard->bbox.height) / frame_rgb.rows : 0.0;
     if (guideboard_decision_start_sec_ <= 0.0 &&
         guideboard->bbox.width >= 70.0f && guideboard->bbox.height >= 30.0f) {
       guideboard_decision_start_sec_ = now;
     }
+    if (guideboard_track_route_eligible_ &&
+        guideboard_route_policy_.prepareKnownDecision()) {
+      setCurrentGuideboardDecision(guideboard_route_policy_.preparedAction(),
+                                   guideboard_route_policy_.decisionSource());
+    }
     applyGuideboardHint();
 
-    if (guideboard_ocr_future_.valid() || last_guideboard_match_.stable) {
+    if (!guideboard_track_route_eligible_ ||
+        !guideboard_route_policy_.recognitionRequired() ||
+        guideboard_api_request_in_flight_ || guideboard_ocr_future_.valid()) {
       return;
     }
     if (now - last_guideboard_ocr_sec_ < ocr_rec_interval_sec_) {
@@ -1119,8 +1710,7 @@ class FusedPerceptionNode : public rclcpp::Node {
       guideboard_fallback_used_ = true;
       fallback_reason = "rec_uncertain_" + std::to_string(guideboard_uncertain_count_);
       logGuideboardResult("fallback", guideboard_track_id_, "unknown", "unknown", "pending",
-                          fallback_reason, last_ocr_score_, last_guideboard_match_.best_score,
-                          last_guideboard_match_.margin, -1.0);
+                          fallback_reason, last_ocr_score_, 0.0, 0.0, -1.0);
     }
 
     cv::Mat crop;
@@ -1140,13 +1730,18 @@ class FusedPerceptionNode : public rclcpp::Node {
     ocr_task_crop_width_ = crop.cols;
     ocr_task_crop_height_ = crop.rows;
     const uint64_t task_track_id = guideboard_track_id_;
+    const uint64_t task_route_session_id = guideboard_route_session_id_;
+    const uint64_t task_branch_event_id = active_guideboard_branch_event_id_;
     guideboard_ocr_future_ = std::async(
         std::launch::async,
-        [this, crop = std::move(crop), pipeline, fallback_reason, task_track_id]() {
+        [this, crop = std::move(crop), pipeline, fallback_reason, task_track_id,
+         task_route_session_id, task_branch_event_id]() {
       OcrTaskResult task;
       task.crop_width = crop.cols;
       task.crop_height = crop.rows;
       task.track_id = task_track_id;
+      task.route_session_id = task_route_session_id;
+      task.branch_event_id = task_branch_event_id;
       task.pipeline = pipeline;
       task.fallback_reason = fallback_reason;
       try {
@@ -1185,6 +1780,10 @@ class FusedPerceptionNode : public rclcpp::Node {
         create_publisher<std_msgs::msg::String>("/perception/guideboard_recognition", 10);
     line_follower_start_client_ = create_client<std_srvs::srv::Trigger>(line_follower_start_service_);
     line_follower_stop_client_ = create_client<std_srvs::srv::Trigger>(line_follower_stop_service_);
+    // Guideboard OCR pauses use the controller's normal start/stop pair.  The
+    // configurable pair above remains dedicated to the Human obstacle state.
+    guideboard_start_client_ = create_client<std_srvs::srv::Trigger>(guideboard_start_service_);
+    guideboard_stop_client_ = create_client<std_srvs::srv::Trigger>(guideboard_stop_service_);
     encoder_count_sub_ = create_subscription<std_msgs::msg::Int64>(
       encoder_count_topic_, rclcpp::QoS(10).reliable(),
       [this](const std_msgs::msg::Int64::SharedPtr msg) {
@@ -1216,10 +1815,11 @@ class FusedPerceptionNode : public rclcpp::Node {
       }
       guideboard_ocr_ready_ = true;
       RCLCPP_INFO(get_logger(),
-                  "guideboard closed-set OCR ready: mode=%s control=%d det=%s rec=%s templates=%zu",
+                  "guideboard OCR ready: mode=%s control=%d api=%d model=%s det=%s rec=%s",
                   ocr_pipeline_mode_.c_str(), ocr_apply_to_control_,
+                  enable_guideboard_api_, guideboard_api_model_.c_str(),
                   ocr_pipeline_mode_ == "rec_only" ? "not_loaded" : ocr_det_model_path_.c_str(),
-                  ocr_rec_model_path_.c_str(), guideboard_recognizer_.templates().size());
+                  ocr_rec_model_path_.c_str());
     }
 
     std_msgs::msg::String labels_msg;
@@ -1227,10 +1827,13 @@ class FusedPerceptionNode : public rclcpp::Node {
     label_pub_->publish(labels_msg);
 
     perf_start_sec_ = nowSeconds();
-    RCLCPP_INFO(get_logger(),
-                "fused perception ready: det=%s seg=%s shm=/dev/shm/%s show_window=%d blend_alpha=%.2f",
-                det_model_path_.c_str(), seg_model_path_.c_str(), shm_name_.c_str(),
-                show_window_, blend_alpha_);
+    if (!guideboard_log_only_) {
+      RCLCPP_INFO(
+          get_logger(),
+          "fused perception ready: det=%s seg=%s shm=/dev/shm/%s show_window=%d blend_alpha=%.2f",
+          det_model_path_.c_str(), seg_model_path_.c_str(), shm_name_.c_str(), show_window_,
+          blend_alpha_);
+    }
   }
 
   void tick() {
@@ -1300,6 +1903,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     auto t_decision1 = std::chrono::steady_clock::now();
     stats.decision_ms = std::chrono::duration<double, std::milli>(t_decision1 - t_decision0).count();
     const LaneDebugInfo& lane_debug = lane_decision_.debugInfo();
+    handleGuideboardBranchEvent(lane_state, lane_debug);
     logDecisionStatus(lane_state, lane_debug);
     updateHumanExecution(lane_debug);
 
@@ -1329,7 +1933,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     sum_seg_model_score_ += static_cast<double>(seg_stats.score_mean) * seg_stats.kept_instances;
     sum_seg_model_instances_ += static_cast<uint64_t>(seg_stats.kept_instances);
 
-    if (!det_ok || !seg_ok) {
+    if (!guideboard_log_only_ && (!det_ok || !seg_ok)) {
       RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000,
                            "inference failure: det_ok=%d seg_ok=%d", det_ok, seg_ok);
     }
@@ -1354,10 +1958,12 @@ class FusedPerceptionNode : public rclcpp::Node {
       if (!line_follower_stop_client_->service_is_ready()) {
         human_service_action_ = "stop_wait_service";
         human_service_last_call_sec_ = now;
-        RCLCPP_WARN_THROTTLE(
-            get_logger(), *get_clock(), 2000,
-            "Human OBSTACLE_STOP active, waiting for %s",
-            line_follower_stop_service_.c_str());
+        if (!guideboard_log_only_) {
+          RCLCPP_WARN_THROTTLE(
+              get_logger(), *get_clock(), 2000,
+              "Human OBSTACLE_STOP active, waiting for %s",
+              line_follower_stop_service_.c_str());
+        }
         return;
       }
 
@@ -1374,18 +1980,24 @@ class FusedPerceptionNode : public rclcpp::Node {
               if (response->success) {
                 human_service_stop_active_ = true;
                 human_service_action_ = "stopped";
-                RCLCPP_WARN(get_logger(),
-                            "Human obstacle stop applied through line follower service: %s",
-                            response->message.c_str());
+                if (!guideboard_log_only_) {
+                  RCLCPP_WARN(get_logger(),
+                              "Human obstacle stop applied through line follower service: %s",
+                              response->message.c_str());
+                }
               } else {
                 human_service_action_ = "stop_failed";
-                RCLCPP_WARN(get_logger(),
-                            "Human obstacle stop rejected by line follower: %s",
-                            response->message.c_str());
+                if (!guideboard_log_only_) {
+                  RCLCPP_WARN(get_logger(),
+                              "Human obstacle stop rejected by line follower: %s",
+                              response->message.c_str());
+                }
               }
             } catch (const std::exception& e) {
               human_service_action_ = "stop_failed";
-              RCLCPP_WARN(get_logger(), "Human obstacle stop service failed: %s", e.what());
+              if (!guideboard_log_only_) {
+                RCLCPP_WARN(get_logger(), "Human obstacle stop service failed: %s", e.what());
+              }
             }
           });
       return;
@@ -1397,10 +2009,12 @@ class FusedPerceptionNode : public rclcpp::Node {
     if (!line_follower_start_client_->service_is_ready()) {
       human_service_action_ = "resume_wait_service";
       human_service_last_call_sec_ = now;
-      RCLCPP_WARN_THROTTLE(
-          get_logger(), *get_clock(), 2000,
-          "Human obstacle cleared, waiting for %s",
-          line_follower_start_service_.c_str());
+      if (!guideboard_log_only_) {
+        RCLCPP_WARN_THROTTLE(
+            get_logger(), *get_clock(), 2000,
+            "Human obstacle cleared, waiting for %s",
+            line_follower_start_service_.c_str());
+      }
       return;
     }
 
@@ -1417,18 +2031,24 @@ class FusedPerceptionNode : public rclcpp::Node {
             if (response->success) {
               human_service_stop_active_ = false;
               human_service_action_ = "cleared";
-              RCLCPP_INFO(get_logger(),
-                          "Human obstacle cleared; controller resume service completed: %s",
-                          response->message.c_str());
+              if (!guideboard_log_only_) {
+                RCLCPP_INFO(get_logger(),
+                            "Human obstacle cleared; controller resume service completed: %s",
+                            response->message.c_str());
+              }
             } else {
               human_service_action_ = "resume_failed";
-              RCLCPP_WARN(get_logger(),
-                          "Human obstacle resume rejected by line follower: %s",
-                          response->message.c_str());
+              if (!guideboard_log_only_) {
+                RCLCPP_WARN(get_logger(),
+                            "Human obstacle resume rejected by line follower: %s",
+                            response->message.c_str());
+              }
             }
           } catch (const std::exception& e) {
             human_service_action_ = "resume_failed";
-            RCLCPP_WARN(get_logger(), "Human obstacle resume service failed: %s", e.what());
+            if (!guideboard_log_only_) {
+              RCLCPP_WARN(get_logger(), "Human obstacle resume service failed: %s", e.what());
+            }
           }
         });
   }
@@ -1561,6 +2181,9 @@ class FusedPerceptionNode : public rclcpp::Node {
            << " car_filter=" << (debug_info.car_boundary_active ? 1 : 0)
            << " car_x=" << debug_info.car_left_x
            << " car_rm=" << debug_info.car_filtered_point_count
+           << " car_push=" << (debug_info.car_push_active ? 1 : 0)
+           << " car_ps=" << debug_info.car_pushed_point_count
+           << " car_del=" << debug_info.car_deleted_point_count
            << " car_lost=" << debug_info.car_boundary_lost_count
            << " fit_hold=" << (debug_info.fit_hold_active ? 1 : 0)
            << " alpha=" << std::clamp(blend_alpha_, 0.0f, 1.0f);
@@ -1569,7 +2192,11 @@ class FusedPerceptionNode : public rclcpp::Node {
     std::ostringstream car_status;
     car_status << "CAR boundary=" << (debug_info.car_boundary_active ? 1 : 0)
                << " left_x=" << debug_info.car_left_x
-               << " removed=" << debug_info.car_filtered_point_count
+               << " push=" << (debug_info.car_push_active ? 1 : 0)
+               << " pushed=" << debug_info.car_pushed_point_count
+               << " deleted=" << debug_info.car_deleted_point_count
+               << " target_x=" << debug_info.car_push_target_x
+               << " bottom=" << debug_info.car_push_expand_bottom_y
                << " lost=" << debug_info.car_boundary_lost_count
                << " hold=" << (debug_info.fit_hold_active ? 1 : 0)
                << " age=" << debug_info.fit_hold_age;
@@ -1578,6 +2205,9 @@ class FusedPerceptionNode : public rclcpp::Node {
     std::ostringstream human_status;
     human_status << "HUMAN state=" << debug_info.human_state
                  << " pass=" << (debug_info.human_passable ? 1 : 0)
+                 << " edge=" << (debug_info.human_right_edge_passable ? 1 : 0)
+                 << " edge_x=" << debug_info.human_right_edge_limit_x
+                 << " edge_n=" << debug_info.human_right_edge_pass_count
                  << " latched=" << (debug_info.human_left_seen_latched ? 1 : 0)
                  << " right=" << debug_info.human_right_clear_confirm_count
                  << " stop=" << debug_info.human_stop_confirm_count
@@ -1622,11 +2252,15 @@ class FusedPerceptionNode : public rclcpp::Node {
       fs::path latest = fs::path(debug_screenshot_dir_) / "latest.jpg";
       cv::imwrite(path.string(), vis);
       cv::imwrite(latest.string(), vis);
-      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000,
-                           "saved debug screenshot: %s", path.string().c_str());
+      if (!guideboard_log_only_) {
+        RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000,
+                             "saved debug screenshot: %s", path.string().c_str());
+      }
     } catch (const std::exception& e) {
-      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000,
-                           "failed to save debug screenshot: %s", e.what());
+      if (!guideboard_log_only_) {
+        RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000,
+                             "failed to save debug screenshot: %s", e.what());
+      }
     }
   }
 
@@ -1650,17 +2284,36 @@ class FusedPerceptionNode : public rclcpp::Node {
       cv::line(vis, cv::Point(car_x, 0), cv::Point(car_x, vis.rows - 1),
                cv::Scalar(255, 255, 0), 2, cv::LINE_AA);
     }
+    if (debug_info.car_push_active && debug_info.car_expanded_bbox.width > 0.0f &&
+        debug_info.car_expanded_bbox.height > 0.0f) {
+      cv::rectangle(vis, debug_info.car_expanded_bbox, cv::Scalar(0, 165, 255), 2,
+                    cv::LINE_AA);
+      const int target_x = std::clamp(
+          static_cast<int>(std::round(debug_info.car_push_target_x)),
+          0, std::max(0, vis.cols - 1));
+      const int top_y = std::clamp(
+          static_cast<int>(std::round(debug_info.car_expanded_bbox.y)),
+          0, std::max(0, vis.rows - 1));
+      const int bottom_y = std::clamp(
+          static_cast<int>(std::round(debug_info.car_expanded_bbox.y +
+                                      debug_info.car_expanded_bbox.height)),
+          top_y, std::max(0, vis.rows - 1));
+      cv::line(vis, cv::Point(target_x, top_y), cv::Point(target_x, bottom_y),
+               cv::Scalar(0, 165, 255), 2, cv::LINE_AA);
+    }
     for (const auto& human : debug_info.humans) {
       const cv::Scalar color = human.stop_candidate
                                    ? cv::Scalar(0, 0, 255)
-                                   : (human.passable ? cv::Scalar(0, 200, 0)
-                                                     : cv::Scalar(0, 165, 255));
+                                   : (human.right_edge_passable
+                                          ? cv::Scalar(255, 255, 0)
+                                          : (human.passable ? cv::Scalar(0, 200, 0)
+                                                             : cv::Scalar(0, 165, 255)));
       cv::rectangle(vis, human.effective_bbox, color, 2, cv::LINE_AA);
       if (human.fit_available && human.fit_line_limit_x >= 0.0f) {
         const int x = std::clamp(static_cast<int>(std::round(human.fit_line_limit_x)),
                                  0, std::max(0, vis.cols - 1));
         const int y = std::clamp(static_cast<int>(std::round(
-            human.effective_bbox.y + human.effective_bbox.height)),
+            human.effective_bbox.y + human.effective_bbox.height * 0.5f)),
             0, std::max(0, vis.rows - 1));
         cv::drawMarker(vis, cv::Point(x, y), cv::Scalar(255, 0, 255),
                        cv::MARKER_CROSS, 9, 2, cv::LINE_AA);
@@ -1708,6 +2361,12 @@ class FusedPerceptionNode : public rclcpp::Node {
     for (const auto& point : points) {
       cv::circle(vis, cv::Point(static_cast<int>(std::round(point.x)), static_cast<int>(std::round(point.y))),
                  template_active ? 3 : 1, cv::Scalar(0, 255, 0), -1);
+    }
+    for (const auto& point : debug_info.pushed_fit_points) {
+      cv::drawMarker(vis,
+                     cv::Point(static_cast<int>(std::round(point.x)),
+                               static_cast<int>(std::round(point.y))),
+                     cv::Scalar(0, 165, 255), cv::MARKER_CROSS, 9, 2, cv::LINE_AA);
     }
 
     if (!debug_info.fit_coeffs.empty()) {
@@ -1761,38 +2420,12 @@ class FusedPerceptionNode : public rclcpp::Node {
     debug_screenshot_dir_ = get_parameter("debug_screenshot_dir").as_string();
     enable_result_log_ = get_parameter("enable_result_log").as_bool();
     enable_data_log_ = get_parameter("enable_data_log").as_bool();
+    guideboard_log_only_ = get_parameter("guideboard_log_only").as_bool();
     enable_perf_stats_ = get_parameter("enable_perf_stats").as_bool();
   }
 
   void logDecisionStatus(const LaneState& lane_state, const LaneDebugInfo& debug_info) {
-    const bool branch_changed = lane_state.branch_side != last_branch_side_;
-    const bool wait_timeout_event = last_guideboard_waiting_for_hint_ &&
-                                    !debug_info.guideboard_waiting_for_hint &&
-                                    ocr_apply_to_control_ &&
-                                    !last_guideboard_match_.stable &&
-                                    lane_state.branch_side.empty();
-    if (enable_result_log_ && wait_timeout_event) {
-      logGuideboardResult(
-          "unknown_timeout", guideboard_track_id_, "unknown", "straight", "pending",
-          "ocr_wait_timeout", last_ocr_score_, last_guideboard_match_.best_score,
-          last_guideboard_match_.margin, stable_decision_latency_ms_);
-    }
-    if (enable_result_log_ && branch_changed && !lane_state.branch_side.empty()) {
-      const bool stable = last_guideboard_match_.stable;
-      const std::string sign = last_guideboard_match_.best_id.empty()
-                                   ? "unknown"
-                                   : last_guideboard_match_.best_id;
-      const std::string action = stable ? last_guideboard_match_.maneuver : "unknown";
-      const std::string reason = !ocr_apply_to_control_
-                                     ? "legacy_config"
-                                     : (stable ? "ocr_stable" : "unknown_timeout");
-      logGuideboardResult(
-          "branch_lock", guideboard_track_id_, sign, action, lane_state.branch_side, reason,
-          last_ocr_score_, last_guideboard_match_.best_score,
-          last_guideboard_match_.margin, stable_decision_latency_ms_);
-    }
-
-    if (enable_data_log_) {
+    if (enable_data_log_ && !guideboard_log_only_) {
       if (debug_info.guideboard_seen && !last_guideboard_seen_) {
         RCLCPP_INFO(get_logger(),
                     "GuideBoard usable: roi_count=%d total=%d best_conf=%.2f center=(%.1f,%.1f); "
@@ -1814,10 +2447,13 @@ class FusedPerceptionNode : public rclcpp::Node {
       if (debug_info.branch_detected != last_branch_detected_ ||
           debug_info.branch_score != last_branch_score_) {
         RCLCPP_INFO(get_logger(),
-                    "branch_detected=%d score=%d encoder_hold=%d encoder_delta=%ld/%ld "
+                    "branch_detected=%d score=%d event_id=%lu armed=%d sign_latched=%d "
+                    "encoder_hold=%d encoder_delta=%ld/%ld "
                     "lb_tpl=%d tpl_side=%s lb_pts=%d lb_reason=%s "
                     "segments=%d raw_points=%d fit_points=%d",
                     debug_info.branch_detected, debug_info.branch_score,
+                    static_cast<unsigned long>(debug_info.branch_event_id),
+                    debug_info.branch_event_armed, debug_info.guideboard_seen_latched,
                     debug_info.encoder_hold, static_cast<long>(debug_info.encoder_hold_delta),
                     static_cast<long>(debug_info.encoder_hold_target),
                     debug_info.left_boundary_template_active, debug_info.boundary_template_side.c_str(),
@@ -1846,9 +2482,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     last_road_state_ = lane_state.road_state;
     last_branch_side_ = lane_state.branch_side;
     last_task_state_ = lane_state.task_state;
-    last_guideboard_waiting_for_hint_ = debug_info.guideboard_waiting_for_hint;
 
-    if (!enable_data_log_) {
+    if (!enable_data_log_ || guideboard_log_only_) {
       return;
     }
     double now = nowSeconds();
@@ -1883,7 +2518,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   }
 
   void logPerfIfNeeded() {
-    if (!enable_perf_stats_) {
+    if (!enable_perf_stats_ || guideboard_log_only_) {
       return;
     }
     double now = nowSeconds();
@@ -1966,8 +2601,11 @@ class FusedPerceptionNode : public rclcpp::Node {
   bool publish_lane_state_{true};
   bool enable_result_log_{true};
   bool enable_data_log_{false};
+  bool guideboard_log_only_{true};
   std::string line_follower_start_service_{"/line_follower/start"};
   std::string line_follower_stop_service_{"/line_follower/stop"};
+  const std::string guideboard_start_service_{"/line_follower/start"};
+  const std::string guideboard_stop_service_{"/line_follower/stop"};
   double human_service_retry_interval_sec_{0.20};
 
   std::string det_model_path_;
@@ -2013,6 +2651,8 @@ class FusedPerceptionNode : public rclcpp::Node {
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr guideboard_recognition_pub_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr line_follower_start_client_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr line_follower_stop_client_;
+  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr guideboard_start_client_;
+  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr guideboard_stop_client_;
   rclcpp::Subscription<std_msgs::msg::Int64>::SharedPtr encoder_count_sub_;
 
   bool human_stop_desired_{false};
@@ -2050,7 +2690,6 @@ class FusedPerceptionNode : public rclcpp::Node {
   float last_seg_model_conf_max_{0.0f};
   double last_status_log_sec_{0.0};
   bool last_guideboard_seen_{false};
-  bool last_guideboard_waiting_for_hint_{false};
   bool last_branch_detected_{false};
   int last_branch_score_{-1};
   std::string last_road_state_;
@@ -2059,6 +2698,17 @@ class FusedPerceptionNode : public rclcpp::Node {
 
   bool enable_guideboard_ocr_{true};
   bool guideboard_ocr_ready_{false};
+  bool enable_guideboard_api_{true};
+  std::string guideboard_api_url_{"https://qianfan.baidubce.com/v2/chat/completions"};
+  std::string guideboard_api_model_{"ernie-4.5-turbo-20260402"};
+  std::string api_key_;
+  double guideboard_api_timeout_sec_{1.5};
+  int guideboard_api_text_history_size_{3};
+  double guideboard_api_text_similarity_{0.70};
+  int guideboard_api_force_ocr_count_after_stop_{2};
+  double guideboard_api_stop_height_ratio_{0.20};
+  bool guideboard_api_retry_on_transport_failure_{true};
+  int guideboard_api_max_attempts_{2};
   std::string ocr_det_model_path_;
   std::string ocr_rec_model_path_;
   std::string ocr_pipeline_mode_{"rec_then_det"};
@@ -2067,13 +2717,27 @@ class FusedPerceptionNode : public rclcpp::Node {
   int ocr_fallback_uncertain_count_{2};
   double ocr_branch_wait_timeout_sec_{0.20};
   std::string ocr_unknown_maneuver_{"straight"};
+  float ocr_min_text_score_{0.35f};
   float ocr_crop_padding_ratio_{0.25f};
   float lane_guideboard_y0_ratio_{0.2f};
   float lane_guideboard_y1_ratio_{0.7f};
   PPOCRDirectionSystem guideboard_ocr_;
-  GuideboardRecognizer guideboard_recognizer_;
-  GuideboardMatch last_guideboard_match_;
   std::future<OcrTaskResult> guideboard_ocr_future_;
+  std::future<GuideboardApiTaskResult> guideboard_api_future_;
+  std::deque<GuideboardApiSample> guideboard_api_ocr_history_;
+  GuideboardRoutePolicy guideboard_route_policy_;
+  uint64_t guideboard_route_session_id_{1};
+  uint64_t active_guideboard_branch_event_id_{0};
+  bool accept_guideboard_for_route_{true};
+  bool guideboard_track_route_eligible_{false};
+  bool guideboard_api_request_in_flight_{false};
+  bool api_session_attempted_{false};
+  bool api_fallback_{false};
+  std::string api_trigger_reason_;
+  int api_attempt_count_{0};
+  double last_api_latency_ms_{-1.0};
+  int last_api_http_status_{0};
+  std::string last_api_corrected_text_;
   int ocr_task_crop_width_{0};
   int ocr_task_crop_height_{0};
   bool has_guideboard_track_{false};
@@ -2082,8 +2746,19 @@ class FusedPerceptionNode : public rclcpp::Node {
   double guideboard_last_seen_sec_{0.0};
   int guideboard_uncertain_count_{0};
   bool guideboard_fallback_used_{false};
-  std::string stable_guideboard_branch_;
-  uint64_t stable_result_logged_track_id_{0};
+  uint64_t guideboard_sequence_{0};
+  std::string current_guideboard_maneuver_;
+  std::string current_guideboard_branch_;
+  std::string current_guideboard_decision_source_;
+  bool current_guideboard_decision_valid_{false};
+  bool current_guideboard_opposite_{false};
+  double last_guideboard_height_ratio_{0.0};
+  int guideboard_api_force_ocr_count_{0};
+  bool guideboard_stop_wait_active_{false};
+  bool guideboard_stop_active_{false};
+  bool guideboard_stop_call_pending_{false};
+  bool guideboard_start_call_pending_{false};
+  bool guideboard_start_after_stop_{false};
   double guideboard_decision_start_sec_{0.0};
   double stable_decision_latency_ms_{-1.0};
   double last_guideboard_ocr_sec_{0.0};

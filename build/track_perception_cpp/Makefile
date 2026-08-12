@@ -224,6 +224,19 @@ test_guideboard_recognizer/fast:
 .PHONY : test_guideboard_recognizer/fast
 
 #=============================================================================
+# Target rules for targets named test_guideboard_route_policy
+
+# Build rule for target.
+test_guideboard_route_policy: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_guideboard_route_policy
+.PHONY : test_guideboard_route_policy
+
+# fast build rule for target.
+test_guideboard_route_policy/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_route_policy.dir/build.make CMakeFiles/test_guideboard_route_policy.dir/build
+.PHONY : test_guideboard_route_policy/fast
+
+#=============================================================================
 # Target rules for targets named test_lane_guideboard_wait
 
 # Build rule for target.
@@ -299,6 +312,30 @@ src/fused_perception_node.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.s
 .PHONY : src/fused_perception_node.cpp.s
 
+src/guideboard_api_client.o: src/guideboard_api_client.cpp.o
+.PHONY : src/guideboard_api_client.o
+
+# target to build an object file
+src/guideboard_api_client.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_api_client.cpp.o
+.PHONY : src/guideboard_api_client.cpp.o
+
+src/guideboard_api_client.i: src/guideboard_api_client.cpp.i
+.PHONY : src/guideboard_api_client.i
+
+# target to preprocess a source file
+src/guideboard_api_client.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_api_client.cpp.i
+.PHONY : src/guideboard_api_client.cpp.i
+
+src/guideboard_api_client.s: src/guideboard_api_client.cpp.s
+.PHONY : src/guideboard_api_client.s
+
+# target to generate assembly for a file
+src/guideboard_api_client.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_api_client.cpp.s
+.PHONY : src/guideboard_api_client.cpp.s
+
 src/guideboard_recognizer.o: src/guideboard_recognizer.cpp.o
 .PHONY : src/guideboard_recognizer.o
 
@@ -325,6 +362,33 @@ src/guideboard_recognizer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_recognizer.dir/build.make CMakeFiles/test_guideboard_recognizer.dir/src/guideboard_recognizer.cpp.s
 .PHONY : src/guideboard_recognizer.cpp.s
+
+src/guideboard_route_policy.o: src/guideboard_route_policy.cpp.o
+.PHONY : src/guideboard_route_policy.o
+
+# target to build an object file
+src/guideboard_route_policy.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_route_policy.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_route_policy.dir/build.make CMakeFiles/test_guideboard_route_policy.dir/src/guideboard_route_policy.cpp.o
+.PHONY : src/guideboard_route_policy.cpp.o
+
+src/guideboard_route_policy.i: src/guideboard_route_policy.cpp.i
+.PHONY : src/guideboard_route_policy.i
+
+# target to preprocess a source file
+src/guideboard_route_policy.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_route_policy.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_route_policy.dir/build.make CMakeFiles/test_guideboard_route_policy.dir/src/guideboard_route_policy.cpp.i
+.PHONY : src/guideboard_route_policy.cpp.i
+
+src/guideboard_route_policy.s: src/guideboard_route_policy.cpp.s
+.PHONY : src/guideboard_route_policy.s
+
+# target to generate assembly for a file
+src/guideboard_route_policy.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_route_policy.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_route_policy.dir/build.make CMakeFiles/test_guideboard_route_policy.dir/src/guideboard_route_policy.cpp.s
+.PHONY : src/guideboard_route_policy.cpp.s
 
 src/lane_decision.o: src/lane_decision.cpp.o
 .PHONY : src/lane_decision.o
@@ -475,6 +539,30 @@ test/test_guideboard_recognizer.s: test/test_guideboard_recognizer.cpp.s
 test/test_guideboard_recognizer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_recognizer.dir/build.make CMakeFiles/test_guideboard_recognizer.dir/test/test_guideboard_recognizer.cpp.s
 .PHONY : test/test_guideboard_recognizer.cpp.s
+
+test/test_guideboard_route_policy.o: test/test_guideboard_route_policy.cpp.o
+.PHONY : test/test_guideboard_route_policy.o
+
+# target to build an object file
+test/test_guideboard_route_policy.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_route_policy.dir/build.make CMakeFiles/test_guideboard_route_policy.dir/test/test_guideboard_route_policy.cpp.o
+.PHONY : test/test_guideboard_route_policy.cpp.o
+
+test/test_guideboard_route_policy.i: test/test_guideboard_route_policy.cpp.i
+.PHONY : test/test_guideboard_route_policy.i
+
+# target to preprocess a source file
+test/test_guideboard_route_policy.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_route_policy.dir/build.make CMakeFiles/test_guideboard_route_policy.dir/test/test_guideboard_route_policy.cpp.i
+.PHONY : test/test_guideboard_route_policy.cpp.i
+
+test/test_guideboard_route_policy.s: test/test_guideboard_route_policy.cpp.s
+.PHONY : test/test_guideboard_route_policy.s
+
+# target to generate assembly for a file
+test/test_guideboard_route_policy.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_route_policy.dir/build.make CMakeFiles/test_guideboard_route_policy.dir/test/test_guideboard_route_policy.cpp.s
+.PHONY : test/test_guideboard_route_policy.cpp.s
 
 test/test_lane_decision_car_boundary.o: test/test_lane_decision_car_boundary.cpp.o
 .PHONY : test/test_lane_decision_car_boundary.o
@@ -711,14 +799,21 @@ help:
 	@echo "... gtest"
 	@echo "... gtest_main"
 	@echo "... test_guideboard_recognizer"
+	@echo "... test_guideboard_route_policy"
 	@echo "... test_lane_decision_car_boundary"
 	@echo "... test_lane_guideboard_wait"
 	@echo "... src/fused_perception_node.o"
 	@echo "... src/fused_perception_node.i"
 	@echo "... src/fused_perception_node.s"
+	@echo "... src/guideboard_api_client.o"
+	@echo "... src/guideboard_api_client.i"
+	@echo "... src/guideboard_api_client.s"
 	@echo "... src/guideboard_recognizer.o"
 	@echo "... src/guideboard_recognizer.i"
 	@echo "... src/guideboard_recognizer.s"
+	@echo "... src/guideboard_route_policy.o"
+	@echo "... src/guideboard_route_policy.i"
+	@echo "... src/guideboard_route_policy.s"
 	@echo "... src/lane_decision.o"
 	@echo "... src/lane_decision.i"
 	@echo "... src/lane_decision.s"
@@ -737,6 +832,9 @@ help:
 	@echo "... test/test_guideboard_recognizer.o"
 	@echo "... test/test_guideboard_recognizer.i"
 	@echo "... test/test_guideboard_recognizer.s"
+	@echo "... test/test_guideboard_route_policy.o"
+	@echo "... test/test_guideboard_route_policy.i"
+	@echo "... test/test_guideboard_route_policy.s"
 	@echo "... test/test_lane_decision_car_boundary.o"
 	@echo "... test/test_lane_decision_car_boundary.i"
 	@echo "... test/test_lane_decision_car_boundary.s"

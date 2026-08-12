@@ -168,6 +168,8 @@
     min_perception_confidence: 0.50
     # 感知短暂失效时保持的最高速度，单位 m/s。
     invalid_hold_speed: 0.10
+    # 丢线/置信度暂时不足时保持上一帧速度和舵量，直到感知恢复。
+    enable_line_loss_command_hold: true
     # 启动后是否自动尝试发车；false 时必须调用 /line_follower/start。
     autonomous_enabled_on_start: false
 

@@ -3,4 +3,20 @@
 控制 ros2 launch line_follower_control_cpp controller.launch.py
 键盘 ros2 run keyboard_controller keyboard_control_node
 
-接下来我的目标是平均1.0m/s,你先从现在的速度缓慢提升,现在我一个节点都没有开启
+
+环境
+source /opt/ros/humble/setup.bash
+source ~/scuderiaferrari/install/setup.bash
+
+四种速度从快到慢
+./manettino/esc_off.sh
+./manettino/tc_off.sh
+./manettino/race.sh
+./manettino/sport.sh
+./manettino/wet.sh
+
+发车
+ros2 service call /line_follower/start std_srvs/srv/Trigger "{}"
+停车
+ros2 service call /line_follower/stop std_srvs/srv/Trigger "{}"
+不可以ctrl + c

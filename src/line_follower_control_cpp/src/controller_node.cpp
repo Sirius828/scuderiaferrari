@@ -81,6 +81,7 @@ struct ControllerParameters
   bool enable_geometry_stall_auto_resume{true};
   double geometry_stall_recovery_time{0.50};
   double invalid_hold_speed_mps{0.25};
+  bool enable_line_loss_command_hold{false};
   double offset_y07_weight{0.20};
   double offset_y08_weight{0.30};
   double offset_y09_weight{0.50};
@@ -169,6 +170,8 @@ public:
     declare_parameter<double>(
       "geometry_stall_recovery_time", params_.geometry_stall_recovery_time);
     declare_parameter<double>("invalid_hold_speed", params_.invalid_hold_speed_mps);
+    declare_parameter<bool>(
+      "enable_line_loss_command_hold", params_.enable_line_loss_command_hold);
     declare_parameter<double>("offset_y07_weight", params_.offset_y07_weight);
     declare_parameter<double>("offset_y08_weight", params_.offset_y08_weight);
     declare_parameter<double>("offset_y09_weight", params_.offset_y09_weight);
@@ -294,7 +297,9 @@ public:
       params_.offset_timeout, steering_sign_, control_frequency_);
     RCLCPP_INFO(
       get_logger(),
-      "Controller starts disabled; use /line_follower/start or /line_follower/set_enabled true");
+      "Controller starts disabled; use /line_follower/start or /line_follower/set_enabled true; "
+      "line_loss_command_hold=%s",
+      params_.enable_line_loss_command_hold ? "true" : "false");
   }
 
   void publish_stop_commands(int count = 5)
@@ -357,6 +362,8 @@ private:
     params_.geometry_stall_recovery_time =
       get_parameter("geometry_stall_recovery_time").as_double();
     params_.invalid_hold_speed_mps = get_parameter("invalid_hold_speed").as_double();
+    params_.enable_line_loss_command_hold =
+      get_parameter("enable_line_loss_command_hold").as_bool();
     params_.offset_y07_weight = get_parameter("offset_y07_weight").as_double();
     params_.offset_y08_weight = get_parameter("offset_y08_weight").as_double();
     params_.offset_y09_weight = get_parameter("offset_y09_weight").as_double();
@@ -852,6 +859,8 @@ private:
         pending.geometry_stall_recovery_time = parameter.as_double();
       } else if (name == "invalid_hold_speed") {
         pending.invalid_hold_speed_mps = parameter.as_double();
+      } else if (name == "enable_line_loss_command_hold") {
+        pending.enable_line_loss_command_hold = parameter.as_bool();
       } else if (name == "offset_y07_weight") {
         pending.offset_y07_weight = parameter.as_double();
       } else if (name == "offset_y08_weight") {
@@ -1429,6 +1438,21 @@ private:
       if (!invalid_since_) {
         invalid_since_ = now;
       }
+
+      if (params_.enable_line_loss_command_hold) {
+        // Keep the exact last command alive so the chassis watchdog continues
+        // to receive a command while lane confidence temporarily drops.
+        // Emergency stop and geometry-stall checks run before this branch and
+        // still force a zero command when either safety condition is active.
+        publish_chassis_enable(true);
+        publish_motion_command(current_speed_mps_, current_steering_);
+        last_mode_ = "line_loss_command_hold";
+        publish_debug(now);
+        previous_control_time_ = now;
+        filtered_derivative_ = 0.0;
+        return;
+      }
+
       const double invalid_age = std::chrono::duration<double>(now - *invalid_since_).count();
       if (invalid_age > params_.offset_timeout) {
         lock_and_stop("perception_timeout");
@@ -2166,6 +2190,8 @@ private:
       (geometry_stall_recovery_since_ ?
       std::chrono::duration<double>(now - *geometry_stall_recovery_since_).count() : 0.0)
          << " perception_ready=" << (perception_ready(now) ? "True" : "False")
+         << " line_loss_command_hold=" <<
+      (params_.enable_line_loss_command_hold ? "True" : "False")
          << " emergency=" << (emergency_stop_active_ ? "True" : "False")
          << " offset_y07=" << current_offset_y07_
          << " offset_y08=" << current_offset_y08_

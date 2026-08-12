@@ -46,6 +46,7 @@
     inner_side_min_linear_speed: 0.0
     inner_side_offset_threshold: 0.05
     invalid_hold_speed: 0.1
+    enable_line_loss_command_hold: true
     lane_state_topic: /perception/lane_state
     linear_speed: 1.2
     lock_branch_outer_bias: false

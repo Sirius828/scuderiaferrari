@@ -1,0 +1,200 @@
+# C++ fused_perception_node 参数 - V2 baseline
+# 说明：
+# - V1: 巡线、岔路、GuideBoard、终点停车。
+# - V2: Car 使用右边界约束参与二阶拟合；Human/终点仍通过保护状态停车。
+
+fused_perception_node:
+  ros__parameters:
+    # 基础输入
+    shm_name: "shm_ar_video"
+    enable_flip: false
+    flip_code: 0
+    input_format: "RGB"
+    model_input_format: "RGB"
+
+    # 性能日志：只看 FPS、RKNN 推理耗时、后处理耗时、发布耗时
+    enable_perf_stats: false
+    perf_interval: 2.0
+
+    # 画面显示：只影响 OpenCV 预览窗口，不影响终端日志
+    show_window: true
+    blend_alpha: 0.5
+    show_branch_debug: true
+    enable_debug_screenshots: false
+    debug_screenshot_interval_sec: 0.0
+    debug_screenshot_branch_only: false
+    debug_screenshot_dir: "/tmp/fused_perception_screenshots"
+
+    # 结果日志：只打印稳定识别、回退、轨迹和最终分支事件
+    enable_result_log: false
+    # 数据日志：终端逐次 OCR、车道几何和周期状态；详细 JSON 始终发布到 ROS 话题
+    enable_data_log: true
+    # Human 使用带运行状态记忆的专用服务：只有避障前已发车才允许清障后恢复。
+    line_follower_start_service: "/line_follower/obstacle_resume"
+    line_follower_stop_service: "/line_follower/obstacle_pause"
+    human_service_retry_interval_sec: 0.20
+
+    # 目标检测模型
+    det_model_path: "model/det_715.rknn"
+    label_list_path: "model/label_list.txt"
+    det_core_id: 0
+    det_input_width: 320 #384
+    det_input_height: 256 # 288
+    det_conf_threshold: 0.75
+    det_nms_threshold: 0.35
+    det_raw_output: true
+    publish_detections: true
+    publish_rate: 0
+    use_fast_postprocess: false
+
+    # 实例分割模型
+    seg_model_dir: "/home/orangepi/scuderiaferrari/src/track_perception/model"
+    seg_model_filename: "seg_714v3.rknn"
+    seg_core_ids: "1,2"
+    seg_input_width: 320 #384
+    seg_input_height: 128 #160
+    seg_crop_y0_ratio: 0.45
+    seg_crop_y1_ratio: 1.0
+    seg_pad_value: 114
+    seg_conf_threshold: 0.15
+    # 与 Ultralytics predict(..., iou=0.7) 对齐：同类别仅按 box IoU 做 NMS。
+    # 不再使用 containment 抑制，否则大框会把其中真实的小区域 mask 筛掉。
+    seg_nms_threshold: 0.70
+    seg_mask_threshold: 0.5
+    seg_max_detections: 30
+    seg_raw_output: true
+
+    # 外圈方向
+    outer_side: "left"
+
+    # GuideBoard 岔路选择：路牌在 ROI 内建立识别轨迹，岔路触发后可等待 OCR 结果再锁定分支
+    enable_guideboard_branch_selection: true
+    guideboard_detect_y0_ratio: 0.2
+    guideboard_detect_y1_ratio: 0.7
+    enable_guideboard_ocr: true
+    ocr_det_model_path: "model/ppocrv4_det.rknn"
+    ocr_rec_model_path: "model/ppocrv4_rec.rknn"
+    # rec_only: 固定两行直接识别；det_rec: 文字检测+识别；rec_then_det: Rec优先，必要时回退
+    ocr_pipeline_mode: "rec_then_det"
+    # 影子模式先只发布识别结果；动态验证通过后改为 true 接管岔路方向
+    ocr_apply_to_control: true
+    ocr_rec_interval_sec: 0.05
+    ocr_fallback_uncertain_count: 2
+    ocr_min_text_score: 0.35
+    ocr_evidence_decay: 0.7
+    ocr_stable_min_evidence: 4.0
+    ocr_stable_min_margin: 2.0
+    ocr_stable_frames: 2
+    ocr_branch_wait_timeout_sec: 0.20
+    ocr_unknown_maneuver: "straight"
+    ocr_template_ids: ["rough_right", "irony_straight", "phone_straight", "shortcut_right", "right_dead_end_straight", "left_rough_right_flat"]
+    ocr_template_texts:
+      - "右道真的有点崎岖，但是直道真的走不了"
+      - "右道比直道好走多了？才怪！"
+      - "他们来电话了，说不让我方向盘往右打！"
+      - "我就说三个字：抄近道"
+      - "右道是一条不归路！"
+      - "左侧道路崎岖，右侧一马平川"
+    ocr_template_maneuvers: ["right", "straight", "straight", "right", "straight", "right"]
+    # 以下三项只为兼容旧配置；闭集识别不再用方向规则投票
+    ocr_min_score: 0.75
+    ocr_crop_padding_ratio: 0.25
+    ocr_vote_window: 3
+
+    # Band 扫描
+    enable_segment_branch_logic: true
+    band_count: 28
+    band_y_min_ratio: 0.45
+    band_y_max_ratio: 1.0
+    band_height_ratio: 0.015
+    min_segment_width_px: 60
+    min_segment_gap_px: 40
+    min_pixels_per_band: 80
+
+    # 岔路确认
+    branch_detect_min_bands: 1
+    branch_confirm_frames: 2
+    branch_detect_far_band_ratio: 0.7
+    enable_encoder_branch_hold: true
+    encoder_count_topic: "/chassis/encoder_count"
+    encoder_hold_counts: 9000
+    # 右岔路单独保持距离；左岔路继续使用 encoder_hold_counts
+    encoder_hold_right_counts: 20000
+    encoder_feedback_timeout_sec: 0.30
+
+    # 中心线拟合
+    fit_min_points: 4
+    fit_order: 2
+    branch_fit_order: 2
+    enable_fit_point_jump_filter: false
+    max_fit_point_dx_ratio: 0.22
+    max_fit_point_dx_px: 140.0
+    enable_fit_point_trend_filter: false
+    fit_point_trend_residual_ratio: 0.12
+    fit_point_trend_residual_px: 80.0
+    fit_point_trend_slope_delta: 0.65
+    fit_point_trend_min_points: 6
+    fit_point_trend_min_keep_ratio: 0.75
+    # 高视角下按新 band 范围 [0.45, 1.0] 重新分布远/中/近采样点。
+    # topic 名保留 y07/y08/y09 仅为兼容控制器，不再代表固定图像高度。
+    offset_y07_ratio: 0.58
+    offset_y08_ratio: 0.72
+    offset_y09_ratio: 0.86
+    heading_y_ratio: 0.65
+    max_offset_jump: 0.80
+    offset_smoothing_alpha: 0.35
+
+    # 左边界模板线：检测到岔路且目标为 left 时，使用 current_left_boundary + template_offset 作为全部拟合点
+    enable_left_boundary_template_line: true
+    left_boundary_template_side: "left"
+    # 基准左模板（0 px 修正）。后续若需内移，应按透视逐渐增加近端修正，避免远端窄路过度偏移。
+    left_boundary_template_offsets: "22.0,25.7,29.5,33.2,39.4,43.7,48.4,54.2,62.4,69.1,75.4,83.6,91.3,99.6,105.3,110.1,116.3,123.5,131.8,140.0,148.0,156.0,164.0,172.0"
+    left_boundary_template_min_points: 6
+    left_boundary_template_weight: 1.0
+    # 右分支模板向当前右边界内侧的修正。原近端 200 px 会把拟合点拉到赛道中心甚至左侧；
+    # 整体减小约 100 px 后，近端点右移，同时保留远端渐进变化，避免曲线出现折角。
+    right_boundary_template_offsets: "0.0,0.0,0.0,0.0,0.0,0.0,6.0,9.0,40.0,41.0,40.0,40.0,40.0,41.0,43.0,47.0,52.0,58.0,65.0,72.0,79.0,86.0,93.0,100.0"
+    right_boundary_template_min_points: 6
+    right_boundary_template_weight: 1.0
+
+    # 障碍保护与 Car 右边界拟合：
+    # - enable_obstacle_avoidance 是旧 band 区域扣除路径，默认关闭，保留便于回滚
+    # - Human 不参与 band/拟合点扣除，由右侧确认和有效面积规则单独处理
+    enable_obstacle_avoidance: false
+    obstacle_labels: ""
+    obstacle_min_confidence: 0.45
+    obstacle_x_margin_px: 35.0
+    obstacle_y_margin_px: 20.0
+    obstacle_max_age: 0.3
+    obstacle_min_bottom_y_ratio: 0.35
+    enable_human_obstacle_stop: true
+    human_left_expand_px: 10.0
+    human_left_expand_width_ratio: 0.50
+    human_line_margin_px: 5.0
+    human_stop_effective_area_ratio: 0.003
+    human_stop_confirm_frames: 2
+    human_clear_confirm_frames: 3
+    enable_car_right_boundary_filter: true
+    car_boundary_x_margin_px: 0.0
+    car_boundary_y_margin_px: 0.0
+    car_boundary_smoothing_alpha: 0.5
+    car_boundary_lost_frames: 3
+    car_fit_hold_timeout_sec: 0.20
+    # Car 推开模式：默认关闭，开启后替代旧的 Car 左边界删除逻辑
+    enable_car_point_push_avoidance: false
+    car_push_expand_left_px: 100.0
+    car_push_expand_bottom_px: 20.0
+    car_push_expand_right_px: 0.0
+    car_push_expand_top_px: 0.0
+    car_push_clearance_px: 3.0
+
+    # 终点停车：Stop bbox 底部达到阈值才 FINISH_STOP
+    # 联调阶段忽略 Stop 标签，不产生 FINISH_STOP；后续接入专用终点联锁后再开启。
+    enable_finish_stop: false
+    finish_stop_min_confidence: 0.45
+    finish_stop_arm_y_ratio: 0.70
+    finish_stop_lost_frames: 3
+    finish_stop_max_age: 0.5
+
+    # 话题发布
+    publish_lane_state: true

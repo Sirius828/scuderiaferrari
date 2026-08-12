@@ -34,11 +34,11 @@ LaneDecisionConfig makeConfig() {
   config.human_left_expand_px = 25.0f;
   config.human_left_expand_width_ratio = 0.50f;
   config.human_line_margin_px = 5.0f;
-  config.human_line_sample_count = 5;
-  config.human_line_sample_start_ratio = 0.60f;
   config.human_stop_effective_area_ratio = 0.020f;
   config.human_stop_confirm_frames = 1;
   config.human_clear_confirm_frames = 2;
+  config.enable_human_right_edge_pass = true;
+  config.human_right_edge_pass_margin_px = 45.0f;
   config.car_boundary_smoothing_alpha = 0.5f;
   config.car_boundary_lost_frames = 3;
   config.car_fit_hold_timeout_sec = 0.20;
@@ -66,12 +66,23 @@ cv::Mat fullMask() {
   return makeMask({446, 443, 479, 450, 460, 440, 455, 470, 348, 348, 328, 318});
 }
 
+cv::Mat carPushMask() {
+  // Far points are outside the original Car box and should be deleted.  The
+  // middle points are inside the expanded box and should be pushed left.  The
+  // last points are safely left of the expanded box and should remain.
+  return makeMask({450, 450, 450, 450, 400, 400, 400, 300, 300, 300, 300, 300});
+}
+
 cv::Mat sparseMask() {
   return makeMask({320, 330, 340});
 }
 
 cv::Mat straightMask() {
   return makeMask({320, 320, 320, 320, 320, 320, 320, 320, 320, 320, 320, 320});
+}
+
+cv::Mat rightFitMask() {
+  return makeMask({620, 620, 620, 620, 620, 620, 620, 620, 620, 620, 620, 620});
 }
 
 Detection car(float left_x) {
@@ -163,6 +174,73 @@ TEST(LaneDecisionCarBoundaryTest, AppliesLeftEdgeRuleEvenWhenCarIsInImageLeftHal
   }
 }
 
+TEST(LaneDecisionCarBoundaryTest, PushesExpandedCarPointsAndDeletesOutsideFarPoints) {
+  LaneDecisionConfig config = makeConfig();
+  config.enable_car_point_push_avoidance = true;
+  config.car_push_expand_left_px = 40.0f;
+  config.car_push_expand_bottom_px = 20.0f;
+  config.car_push_expand_right_px = 0.0f;
+  config.car_push_expand_top_px = 0.0f;
+  config.car_push_clearance_px = 3.0f;
+
+  LaneDecision decision;
+  decision.configure(config);
+  const LaneState state = decision.decide(carPushMask(), {car(360.0f)});
+  const auto& debug = decision.debugInfo();
+
+  EXPECT_TRUE(state.is_valid);
+  EXPECT_EQ(state.task_state, "CLEAR");
+  EXPECT_TRUE(debug.car_push_active);
+  EXPECT_EQ(debug.car_pushed_point_count, 2);
+  EXPECT_EQ(debug.car_deleted_point_count, 5);
+  EXPECT_EQ(debug.car_filtered_point_count, 5);
+  EXPECT_NEAR(debug.car_push_target_x, 317.0f, 1e-4f);
+  EXPECT_NEAR(debug.car_expanded_bbox.x, 320.0f, 1e-4f);
+  EXPECT_NEAR(debug.car_expanded_bbox.y, 200.0f, 1e-4f);
+  EXPECT_NEAR(debug.car_expanded_bbox.width, 120.0f, 1e-4f);
+  EXPECT_NEAR(debug.car_expanded_bbox.height, 140.0f, 1e-4f);
+  ASSERT_EQ(debug.fit_coeffs.size(), 3u);
+  EXPECT_EQ(debug.fit_order, 2);
+
+  for (const auto& point : debug.pushed_fit_points) {
+    EXPECT_FLOAT_EQ(point.x, 317.0f);
+    EXPECT_GE(point.y, 200.0f);
+    EXPECT_LE(point.y, 340.0f);
+  }
+  for (const auto& point : debug.removed_fit_points) {
+    EXPECT_GT(point.x, 360.0f);
+  }
+  bool has_safe_left_point = false;
+  for (const auto& point : debug.fit_points) {
+    if (point.x < 320.0f) {
+      has_safe_left_point = true;
+    }
+  }
+  EXPECT_TRUE(has_safe_left_point);
+}
+
+TEST(LaneDecisionCarBoundaryTest, PushModeIsSwitchableAndDoesNotStackLegacyDeletion) {
+  LaneDecisionConfig legacy_config = makeConfig();
+  legacy_config.enable_car_point_push_avoidance = false;
+
+  LaneDecision legacy;
+  legacy.configure(legacy_config);
+  legacy.decide(carPushMask(), {car(360.0f)});
+  EXPECT_FALSE(legacy.debugInfo().car_push_active);
+  EXPECT_TRUE(legacy.debugInfo().pushed_fit_points.empty());
+  EXPECT_EQ(legacy.debugInfo().car_filtered_point_count, 7);
+
+  LaneDecisionConfig push_config = legacy_config;
+  push_config.enable_car_point_push_avoidance = true;
+  LaneDecision pushed;
+  pushed.configure(push_config);
+  pushed.decide(carPushMask(), {car(360.0f)});
+  EXPECT_TRUE(pushed.debugInfo().car_push_active);
+  EXPECT_EQ(pushed.debugInfo().car_pushed_point_count, 2);
+  EXPECT_EQ(pushed.debugInfo().car_deleted_point_count, 5);
+  EXPECT_EQ(pushed.debugInfo().fit_points.size(), 7u);
+}
+
 TEST(LaneDecisionCarBoundaryTest, SmoothsBoundaryAndKeepsItAcrossTwoLostFrames) {
   LaneDecision decision;
   decision.configure(makeConfig());
@@ -227,6 +305,63 @@ TEST(LaneDecisionCarBoundaryTest, HumanOnRightPassesRegardlessOfAreaAndDoesNotCh
   EXPECT_EQ(state.offset_y07, baseline_state.offset_y07);
   EXPECT_EQ(state.offset_y08, baseline_state.offset_y08);
   EXPECT_EQ(state.offset_y09, baseline_state.offset_y09);
+}
+
+TEST(LaneDecisionCarBoundaryTest, HumanAtRightEdgePassesEvenWhenFitLineLeavesNoRightSpace) {
+  LaneDecision decision;
+  decision.configure(makeConfig());
+
+  const LaneState state = decision.decide(
+      rightFitMask(), {human(590.0f, 180.0f, 40.0f, 300.0f)});
+  const auto& debug = decision.debugInfo();
+
+  ASSERT_EQ(debug.humans.size(), 1u);
+  EXPECT_TRUE(state.is_valid);
+  EXPECT_EQ(state.task_state, "CLEAR");
+  EXPECT_TRUE(debug.humans.front().right_edge_passable);
+  EXPECT_TRUE(debug.humans.front().passable);
+  EXPECT_FALSE(debug.humans.front().stop_candidate);
+  EXPECT_TRUE(debug.human_right_edge_passable);
+  EXPECT_EQ(debug.human_right_edge_pass_count, 1);
+  EXPECT_NEAR(debug.human_right_edge_limit_x, 595.0f, 1e-4f);
+  EXPECT_FALSE(debug.human_left_seen_latched);
+  EXPECT_EQ(debug.human_state, "PASSABLE");
+}
+
+TEST(LaneDecisionCarBoundaryTest, RightEdgeBoundaryIsInclusiveAndOutsideStillUsesFitLine) {
+  LaneDecision edge_decision;
+  edge_decision.configure(makeConfig());
+  const LaneState edge_state = edge_decision.decide(
+      rightFitMask(), {human(555.0f, 250.0f, 40.0f, 50.0f)});
+  ASSERT_EQ(edge_decision.debugInfo().humans.size(), 1u);
+  EXPECT_EQ(edge_state.task_state, "CLEAR");
+  EXPECT_TRUE(edge_decision.debugInfo().humans.front().right_edge_passable);
+  EXPECT_TRUE(edge_decision.debugInfo().human_passable);
+
+  LaneDecision outside_decision;
+  outside_decision.configure(makeConfig());
+  const LaneState outside_state = outside_decision.decide(
+      rightFitMask(), {human(554.0f, 250.0f, 40.0f, 50.0f)});
+  ASSERT_EQ(outside_decision.debugInfo().humans.size(), 1u);
+  EXPECT_EQ(outside_state.task_state, "CLEAR");
+  EXPECT_FALSE(outside_decision.debugInfo().humans.front().right_edge_passable);
+  EXPECT_FALSE(outside_decision.debugInfo().humans.front().passable);
+  EXPECT_TRUE(outside_decision.debugInfo().human_left_seen_latched);
+}
+
+TEST(LaneDecisionCarBoundaryTest, RightEdgePassesWhenFitIsInvalid) {
+  LaneDecision decision;
+  decision.configure(makeConfig());
+
+  const LaneState state = decision.decide(
+      sparseMask(), {human(590.0f, 250.0f, 40.0f, 50.0f)});
+  ASSERT_EQ(decision.debugInfo().humans.size(), 1u);
+  EXPECT_EQ(state.task_state, "CLEAR");
+  EXPECT_FALSE(decision.debugInfo().humans.front().fit_available);
+  EXPECT_TRUE(decision.debugInfo().humans.front().right_edge_passable);
+  EXPECT_TRUE(decision.debugInfo().humans.front().passable);
+  EXPECT_FALSE(decision.debugInfo().human_left_seen_latched);
+  EXPECT_EQ(decision.debugInfo().human_state, "PASSABLE");
 }
 
 TEST(LaneDecisionCarBoundaryTest, LeftHumanLatchesWithoutStoppingBelowAreaThreshold) {
@@ -302,6 +437,71 @@ TEST(LaneDecisionCarBoundaryTest, RightHumanClearsLeftMemoryOnlyAfterConfirmatio
   EXPECT_FALSE(decision.debugInfo().human_left_seen_latched);
   EXPECT_TRUE(decision.debugInfo().human_passable);
   EXPECT_EQ(decision.debugInfo().human_state, "PASSABLE");
+}
+
+TEST(LaneDecisionCarBoundaryTest, RightEdgeHumanClearsLeftMemoryImmediately) {
+  LaneDecision decision;
+  LaneDecisionConfig config = makeConfig();
+  config.human_clear_confirm_frames = 3;
+  decision.configure(config);
+
+  decision.decide(rightFitMask(), {human(250.0f, 250.0f, 40.0f, 50.0f)});
+  ASSERT_TRUE(decision.debugInfo().human_left_seen_latched);
+
+  const LaneState edge_state = decision.decide(
+      rightFitMask(), {human(590.0f, 250.0f, 40.0f, 50.0f)});
+  EXPECT_EQ(edge_state.task_state, "CLEAR");
+  EXPECT_TRUE(decision.debugInfo().human_right_edge_passable);
+  EXPECT_FALSE(decision.debugInfo().human_left_seen_latched);
+  EXPECT_EQ(decision.debugInfo().human_right_clear_confirm_count, 0);
+  EXPECT_EQ(decision.debugInfo().human_state, "PASSABLE");
+}
+
+TEST(LaneDecisionCarBoundaryTest, RightEdgeHumanReleasesActiveStop) {
+  LaneDecision decision;
+  LaneDecisionConfig config = makeConfig();
+  config.human_stop_effective_area_ratio = 0.020f;
+  config.human_stop_confirm_frames = 1;
+  decision.configure(config);
+
+  const LaneState stopped = decision.decide(
+      rightFitMask(), {human(250.0f, 180.0f, 40.0f, 120.0f)});
+  ASSERT_EQ(stopped.task_state, "OBSTACLE_STOP");
+
+  const LaneState cleared = decision.decide(
+      rightFitMask(), {human(590.0f, 250.0f, 40.0f, 50.0f)});
+  EXPECT_EQ(cleared.task_state, "CLEAR");
+  EXPECT_FALSE(decision.debugInfo().human_left_seen_latched);
+  EXPECT_EQ(decision.debugInfo().human_state, "PASSABLE");
+}
+
+TEST(LaneDecisionCarBoundaryTest, NonpassableHumanBlocksRightEdgeClear) {
+  LaneDecision decision;
+  decision.configure(makeConfig());
+
+  const LaneState state = decision.decide(
+      rightFitMask(), {human(590.0f, 250.0f, 40.0f, 50.0f),
+                       human(250.0f, 250.0f, 40.0f, 50.0f)});
+  EXPECT_EQ(state.task_state, "CLEAR");
+  EXPECT_TRUE(decision.debugInfo().human_right_edge_passable);
+  EXPECT_TRUE(decision.debugInfo().human_left_seen_latched);
+  EXPECT_FALSE(decision.debugInfo().human_passable);
+  EXPECT_EQ(decision.debugInfo().human_state, "LEFT_LATCHED_WAIT_AREA");
+}
+
+TEST(LaneDecisionCarBoundaryTest, DisablingRightEdgePassRestoresFitLineJudgement) {
+  LaneDecisionConfig config = makeConfig();
+  config.enable_human_right_edge_pass = false;
+  LaneDecision decision;
+  decision.configure(config);
+
+  const LaneState state = decision.decide(
+      rightFitMask(), {human(590.0f, 250.0f, 40.0f, 50.0f)});
+  ASSERT_EQ(decision.debugInfo().humans.size(), 1u);
+  EXPECT_EQ(state.task_state, "CLEAR");
+  EXPECT_FALSE(decision.debugInfo().humans.front().right_edge_passable);
+  EXPECT_FALSE(decision.debugInfo().humans.front().passable);
+  EXPECT_TRUE(decision.debugInfo().human_left_seen_latched);
 }
 
 TEST(LaneDecisionCarBoundaryTest, LostFrameResetsRightConfirmationAndDoesNotClearMemory) {

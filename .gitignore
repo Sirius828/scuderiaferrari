@@ -3,3 +3,9 @@ setupUI/build/setup_webui/setup_webui.pkg
 *.log
 *.onnx
 *.mp4
+*.mov
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]

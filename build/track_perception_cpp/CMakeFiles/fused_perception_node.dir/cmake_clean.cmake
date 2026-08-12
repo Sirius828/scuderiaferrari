@@ -1,8 +1,12 @@
 file(REMOVE_RECURSE
   "CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o"
   "CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o.d"
+  "CMakeFiles/fused_perception_node.dir/src/guideboard_api_client.cpp.o"
+  "CMakeFiles/fused_perception_node.dir/src/guideboard_api_client.cpp.o.d"
   "CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o"
   "CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o.d"
+  "CMakeFiles/fused_perception_node.dir/src/guideboard_route_policy.cpp.o"
+  "CMakeFiles/fused_perception_node.dir/src/guideboard_route_policy.cpp.o.d"
   "CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o"
   "CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o.d"
   "CMakeFiles/fused_perception_node.dir/src/rknn_model.cpp.o"

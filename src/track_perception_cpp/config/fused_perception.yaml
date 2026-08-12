@@ -7,7 +7,7 @@ fused_perception_node:
   ros__parameters:
     # 基础输入
     shm_name: "shm_ar_video"
-    enable_flip: false
+    enable_flip: true
     flip_code: 0
     input_format: "RGB"
     model_input_format: "RGB"
@@ -26,9 +26,10 @@ fused_perception_node:
     debug_screenshot_dir: "/tmp/fused_perception_screenshots"
 
     # 结果日志：只打印稳定识别、回退、轨迹和最终分支事件
-    enable_result_log: false
-    # 数据日志：终端逐次 OCR、车道几何和周期状态；详细 JSON 始终发布到 ROS 话题
-    enable_data_log: true
+    enable_result_log: true
+    # 终端只输出 GuideBoard OCR/API 日志；详细 JSON 仍发布到 ROS 话题
+    enable_data_log: false
+    guideboard_log_only: true
     # Human 使用带运行状态记忆的专用服务：只有避障前已发车才允许清障后恢复。
     line_follower_start_service: "/line_follower/obstacle_resume"
     line_follower_stop_service: "/line_follower/obstacle_pause"
@@ -69,10 +70,21 @@ fused_perception_node:
 
     # GuideBoard 岔路选择：路牌在 ROI 内建立识别轨迹，岔路触发后可等待 OCR 结果再锁定分支
     enable_guideboard_branch_selection: true
-    guideboard_branch: "right"
     guideboard_detect_y0_ratio: 0.2
     guideboard_detect_y1_ratio: 0.7
     enable_guideboard_ocr: true
+    enable_guideboard_api: true
+    # 禁止在仓库中填写 Key；启动前通过环境变量 QIANFAN_API_KEY 注入
+    guideboard_api_key: ""
+    guideboard_api_url: "https://qianfan.baidubce.com/v2/chat/completions"
+    guideboard_api_model: "ernie-4.5-turbo-20260402"
+    guideboard_api_timeout_sec: 1.5
+    guideboard_api_text_history_size: 3
+    guideboard_api_text_similarity: 0.70
+    guideboard_api_force_ocr_count_after_stop: 2
+    guideboard_api_stop_height_ratio: 0.20
+    guideboard_api_retry_on_transport_failure: true
+    guideboard_api_max_attempts: 2
     ocr_det_model_path: "model/ppocrv4_det.rknn"
     ocr_rec_model_path: "model/ppocrv4_rec.rknn"
     # rec_only: 固定两行直接识别；det_rec: 文字检测+识别；rec_then_det: Rec优先，必要时回退
@@ -169,20 +181,27 @@ fused_perception_node:
     obstacle_max_age: 0.3
     obstacle_min_bottom_y_ratio: 0.35
     enable_human_obstacle_stop: true
-    human_left_expand_px: 30.0
-    human_left_expand_width_ratio: 0.50
+    human_left_expand_px: 10.0
+    human_left_expand_width_ratio: 0.20
     human_line_margin_px: 5.0
-    human_line_sample_count: 5
-    human_line_sample_start_ratio: 0.60
-    human_stop_effective_area_ratio: 0.008
+    human_stop_effective_area_ratio: 0.004
     human_stop_confirm_frames: 2
-    human_clear_confirm_frames: 3
+    human_clear_confirm_frames: 2
+    enable_human_right_edge_pass: true
+    human_right_edge_pass_margin_px: 45.0
     enable_car_right_boundary_filter: true
     car_boundary_x_margin_px: 0.0
     car_boundary_y_margin_px: 0.0
     car_boundary_smoothing_alpha: 0.5
     car_boundary_lost_frames: 3
     car_fit_hold_timeout_sec: 0.20
+    # Car 推开模式：默认关闭，开启后替代旧的 Car 左边界删除逻辑
+    enable_car_point_push_avoidance: false
+    car_push_expand_left_px: 100.0
+    car_push_expand_bottom_px: 20.0
+    car_push_expand_right_px: 0.0
+    car_push_expand_top_px: 0.0
+    car_push_clearance_px: 3.0
 
     # 终点停车：Stop bbox 底部达到阈值才 FINISH_STOP
     # 联调阶段忽略 Stop 标签，不产生 FINISH_STOP；后续接入专用终点联锁后再开启。

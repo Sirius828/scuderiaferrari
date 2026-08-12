@@ -164,6 +164,9 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: /home/oran
   /usr/include/c++/11/tr1/poly_hermite.tcc \
   /usr/include/c++/11/tr1/poly_laguerre.tcc \
   /usr/include/c++/11/tr1/riemann_zeta.tcc \
+  /usr/include/c++/11/deque \
+  /usr/include/c++/11/bits/stl_deque.h \
+  /usr/include/c++/11/bits/deque.tcc \
   /usr/include/c++/11/filesystem \
   /usr/include/c++/11/bits/fs_fwd.h \
   /usr/include/c++/11/system_error \
@@ -877,9 +880,6 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: /home/oran
   /usr/include/opencv4/opencv2/stitching/detail/util.hpp \
   /usr/include/opencv4/opencv2/stitching/detail/util_inl.hpp \
   /usr/include/c++/11/queue \
-  /usr/include/c++/11/deque \
-  /usr/include/c++/11/bits/stl_deque.h \
-  /usr/include/c++/11/bits/deque.tcc \
   /usr/include/c++/11/bits/stl_queue.h \
   /usr/include/opencv4/opencv2/stitching/detail/camera.hpp \
   /usr/include/opencv4/opencv2/stitching/detail/exposure_compensate.hpp \
@@ -893,13 +893,315 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: /home/oran
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/ppocr_system.h \
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/rknn/include/rknn_api.h \
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/utils/common.h \
+  /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/guideboard_api_client.hpp \
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/guideboard_recognizer.hpp \
+  /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/guideboard_route_policy.hpp \
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/lane_decision.hpp \
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/types.hpp \
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/shm_reader.hpp \
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/yolo_detector.hpp \
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/rknn_model.hpp \
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/yolo_seg.hpp
+
+CMakeFiles/fused_perception_node.dir/src/guideboard_api_client.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/guideboard_api_client.cpp \
+  /usr/include/stdc-predef.h \
+  /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/guideboard_api_client.hpp \
+  /usr/include/c++/11/string \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/c++config.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/os_defines.h \
+  /usr/include/features.h \
+  /usr/include/features-time64.h \
+  /usr/include/aarch64-linux-gnu/bits/wordsize.h \
+  /usr/include/aarch64-linux-gnu/bits/timesize.h \
+  /usr/include/aarch64-linux-gnu/sys/cdefs.h \
+  /usr/include/aarch64-linux-gnu/bits/long-double.h \
+  /usr/include/aarch64-linux-gnu/gnu/stubs.h \
+  /usr/include/aarch64-linux-gnu/gnu/stubs-lp64.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/cpu_defines.h \
+  /usr/include/c++/11/pstl/pstl_config.h \
+  /usr/include/c++/11/bits/stringfwd.h \
+  /usr/include/c++/11/bits/memoryfwd.h \
+  /usr/include/c++/11/bits/char_traits.h \
+  /usr/include/c++/11/bits/stl_algobase.h \
+  /usr/include/c++/11/bits/functexcept.h \
+  /usr/include/c++/11/bits/exception_defines.h \
+  /usr/include/c++/11/bits/cpp_type_traits.h \
+  /usr/include/c++/11/ext/type_traits.h \
+  /usr/include/c++/11/ext/numeric_traits.h \
+  /usr/include/c++/11/bits/stl_pair.h \
+  /usr/include/c++/11/bits/move.h \
+  /usr/include/c++/11/type_traits \
+  /usr/include/c++/11/bits/stl_iterator_base_types.h \
+  /usr/include/c++/11/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/11/bits/concept_check.h \
+  /usr/include/c++/11/debug/assertions.h \
+  /usr/include/c++/11/bits/stl_iterator.h \
+  /usr/include/c++/11/bits/ptr_traits.h \
+  /usr/include/c++/11/debug/debug.h \
+  /usr/include/c++/11/bits/predefined_ops.h \
+  /usr/include/c++/11/bits/postypes.h \
+  /usr/include/c++/11/cwchar \
+  /usr/include/wchar.h \
+  /usr/include/aarch64-linux-gnu/bits/libc-header-start.h \
+  /usr/include/aarch64-linux-gnu/bits/floatn.h \
+  /usr/include/aarch64-linux-gnu/bits/floatn-common.h \
+  /usr/lib/gcc/aarch64-linux-gnu/11/include/stddef.h \
+  /usr/lib/gcc/aarch64-linux-gnu/11/include/stdarg.h \
+  /usr/include/aarch64-linux-gnu/bits/wchar.h \
+  /usr/include/aarch64-linux-gnu/bits/types/wint_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/mbstate_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/__mbstate_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/__FILE.h \
+  /usr/include/aarch64-linux-gnu/bits/types/FILE.h \
+  /usr/include/aarch64-linux-gnu/bits/types/locale_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/__locale_t.h \
+  /usr/include/aarch64-linux-gnu/bits/wchar2.h \
+  /usr/include/c++/11/cstdint \
+  /usr/lib/gcc/aarch64-linux-gnu/11/include/stdint.h \
+  /usr/include/stdint.h \
+  /usr/include/aarch64-linux-gnu/bits/types.h \
+  /usr/include/aarch64-linux-gnu/bits/typesizes.h \
+  /usr/include/aarch64-linux-gnu/bits/time64.h \
+  /usr/include/aarch64-linux-gnu/bits/stdint-intn.h \
+  /usr/include/aarch64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/c++/11/bits/allocator.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/c++allocator.h \
+  /usr/include/c++/11/ext/new_allocator.h \
+  /usr/include/c++/11/new \
+  /usr/include/c++/11/bits/exception.h \
+  /usr/include/c++/11/bits/localefwd.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/c++locale.h \
+  /usr/include/c++/11/clocale \
+  /usr/include/locale.h \
+  /usr/include/aarch64-linux-gnu/bits/locale.h \
+  /usr/include/c++/11/iosfwd \
+  /usr/include/c++/11/cctype \
+  /usr/include/ctype.h \
+  /usr/include/aarch64-linux-gnu/bits/endian.h \
+  /usr/include/aarch64-linux-gnu/bits/endianness.h \
+  /usr/include/c++/11/bits/ostream_insert.h \
+  /usr/include/c++/11/bits/cxxabi_forced.h \
+  /usr/include/c++/11/bits/stl_function.h \
+  /usr/include/c++/11/backward/binders.h \
+  /usr/include/c++/11/bits/range_access.h \
+  /usr/include/c++/11/initializer_list \
+  /usr/include/c++/11/bits/basic_string.h \
+  /usr/include/c++/11/ext/atomicity.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/gthr.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/gthr-default.h \
+  /usr/include/pthread.h \
+  /usr/include/sched.h \
+  /usr/include/aarch64-linux-gnu/bits/types/time_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct_timespec.h \
+  /usr/include/aarch64-linux-gnu/bits/sched.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct_sched_param.h \
+  /usr/include/aarch64-linux-gnu/bits/cpu-set.h \
+  /usr/include/time.h \
+  /usr/include/aarch64-linux-gnu/bits/time.h \
+  /usr/include/aarch64-linux-gnu/bits/timex.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct_timeval.h \
+  /usr/include/aarch64-linux-gnu/bits/types/clock_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct_tm.h \
+  /usr/include/aarch64-linux-gnu/bits/types/clockid_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/timer_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct_itimerspec.h \
+  /usr/include/aarch64-linux-gnu/bits/pthreadtypes.h \
+  /usr/include/aarch64-linux-gnu/bits/thread-shared-types.h \
+  /usr/include/aarch64-linux-gnu/bits/pthreadtypes-arch.h \
+  /usr/include/aarch64-linux-gnu/bits/atomic_wide_counter.h \
+  /usr/include/aarch64-linux-gnu/bits/struct_mutex.h \
+  /usr/include/aarch64-linux-gnu/bits/struct_rwlock.h \
+  /usr/include/aarch64-linux-gnu/bits/setjmp.h \
+  /usr/include/aarch64-linux-gnu/bits/types/__sigset_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct___jmp_buf_tag.h \
+  /usr/include/aarch64-linux-gnu/bits/pthread_stack_min-dynamic.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/atomic_word.h \
+  /usr/include/aarch64-linux-gnu/sys/single_threaded.h \
+  /usr/include/c++/11/ext/alloc_traits.h \
+  /usr/include/c++/11/bits/alloc_traits.h \
+  /usr/include/c++/11/bits/stl_construct.h \
+  /usr/include/c++/11/string_view \
+  /usr/include/c++/11/bits/functional_hash.h \
+  /usr/include/c++/11/bits/hash_bytes.h \
+  /usr/include/c++/11/bits/string_view.tcc \
+  /usr/include/c++/11/ext/string_conversions.h \
+  /usr/include/c++/11/cstdlib \
+  /usr/include/stdlib.h \
+  /usr/include/aarch64-linux-gnu/bits/waitflags.h \
+  /usr/include/aarch64-linux-gnu/bits/waitstatus.h \
+  /usr/include/aarch64-linux-gnu/sys/types.h \
+  /usr/include/endian.h \
+  /usr/include/aarch64-linux-gnu/bits/byteswap.h \
+  /usr/include/aarch64-linux-gnu/bits/uintn-identity.h \
+  /usr/include/aarch64-linux-gnu/sys/select.h \
+  /usr/include/aarch64-linux-gnu/bits/select.h \
+  /usr/include/aarch64-linux-gnu/bits/types/sigset_t.h \
+  /usr/include/aarch64-linux-gnu/bits/select2.h \
+  /usr/include/alloca.h \
+  /usr/include/aarch64-linux-gnu/bits/stdlib-bsearch.h \
+  /usr/include/aarch64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/aarch64-linux-gnu/bits/stdlib.h \
+  /usr/include/c++/11/bits/std_abs.h \
+  /usr/include/c++/11/cstdio \
+  /usr/include/stdio.h \
+  /usr/include/aarch64-linux-gnu/bits/types/__fpos_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/__fpos64_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct_FILE.h \
+  /usr/include/aarch64-linux-gnu/bits/types/cookie_io_functions_t.h \
+  /usr/include/aarch64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/aarch64-linux-gnu/bits/stdio.h \
+  /usr/include/aarch64-linux-gnu/bits/stdio2.h \
+  /usr/include/c++/11/cerrno \
+  /usr/include/errno.h \
+  /usr/include/aarch64-linux-gnu/bits/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/include/aarch64-linux-gnu/asm/errno.h \
+  /usr/include/asm-generic/errno.h \
+  /usr/include/asm-generic/errno-base.h \
+  /usr/include/aarch64-linux-gnu/bits/types/error_t.h \
+  /usr/include/c++/11/bits/charconv.h \
+  /usr/include/c++/11/bits/basic_string.tcc \
+  /usr/include/c++/11/vector \
+  /usr/include/c++/11/bits/stl_uninitialized.h \
+  /usr/include/c++/11/bits/stl_vector.h \
+  /usr/include/c++/11/bits/stl_bvector.h \
+  /usr/include/c++/11/bits/vector.tcc \
+  /usr/include/c++/11/algorithm \
+  /usr/include/c++/11/utility \
+  /usr/include/c++/11/bits/stl_relops.h \
+  /usr/include/c++/11/bits/stl_algo.h \
+  /usr/include/c++/11/bits/algorithmfwd.h \
+  /usr/include/c++/11/bits/stl_heap.h \
+  /usr/include/c++/11/bits/stl_tempbuf.h \
+  /usr/include/c++/11/bits/uniform_int_dist.h \
+  /usr/include/c++/11/pstl/glue_algorithm_defs.h \
+  /usr/include/c++/11/functional \
+  /usr/include/c++/11/tuple \
+  /usr/include/c++/11/array \
+  /usr/include/c++/11/bits/uses_allocator.h \
+  /usr/include/c++/11/bits/invoke.h \
+  /usr/include/c++/11/bits/refwrap.h \
+  /usr/include/c++/11/bits/std_function.h \
+  /usr/include/c++/11/typeinfo \
+  /usr/include/c++/11/unordered_map \
+  /usr/include/c++/11/ext/aligned_buffer.h \
+  /usr/include/c++/11/bits/hashtable.h \
+  /usr/include/c++/11/bits/hashtable_policy.h \
+  /usr/include/c++/11/bits/enable_special_members.h \
+  /usr/include/c++/11/bits/node_handle.h \
+  /usr/include/c++/11/bits/unordered_map.h \
+  /usr/include/c++/11/bits/erase_if.h \
+  /usr/include/c++/11/pstl/execution_defs.h \
+  /usr/include/c++/11/chrono \
+  /usr/include/c++/11/ratio \
+  /usr/include/c++/11/limits \
+  /usr/include/c++/11/ctime \
+  /usr/include/c++/11/bits/parse_numbers.h \
+  /usr/include/c++/11/mutex \
+  /usr/include/c++/11/exception \
+  /usr/include/c++/11/bits/exception_ptr.h \
+  /usr/include/c++/11/bits/cxxabi_init_exception.h \
+  /usr/include/c++/11/bits/nested_exception.h \
+  /usr/include/c++/11/system_error \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/error_constants.h \
+  /usr/include/c++/11/stdexcept \
+  /usr/include/c++/11/bits/std_mutex.h \
+  /usr/include/c++/11/bits/unique_lock.h \
+  /usr/include/c++/11/sstream \
+  /usr/include/c++/11/istream \
+  /usr/include/c++/11/ios \
+  /usr/include/c++/11/bits/ios_base.h \
+  /usr/include/c++/11/bits/locale_classes.h \
+  /usr/include/c++/11/bits/locale_classes.tcc \
+  /usr/include/c++/11/streambuf \
+  /usr/include/c++/11/bits/streambuf.tcc \
+  /usr/include/c++/11/bits/basic_ios.h \
+  /usr/include/c++/11/bits/locale_facets.h \
+  /usr/include/c++/11/cwctype \
+  /usr/include/wctype.h \
+  /usr/include/aarch64-linux-gnu/bits/wctype-wchar.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/ctype_base.h \
+  /usr/include/c++/11/bits/streambuf_iterator.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/ctype_inline.h \
+  /usr/include/c++/11/bits/locale_facets.tcc \
+  /usr/include/c++/11/bits/basic_ios.tcc \
+  /usr/include/c++/11/ostream \
+  /usr/include/c++/11/bits/ostream.tcc \
+  /usr/include/c++/11/bits/istream.tcc \
+  /usr/include/c++/11/bits/sstream.tcc \
+  /usr/include/aarch64-linux-gnu/curl/curl.h \
+  /usr/include/aarch64-linux-gnu/curl/curlver.h \
+  /usr/include/aarch64-linux-gnu/curl/system.h \
+  /usr/include/aarch64-linux-gnu/sys/socket.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct_iovec.h \
+  /usr/include/aarch64-linux-gnu/bits/socket.h \
+  /usr/include/aarch64-linux-gnu/bits/socket_type.h \
+  /usr/include/aarch64-linux-gnu/bits/sockaddr.h \
+  /usr/include/aarch64-linux-gnu/asm/socket.h \
+  /usr/include/asm-generic/socket.h \
+  /usr/include/linux/posix_types.h \
+  /usr/include/linux/stddef.h \
+  /usr/include/aarch64-linux-gnu/asm/posix_types.h \
+  /usr/include/asm-generic/posix_types.h \
+  /usr/include/aarch64-linux-gnu/asm/bitsperlong.h \
+  /usr/include/asm-generic/bitsperlong.h \
+  /usr/include/aarch64-linux-gnu/asm/sockios.h \
+  /usr/include/asm-generic/sockios.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct_osockaddr.h \
+  /usr/include/aarch64-linux-gnu/bits/socket2.h \
+  /usr/lib/gcc/aarch64-linux-gnu/11/include/limits.h \
+  /usr/lib/gcc/aarch64-linux-gnu/11/include/syslimits.h \
+  /usr/include/limits.h \
+  /usr/include/aarch64-linux-gnu/bits/posix1_lim.h \
+  /usr/include/aarch64-linux-gnu/bits/local_lim.h \
+  /usr/include/linux/limits.h \
+  /usr/include/aarch64-linux-gnu/bits/posix2_lim.h \
+  /usr/include/aarch64-linux-gnu/bits/xopen_lim.h \
+  /usr/include/aarch64-linux-gnu/bits/uio_lim.h \
+  /usr/include/aarch64-linux-gnu/sys/time.h \
+  /usr/include/aarch64-linux-gnu/curl/easy.h \
+  /usr/include/aarch64-linux-gnu/curl/multi.h \
+  /usr/include/aarch64-linux-gnu/curl/curl.h \
+  /usr/include/aarch64-linux-gnu/curl/urlapi.h \
+  /usr/include/aarch64-linux-gnu/curl/options.h \
+  /usr/include/rapidjson/document.h \
+  /usr/include/rapidjson/reader.h \
+  /usr/include/rapidjson/allocators.h \
+  /usr/include/rapidjson/rapidjson.h \
+  /usr/include/c++/11/cstring \
+  /usr/include/string.h \
+  /usr/include/strings.h \
+  /usr/include/aarch64-linux-gnu/bits/strings_fortified.h \
+  /usr/include/aarch64-linux-gnu/bits/string_fortified.h \
+  /usr/include/inttypes.h \
+  /usr/include/c++/11/cassert \
+  /usr/include/assert.h \
+  /usr/include/rapidjson/stream.h \
+  /usr/include/rapidjson/encodings.h \
+  /usr/include/rapidjson/encodedstream.h \
+  /usr/include/rapidjson/memorystream.h \
+  /usr/include/rapidjson/internal/meta.h \
+  /usr/include/rapidjson/rapidjson.h \
+  /usr/include/rapidjson/internal/stack.h \
+  /usr/include/rapidjson/allocators.h \
+  /usr/include/rapidjson/internal/swap.h \
+  /usr/include/rapidjson/internal/strtod.h \
+  /usr/include/rapidjson/internal/ieee754.h \
+  /usr/include/rapidjson/internal/biginteger.h \
+  /usr/include/rapidjson/internal/diyfp.h \
+  /usr/include/rapidjson/internal/pow10.h \
+  /usr/include/rapidjson/error/error.h \
+  /usr/include/rapidjson/rapidjson.h \
+  /usr/include/rapidjson/internal/strfunc.h \
+  /usr/include/rapidjson/stream.h \
+  /usr/include/c++/11/iterator \
+  /usr/include/c++/11/bits/stream_iterator.h \
+  /usr/include/rapidjson/stringbuffer.h \
+  /usr/include/rapidjson/writer.h \
+  /usr/include/rapidjson/internal/dtoa.h \
+  /usr/include/rapidjson/internal/itoa.h \
+  /usr/include/rapidjson/internal/itoa.h \
+  /usr/include/rapidjson/stringbuffer.h
 
 CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/guideboard_recognizer.cpp \
   /usr/include/stdc-predef.h \
@@ -1118,6 +1420,165 @@ CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o: /home/oran
   /usr/include/c++/11/tr1/poly_hermite.tcc \
   /usr/include/c++/11/tr1/poly_laguerre.tcc \
   /usr/include/c++/11/tr1/riemann_zeta.tcc
+
+CMakeFiles/fused_perception_node.dir/src/guideboard_route_policy.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/guideboard_route_policy.cpp \
+  /usr/include/stdc-predef.h \
+  /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/guideboard_route_policy.hpp \
+  /usr/include/c++/11/string \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/c++config.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/os_defines.h \
+  /usr/include/features.h \
+  /usr/include/features-time64.h \
+  /usr/include/aarch64-linux-gnu/bits/wordsize.h \
+  /usr/include/aarch64-linux-gnu/bits/timesize.h \
+  /usr/include/aarch64-linux-gnu/sys/cdefs.h \
+  /usr/include/aarch64-linux-gnu/bits/long-double.h \
+  /usr/include/aarch64-linux-gnu/gnu/stubs.h \
+  /usr/include/aarch64-linux-gnu/gnu/stubs-lp64.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/cpu_defines.h \
+  /usr/include/c++/11/pstl/pstl_config.h \
+  /usr/include/c++/11/bits/stringfwd.h \
+  /usr/include/c++/11/bits/memoryfwd.h \
+  /usr/include/c++/11/bits/char_traits.h \
+  /usr/include/c++/11/bits/stl_algobase.h \
+  /usr/include/c++/11/bits/functexcept.h \
+  /usr/include/c++/11/bits/exception_defines.h \
+  /usr/include/c++/11/bits/cpp_type_traits.h \
+  /usr/include/c++/11/ext/type_traits.h \
+  /usr/include/c++/11/ext/numeric_traits.h \
+  /usr/include/c++/11/bits/stl_pair.h \
+  /usr/include/c++/11/bits/move.h \
+  /usr/include/c++/11/type_traits \
+  /usr/include/c++/11/bits/stl_iterator_base_types.h \
+  /usr/include/c++/11/bits/stl_iterator_base_funcs.h \
+  /usr/include/c++/11/bits/concept_check.h \
+  /usr/include/c++/11/debug/assertions.h \
+  /usr/include/c++/11/bits/stl_iterator.h \
+  /usr/include/c++/11/bits/ptr_traits.h \
+  /usr/include/c++/11/debug/debug.h \
+  /usr/include/c++/11/bits/predefined_ops.h \
+  /usr/include/c++/11/bits/postypes.h \
+  /usr/include/c++/11/cwchar \
+  /usr/include/wchar.h \
+  /usr/include/aarch64-linux-gnu/bits/libc-header-start.h \
+  /usr/include/aarch64-linux-gnu/bits/floatn.h \
+  /usr/include/aarch64-linux-gnu/bits/floatn-common.h \
+  /usr/lib/gcc/aarch64-linux-gnu/11/include/stddef.h \
+  /usr/lib/gcc/aarch64-linux-gnu/11/include/stdarg.h \
+  /usr/include/aarch64-linux-gnu/bits/wchar.h \
+  /usr/include/aarch64-linux-gnu/bits/types/wint_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/mbstate_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/__mbstate_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/__FILE.h \
+  /usr/include/aarch64-linux-gnu/bits/types/FILE.h \
+  /usr/include/aarch64-linux-gnu/bits/types/locale_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/__locale_t.h \
+  /usr/include/aarch64-linux-gnu/bits/wchar2.h \
+  /usr/include/c++/11/cstdint \
+  /usr/lib/gcc/aarch64-linux-gnu/11/include/stdint.h \
+  /usr/include/stdint.h \
+  /usr/include/aarch64-linux-gnu/bits/types.h \
+  /usr/include/aarch64-linux-gnu/bits/typesizes.h \
+  /usr/include/aarch64-linux-gnu/bits/time64.h \
+  /usr/include/aarch64-linux-gnu/bits/stdint-intn.h \
+  /usr/include/aarch64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/c++/11/bits/allocator.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/c++allocator.h \
+  /usr/include/c++/11/ext/new_allocator.h \
+  /usr/include/c++/11/new \
+  /usr/include/c++/11/bits/exception.h \
+  /usr/include/c++/11/bits/localefwd.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/c++locale.h \
+  /usr/include/c++/11/clocale \
+  /usr/include/locale.h \
+  /usr/include/aarch64-linux-gnu/bits/locale.h \
+  /usr/include/c++/11/iosfwd \
+  /usr/include/c++/11/cctype \
+  /usr/include/ctype.h \
+  /usr/include/aarch64-linux-gnu/bits/endian.h \
+  /usr/include/aarch64-linux-gnu/bits/endianness.h \
+  /usr/include/c++/11/bits/ostream_insert.h \
+  /usr/include/c++/11/bits/cxxabi_forced.h \
+  /usr/include/c++/11/bits/stl_function.h \
+  /usr/include/c++/11/backward/binders.h \
+  /usr/include/c++/11/bits/range_access.h \
+  /usr/include/c++/11/initializer_list \
+  /usr/include/c++/11/bits/basic_string.h \
+  /usr/include/c++/11/ext/atomicity.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/gthr.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/gthr-default.h \
+  /usr/include/pthread.h \
+  /usr/include/sched.h \
+  /usr/include/aarch64-linux-gnu/bits/types/time_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct_timespec.h \
+  /usr/include/aarch64-linux-gnu/bits/sched.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct_sched_param.h \
+  /usr/include/aarch64-linux-gnu/bits/cpu-set.h \
+  /usr/include/time.h \
+  /usr/include/aarch64-linux-gnu/bits/time.h \
+  /usr/include/aarch64-linux-gnu/bits/timex.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct_timeval.h \
+  /usr/include/aarch64-linux-gnu/bits/types/clock_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct_tm.h \
+  /usr/include/aarch64-linux-gnu/bits/types/clockid_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/timer_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct_itimerspec.h \
+  /usr/include/aarch64-linux-gnu/bits/pthreadtypes.h \
+  /usr/include/aarch64-linux-gnu/bits/thread-shared-types.h \
+  /usr/include/aarch64-linux-gnu/bits/pthreadtypes-arch.h \
+  /usr/include/aarch64-linux-gnu/bits/atomic_wide_counter.h \
+  /usr/include/aarch64-linux-gnu/bits/struct_mutex.h \
+  /usr/include/aarch64-linux-gnu/bits/struct_rwlock.h \
+  /usr/include/aarch64-linux-gnu/bits/setjmp.h \
+  /usr/include/aarch64-linux-gnu/bits/types/__sigset_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct___jmp_buf_tag.h \
+  /usr/include/aarch64-linux-gnu/bits/pthread_stack_min-dynamic.h \
+  /usr/include/aarch64-linux-gnu/c++/11/bits/atomic_word.h \
+  /usr/include/aarch64-linux-gnu/sys/single_threaded.h \
+  /usr/include/c++/11/ext/alloc_traits.h \
+  /usr/include/c++/11/bits/alloc_traits.h \
+  /usr/include/c++/11/bits/stl_construct.h \
+  /usr/include/c++/11/string_view \
+  /usr/include/c++/11/bits/functional_hash.h \
+  /usr/include/c++/11/bits/hash_bytes.h \
+  /usr/include/c++/11/bits/string_view.tcc \
+  /usr/include/c++/11/ext/string_conversions.h \
+  /usr/include/c++/11/cstdlib \
+  /usr/include/stdlib.h \
+  /usr/include/aarch64-linux-gnu/bits/waitflags.h \
+  /usr/include/aarch64-linux-gnu/bits/waitstatus.h \
+  /usr/include/aarch64-linux-gnu/sys/types.h \
+  /usr/include/endian.h \
+  /usr/include/aarch64-linux-gnu/bits/byteswap.h \
+  /usr/include/aarch64-linux-gnu/bits/uintn-identity.h \
+  /usr/include/aarch64-linux-gnu/sys/select.h \
+  /usr/include/aarch64-linux-gnu/bits/select.h \
+  /usr/include/aarch64-linux-gnu/bits/types/sigset_t.h \
+  /usr/include/aarch64-linux-gnu/bits/select2.h \
+  /usr/include/alloca.h \
+  /usr/include/aarch64-linux-gnu/bits/stdlib-bsearch.h \
+  /usr/include/aarch64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/aarch64-linux-gnu/bits/stdlib.h \
+  /usr/include/c++/11/bits/std_abs.h \
+  /usr/include/c++/11/cstdio \
+  /usr/include/stdio.h \
+  /usr/include/aarch64-linux-gnu/bits/types/__fpos_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/__fpos64_t.h \
+  /usr/include/aarch64-linux-gnu/bits/types/struct_FILE.h \
+  /usr/include/aarch64-linux-gnu/bits/types/cookie_io_functions_t.h \
+  /usr/include/aarch64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/aarch64-linux-gnu/bits/stdio.h \
+  /usr/include/aarch64-linux-gnu/bits/stdio2.h \
+  /usr/include/c++/11/cerrno \
+  /usr/include/errno.h \
+  /usr/include/aarch64-linux-gnu/bits/errno.h \
+  /usr/include/linux/errno.h \
+  /usr/include/aarch64-linux-gnu/asm/errno.h \
+  /usr/include/asm-generic/errno.h \
+  /usr/include/asm-generic/errno-base.h \
+  /usr/include/aarch64-linux-gnu/bits/types/error_t.h \
+  /usr/include/c++/11/bits/charconv.h \
+  /usr/include/c++/11/bits/basic_string.tcc
 
 CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/lane_decision.cpp \
   /usr/include/stdc-predef.h \
@@ -5104,8 +5565,6 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/utils/file_utils.c:
 
-/home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/utils/image_utils.h:
-
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/utils/file_utils.h:
 
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/ppocr_direction_system.cc:
@@ -5126,8 +5585,6 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /usr/include/aarch64-linux-gnu/bits/stat.h:
 
-/usr/include/aarch64-linux-gnu/bits/types/struct_iovec.h:
-
 /usr/include/aarch64-linux-gnu/bits/fcntl.h:
 
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/shm_reader.cpp:
@@ -5140,6 +5597,44 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/lane_decision.cpp:
 
+/home/orangepi/scuderiaferrari/src/track_perception_cpp/src/guideboard_route_policy.cpp:
+
+/usr/include/rapidjson/internal/itoa.h:
+
+/usr/include/rapidjson/internal/dtoa.h:
+
+/home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/utils/image_utils.h:
+
+/usr/include/rapidjson/internal/pow10.h:
+
+/usr/include/rapidjson/internal/biginteger.h:
+
+/usr/include/rapidjson/internal/stack.h:
+
+/usr/include/rapidjson/stream.h:
+
+/usr/include/inttypes.h:
+
+/usr/include/rapidjson/document.h:
+
+/usr/include/aarch64-linux-gnu/bits/socket2.h:
+
+/usr/include/rapidjson/internal/swap.h:
+
+/usr/include/aarch64-linux-gnu/bits/sockaddr.h:
+
+/usr/include/aarch64-linux-gnu/curl/easy.h:
+
+/usr/include/aarch64-linux-gnu/bits/socket_type.h:
+
+/usr/include/aarch64-linux-gnu/bits/socket.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/struct_iovec.h:
+
+/usr/include/aarch64-linux-gnu/curl/curlver.h:
+
+/usr/include/aarch64-linux-gnu/curl/curl.h:
+
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/yolo_seg.hpp:
 
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/yolo_detector.hpp:
@@ -5147,6 +5642,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/shm_reader.hpp:
 
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/types.hpp:
+
+/home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/guideboard_route_policy.hpp:
 
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/utils/common.h:
 
@@ -5162,12 +5659,6 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /usr/include/c++/11/bits/stl_queue.h:
 
-/usr/include/c++/11/bits/deque.tcc:
-
-/usr/include/c++/11/bits/stl_deque.h:
-
-/usr/include/c++/11/deque:
-
 /usr/include/c++/11/queue:
 
 /usr/include/opencv4/opencv2/stitching/detail/util.hpp:
@@ -5175,6 +5666,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /usr/include/opencv4/opencv2/stitching/detail/motion_estimators.hpp:
 
 /usr/include/opencv4/opencv2/stitching/detail/matchers.hpp:
+
+/home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/guideboard_api_client.hpp:
 
 /usr/include/opencv4/opencv2/stitching/detail/warpers_inl.hpp:
 
@@ -5222,6 +5715,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /usr/include/aarch64-linux-gnu/sys/stat.h:
 
+/usr/include/rapidjson/internal/meta.h:
+
 /usr/include/opencv4/opencv2/dnn/utils/inference_engine.hpp:
 
 /usr/include/opencv4/opencv2/dnn/dnn.inl.hpp:
@@ -5256,6 +5751,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /usr/include/opencv4/opencv2/core/mat.inl.hpp:
 
+/usr/include/rapidjson/internal/diyfp.h:
+
 /usr/include/opencv4/opencv2/core/mat.hpp:
 
 /usr/include/c++/11/cfloat:
@@ -5277,6 +5774,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /usr/include/aarch64-linux-gnu/bits/uio_lim.h:
 
 /usr/include/aarch64-linux-gnu/bits/xopen_lim.h:
+
+/usr/include/rapidjson/encodings.h:
 
 /usr/lib/gcc/aarch64-linux-gnu/11/include/limits.h:
 
@@ -5344,6 +5843,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/bool__traits.hpp:
 
+/usr/include/aarch64-linux-gnu/asm/sockios.h:
+
 /opt/ros/humble/include/rclcpp/rclcpp/wait_set_policies/thread_safe_synchronization.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/wait_result.hpp:
@@ -5369,6 +5870,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/set_parameters__struct.hpp:
 
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/list_parameters__builder.hpp:
+
+/usr/include/rapidjson/stringbuffer.h:
 
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/list_parameters__struct.hpp:
 
@@ -5424,6 +5927,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/rclcpp/rclcpp/node_options.hpp:
 
+/usr/include/aarch64-linux-gnu/curl/multi.h:
+
 /opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_waitables_interface.hpp:
 
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter_value__type_support.hpp:
@@ -5473,6 +5978,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter__struct.hpp:
 
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/parameter_event.hpp:
+
+/usr/include/asm-generic/socket.h:
 
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/parameter_descriptor__type_support.hpp:
 
@@ -5548,6 +6055,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/statistics_msgs/statistics_msgs/msg/detail/metrics_message__type_support.hpp:
 
+/usr/include/aarch64-linux-gnu/sys/socket.h:
+
 /opt/ros/humble/include/statistics_msgs/statistics_msgs/msg/detail/metrics_message__traits.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/get_node_topics_interface.hpp:
@@ -5578,6 +6087,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/set_parameters_result__traits.hpp:
 
+/usr/include/rapidjson/reader.h:
+
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/set_parameters_result__builder.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/qos_overriding_options.hpp:
@@ -5598,15 +6109,17 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__traits.hpp:
 
-/usr/include/c++/11/ios:
+/opt/ros/humble/include/rclcpp/rclcpp/intra_process_setting.hpp:
 
-/usr/include/c++/11/utility:
+/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__builder.hpp:
 
-/usr/include/c++/11/istream:
+/opt/ros/humble/include/std_msgs/std_msgs/msg/detail/multi_array_dimension__traits.hpp:
 
-/usr/include/c++/11/sstream:
+/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__struct.hpp:
 
 /usr/include/c++/11/bits/unique_ptr.h:
+
+/usr/include/rapidjson/memorystream.h:
 
 /usr/include/c++/11/bits/locale_conv.h:
 
@@ -5645,6 +6158,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /usr/include/aarch64-linux-gnu/bits/stdio_lim.h:
 
 /usr/include/c++/11/bits/stl_multiset.h:
+
+/usr/include/aarch64-linux-gnu/curl/options.h:
 
 /usr/include/aarch64-linux-gnu/bits/wctype-wchar.h:
 
@@ -5766,6 +6281,10 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /usr/include/c++/11/bits/stl_bvector.h:
 
+/usr/include/c++/11/bits/stl_deque.h:
+
+/usr/include/c++/11/deque:
+
 /usr/include/c++/11/bits/exception.h:
 
 /opt/ros/humble/include/rmw/rmw/get_topic_names_and_types.h:
@@ -5843,10 +6362,6 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /opt/ros/humble/include/rclcpp/rclcpp/init_options.hpp:
 
 /usr/include/aarch64-linux-gnu/bits/types/struct_tm.h:
-
-/opt/ros/humble/include/rclcpp/rclcpp/intra_process_setting.hpp:
-
-/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__builder.hpp:
 
 /usr/include/aarch64-linux-gnu/bits/timex.h:
 
@@ -5938,6 +6453,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /usr/include/aarch64-linux-gnu/bits/floatn-common.h:
 
+/usr/include/rapidjson/error/error.h:
+
 /usr/include/opencv4/opencv2/flann/timer.h:
 
 /opt/ros/humble/include/rcl/rcl/log_level.h:
@@ -6026,6 +6543,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /usr/include/c++/11/bits/this_thread_sleep.h:
 
+/usr/include/rapidjson/allocators.h:
+
 /usr/include/opencv4/opencv2/flann/any.h:
 
 /usr/include/aarch64-linux-gnu/bits/stdint-intn.h:
@@ -6075,6 +6594,10 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /opt/ros/humble/include/rclcpp/rclcpp/topic_statistics/subscription_topic_statistics.hpp:
 
 /usr/include/features.h:
+
+/usr/include/c++/11/utility:
+
+/usr/include/c++/11/ios:
 
 /usr/include/opencv4/opencv2/imgproc.hpp:
 
@@ -6200,12 +6723,6 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /usr/include/c++/11/cstdlib:
 
-/usr/include/opencv4/opencv2/flann/result_set.h:
-
-/usr/include/aarch64-linux-gnu/bits/types/struct_timeval.h:
-
-/opt/ros/humble/include/rcutils/rcutils/types/string_map.h:
-
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/guideboard_recognizer.hpp:
 
 /usr/include/pthread.h:
@@ -6243,6 +6760,14 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /usr/include/aarch64-linux-gnu/bits/pthread_stack_min-dynamic.h:
 
 /usr/include/c++/11/pstl/pstl_config.h:
+
+/usr/include/opencv4/opencv2/flann/result_set.h:
+
+/opt/ros/humble/include/rcutils/rcutils/types/string_map.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/struct_timeval.h:
+
+/usr/include/c++/11/sstream:
 
 /usr/include/aarch64-linux-gnu/bits/pthreadtypes-arch.h:
 
@@ -6290,6 +6815,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /usr/include/c++/11/bits/invoke.h:
 
+/usr/include/asm-generic/sockios.h:
+
 /usr/include/c++/11/bits/stl_tempbuf.h:
 
 /usr/include/c++/11/bits/std_function.h:
@@ -6311,6 +6838,12 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /usr/include/c++/11/bits/range_access.h:
 
 /usr/include/c++/11/iterator:
+
+/usr/include/c++/11/bits/deque.tcc:
+
+/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/set_parameters_atomically__struct.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/any_executable.hpp:
 
 /usr/include/aarch64-linux-gnu/bits/mathcalls.h:
 
@@ -6406,6 +6939,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /usr/include/aarch64-linux-gnu/bits/types/sigval_t.h:
 
+/usr/include/rapidjson/rapidjson.h:
+
 /usr/include/opencv4/opencv2/core/cuda.inl.hpp:
 
 /usr/include/c++/11/bits/atomic_base.h:
@@ -6425,6 +6960,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /usr/include/opencv4/opencv2/flann/lsh_index.h:
 
 /usr/include/aarch64-linux-gnu/asm/types.h:
+
+/usr/include/c++/11/istream:
 
 /usr/include/c++/11/ostream:
 
@@ -6453,6 +6990,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /usr/include/c++/11/backward/auto_ptr.h:
 
 /usr/include/linux/stat.h:
+
+/usr/include/aarch64-linux-gnu/curl/system.h:
 
 /usr/include/c++/11/pstl/glue_memory_defs.h:
 
@@ -6485,6 +7024,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /usr/include/aarch64-linux-gnu/bits/dirent_ext.h:
 
 /usr/include/aarch64-linux-gnu/bits/types/siginfo_t.h:
+
+/usr/include/rapidjson/encodedstream.h:
 
 /usr/include/alloca.h:
 
@@ -6563,6 +7104,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /usr/include/linux/close_range.h:
 
 /opt/ros/humble/include/rcl/rcl/init_options.h:
+
+/usr/include/aarch64-linux-gnu/bits/types/struct_osockaddr.h:
 
 /opt/ros/humble/include/rcpputils/rcpputils/join.hpp:
 
@@ -6652,6 +7195,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/rcl/rcl/macros.h:
 
+/usr/include/rapidjson/internal/strtod.h:
+
 /opt/ros/humble/include/rcutils/rcutils/error_handling.h:
 
 /usr/include/c++/11/stdlib.h:
@@ -6661,6 +7206,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_time_source_interface.hpp:
 
 /usr/include/aarch64-linux-gnu/bits/string_fortified.h:
+
+/home/orangepi/scuderiaferrari/src/track_perception_cpp/src/guideboard_api_client.cpp:
 
 /opt/ros/humble/include/rcutils/rcutils/time.h:
 
@@ -6758,6 +7305,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/rcl/rcl/node_options.h:
 
+/usr/include/rapidjson/internal/ieee754.h:
+
 /opt/ros/humble/include/rclcpp/rclcpp/experimental/subscription_intra_process_base.hpp:
 
 /usr/include/aarch64-linux-gnu/c++/11/bits/time_members.h:
@@ -6836,11 +7385,9 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/rclcpp/rclcpp/time.hpp:
 
-/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/set_parameters_atomically__struct.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/any_executable.hpp:
-
 /usr/include/fcntl.h:
+
+/usr/include/rapidjson/internal/strfunc.h:
 
 /opt/ros/humble/include/rclcpp/rclcpp/callback_group.hpp:
 
@@ -6881,6 +7428,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /opt/ros/humble/include/rclcpp/rclcpp/experimental/ros_message_intra_process_buffer.hpp:
 
 /opt/ros/humble/include/rosidl_runtime_c/rosidl_runtime_c/message_initialization.h:
+
+/usr/include/aarch64-linux-gnu/curl/urlapi.h:
 
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/describe_parameters.hpp:
 
@@ -6942,6 +7491,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/rclcpp/rclcpp/any_subscription_callback.hpp:
 
+/usr/include/aarch64-linux-gnu/asm/socket.h:
+
 /opt/ros/humble/include/rclcpp/rclcpp/message_info.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/serialized_message.hpp:
@@ -6962,12 +7513,10 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/rclcpp/rclcpp/experimental/create_intra_process_buffer.hpp:
 
+/usr/include/rapidjson/writer.h:
+
 /opt/ros/humble/include/rclcpp/rclcpp/intra_process_buffer_type.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/experimental/subscription_intra_process_buffer.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/clock.hpp:
-
-/opt/ros/humble/include/std_msgs/std_msgs/msg/detail/multi_array_dimension__traits.hpp:
-
-/opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__struct.hpp:

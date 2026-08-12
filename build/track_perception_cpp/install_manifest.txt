@@ -1,2 +1,0 @@
-/home/orangepi/scuderiaferrari/install/track_perception_cpp/share/track_perception_cpp/launch/__pycache__/fused_perception.launch.cpython-310.pyc
-/home/orangepi/scuderiaferrari/install/track_perception_cpp/share/track_perception_cpp/package.dsv

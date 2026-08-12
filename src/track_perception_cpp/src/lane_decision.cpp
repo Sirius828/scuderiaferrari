@@ -169,15 +169,20 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.car_boundary_smoothing_alpha = clampValue(cfg_.car_boundary_smoothing_alpha, 0.0f, 1.0f);
   cfg_.car_boundary_lost_frames = std::max(1, cfg_.car_boundary_lost_frames);
   cfg_.car_fit_hold_timeout_sec = std::max(0.0, cfg_.car_fit_hold_timeout_sec);
+  cfg_.car_push_expand_left_px = std::max(0.0f, cfg_.car_push_expand_left_px);
+  cfg_.car_push_expand_bottom_px = std::max(0.0f, cfg_.car_push_expand_bottom_px);
+  cfg_.car_push_expand_right_px = std::max(0.0f, cfg_.car_push_expand_right_px);
+  cfg_.car_push_expand_top_px = std::max(0.0f, cfg_.car_push_expand_top_px);
+  cfg_.car_push_clearance_px = std::max(0.0f, cfg_.car_push_clearance_px);
   cfg_.human_left_expand_px = std::max(0.0f, cfg_.human_left_expand_px);
   cfg_.human_left_expand_width_ratio = std::max(0.0f, cfg_.human_left_expand_width_ratio);
   cfg_.human_line_margin_px = std::max(0.0f, cfg_.human_line_margin_px);
-  cfg_.human_line_sample_count = std::max(2, cfg_.human_line_sample_count);
-  cfg_.human_line_sample_start_ratio = clampValue(cfg_.human_line_sample_start_ratio, 0.0f, 1.0f);
   cfg_.human_stop_effective_area_ratio =
       clampValue(cfg_.human_stop_effective_area_ratio, 0.0f, 1.0f);
   cfg_.human_stop_confirm_frames = std::max(1, cfg_.human_stop_confirm_frames);
   cfg_.human_clear_confirm_frames = std::max(1, cfg_.human_clear_confirm_frames);
+  cfg_.human_right_edge_pass_margin_px =
+      std::max(0.0f, cfg_.human_right_edge_pass_margin_px);
   if (cfg_.guideboard_unknown_branch != "left" && cfg_.guideboard_unknown_branch != "right") {
     cfg_.guideboard_unknown_branch = cfg_.outer_side;
   }
@@ -188,10 +193,26 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   last_offsets_.fill(0.0);
   left_boundary_template_offsets_ = parseDoubleList(cfg_.left_boundary_template_offsets);
   right_boundary_template_offsets_ = parseDoubleList(cfg_.right_boundary_template_offsets);
+  branch_locked_ = false;
   locked_branch_side_ = cfg_.outer_side;
+  guideboard_branch_hint_ = cfg_.guideboard_unknown_branch;
+  guideboard_branch_hint_source_ = "guideboard_hint";
+  guideboard_branch_hint_valid_ = false;
+  guideboard_hint_wait_start_sec_ = 0.0;
+  branch_confirm_count_ = 0;
+  guideboard_seen_latched_ = false;
+  branch_event_armed_ = true;
+  branch_event_rearmed_ = false;
+  branch_clear_count_ = 0;
+  branch_event_id_ = 1;
+  encoder_hold_active_ = false;
+  encoder_hold_baseline_valid_ = false;
+  encoder_hold_delta_ = 0;
   encoder_hold_target_ = cfg_.encoder_hold_counts;
   car_boundary_active_ = false;
   car_left_x_ = -1.0;
+  car_right_x_ = 0.0;
+  car_top_y_ = 0.0;
   car_bottom_y_ = 0.0;
   car_boundary_lost_count_ = 0;
   fit_hold_active_ = false;
@@ -212,13 +233,17 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   human_stop_confirm_count_ = 0;
 }
 
-void LaneDecision::setGuideboardBranchHint(const std::string& branch, bool valid) {
+void LaneDecision::setGuideboardBranchHint(const std::string& branch, bool valid,
+                                           const std::string& decision_source) {
   if (!valid) {
     guideboard_branch_hint_valid_ = false;
     return;
   }
   if (branch == "left" || branch == "right") {
     guideboard_branch_hint_ = branch;
+    guideboard_branch_hint_source_ = decision_source.empty()
+                                         ? "guideboard_hint"
+                                         : decision_source;
     guideboard_branch_hint_valid_ = true;
   }
 }
@@ -256,9 +281,10 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
   std::vector<cv::Point3f> raw_points;
   std::vector<cv::Point3f> fit_points;
   std::vector<cv::Point3f> removed_fit_points;
+  std::vector<cv::Point3f> pushed_fit_points;
   std::vector<double> fit_coeffs;
 
-  updateCarBoundaryState(detections, h);
+  updateCarBoundaryState(detections, w, h);
 
   if (cfg_.enable_segment_branch_logic) {
     bands = buildBands(seg_map, detections);
@@ -283,6 +309,24 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
       }
     }
     bool guideboard_seen = cfg_.enable_guideboard_branch_selection && guideboard_roi_count > 0;
+    branch_event_rearmed_ = false;
+    if (!branch_locked_ && !branch_event_armed_) {
+      if (!branch_detected) {
+        ++branch_clear_count_;
+        if (branch_clear_count_ >= cfg_.branch_confirm_frames) {
+          branch_event_armed_ = true;
+          branch_event_rearmed_ = true;
+          branch_clear_count_ = 0;
+          guideboard_seen_latched_ = false;
+          ++branch_event_id_;
+        }
+      } else {
+        branch_clear_count_ = 0;
+      }
+    }
+    if (!branch_locked_ && branch_event_armed_ && guideboard_seen) {
+      guideboard_seen_latched_ = true;
+    }
     debug_info_.branch_detected = branch_detected;
     debug_info_.branch_score = branch_score;
     debug_info_.guideboard_seen = guideboard_seen;
@@ -291,9 +335,13 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     debug_info_.guideboard_best_confidence = guideboard_best_confidence;
     debug_info_.guideboard_best_center = guideboard_best_center;
     debug_info_.guideboard_hint_valid = guideboard_branch_hint_valid_;
-    if (!branch_locked_) {
+    debug_info_.guideboard_seen_latched = guideboard_seen_latched_;
+    debug_info_.branch_event_armed = branch_event_armed_;
+    debug_info_.branch_event_rearmed = branch_event_rearmed_;
+    debug_info_.branch_event_id = branch_event_id_;
+    if (!branch_locked_ && branch_event_armed_) {
       const bool hint_wait_active = guideboard_hint_wait_start_sec_ > 0.0;
-      if (branch_detected || (guideboard_seen && branch_score > 0) || hint_wait_active) {
+      if (branch_detected || (guideboard_seen_latched_ && branch_score > 0) || hint_wait_active) {
         ++branch_confirm_count_;
       } else {
         branch_confirm_count_ = 0;
@@ -301,6 +349,7 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
       }
       if (branch_confirm_count_ >= cfg_.branch_confirm_frames) {
         const bool waiting_for_hint = cfg_.guideboard_require_hint &&
+                                      guideboard_seen_latched_ &&
                                       !guideboard_branch_hint_valid_;
         if (waiting_for_hint && guideboard_hint_wait_start_sec_ <= 0.0) {
           guideboard_hint_wait_start_sec_ = current_time;
@@ -315,20 +364,22 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
         if (waiting_for_hint && !hint_wait_timed_out) {
           branch_confirm_count_ = cfg_.branch_confirm_frames;
         } else {
-          std::string target_branch = cfg_.outer_side;
-          if (cfg_.guideboard_require_hint) {
+          std::string target_branch = cfg_.guideboard_unknown_branch;
+          std::string decision_source = "no_guideboard_default";
+          if (guideboard_seen_latched_ && guideboard_branch_hint_valid_) {
+            target_branch = guideboard_branch_hint_;
+            decision_source = guideboard_branch_hint_source_;
+          } else if (guideboard_seen_latched_ && cfg_.guideboard_require_hint) {
             target_branch = guideboard_branch_hint_valid_
                                 ? guideboard_branch_hint_
                                 : cfg_.guideboard_unknown_branch;
-          } else if (guideboard_seen) {
-            target_branch = guideboard_branch_hint_valid_
-                                ? guideboard_branch_hint_
-                                : cfg_.guideboard_branch;
+            decision_source = "guideboard_timeout";
           }
           if (target_branch != "left" && target_branch != "right") {
             target_branch = cfg_.outer_side;
           }
 
+          const bool locked_with_guideboard = guideboard_seen_latched_;
           branch_locked_ = cfg_.enable_encoder_branch_hold;
           locked_branch_side_ = target_branch;
           encoder_hold_target_ = target_branch == "right"
@@ -336,17 +387,25 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
                                      : cfg_.encoder_hold_counts;
           lock_start_time_ = current_time;
           branch_confirm_count_ = 0;
+          branch_event_armed_ = false;
+          branch_clear_count_ = 0;
           encoder_hold_active_ = branch_locked_;
           encoder_hold_baseline_valid_ = false;
           encoder_hold_delta_ = 0;
           guideboard_hint_wait_start_sec_ = 0.0;
+          guideboard_seen_latched_ = false;
+          guideboard_branch_hint_valid_ = false;
+          debug_info_.branch_lock_event = true;
+          debug_info_.branch_lock_guideboard = locked_with_guideboard;
+          debug_info_.branch_decision_source = decision_source;
+          debug_info_.branch_event_armed = false;
           if (has_encoder_count_) {
             encoder_hold_start_count_ = latest_encoder_count_;
             encoder_hold_baseline_valid_ = true;
           }
         }
       }
-    } else {
+    } else if (branch_locked_) {
       guideboard_hint_wait_start_sec_ = 0.0;
     }
 
@@ -388,7 +447,12 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     }
     int fit_order = (branch_locked_ || debug_info_.left_boundary_template_active) ? cfg_.branch_fit_order : cfg_.fit_order;
     fit_points = raw_points;
-    fit_points = filterCarRightBoundaryPoints(fit_points, &removed_fit_points);
+    if (cfg_.enable_car_point_push_avoidance) {
+      fit_points = applyCarPointPushAvoidance(
+          fit_points, w, h, &pushed_fit_points, &removed_fit_points);
+    } else {
+      fit_points = filterCarRightBoundaryPoints(fit_points, &removed_fit_points);
+    }
     fit_points = filterCenterlinePoints(fit_points, w, last_center_x);
 
     const bool fit_success = static_cast<int>(fit_points.size()) >= cfg_.fit_min_points &&
@@ -456,7 +520,7 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     }
     populateDebugInfo(
       bands, getActiveObstacleZones(detections, w, h), raw_points, fit_points,
-      removed_fit_points, fit_coeffs);
+      removed_fit_points, pushed_fit_points, w, h, fit_coeffs);
   } else {
     cv::Mat bottom_seg = seg_map(cv::Range(h / 2, h), cv::Range::all());
     offsets.fill(fallbackCenterOffset(bottom_seg));
@@ -1036,10 +1100,12 @@ std::vector<cv::Point3f> LaneDecision::filterCenterlinePoints(
 }
 
 void LaneDecision::updateCarBoundaryState(const std::vector<Detection>& detections,
-                                           int image_height) {
-  if (!cfg_.enable_car_right_boundary_filter) {
+                                           int image_width, int image_height) {
+  if (!cfg_.enable_car_right_boundary_filter && !cfg_.enable_car_point_push_avoidance) {
     car_boundary_active_ = false;
     car_left_x_ = -1.0;
+    car_right_x_ = 0.0;
+    car_top_y_ = 0.0;
     car_bottom_y_ = 0.0;
     car_boundary_lost_count_ = 0;
     return;
@@ -1049,6 +1115,8 @@ void LaneDecision::updateCarBoundaryState(const std::vector<Detection>& detectio
                               clampValue(cfg_.obstacle_min_bottom_y_ratio, 0.0f, 1.0f);
   bool car_seen = false;
   double detected_left_x = std::numeric_limits<double>::max();
+  double detected_right_x = 0.0;
+  double detected_top_y = 0.0;
   double detected_bottom_y = 0.0;
   for (const auto& det : detections) {
     if (det.class_name != "Car" || det.confidence < cfg_.obstacle_min_confidence) {
@@ -1062,6 +1130,8 @@ void LaneDecision::updateCarBoundaryState(const std::vector<Detection>& detectio
     }
     if (bbox_left < detected_left_x) {
       detected_left_x = bbox_left;
+      detected_right_x = det.bbox.x + det.bbox.width;
+      detected_top_y = det.bbox.y;
       detected_bottom_y = bbox_bottom;
       car_seen = true;
     }
@@ -1071,10 +1141,25 @@ void LaneDecision::updateCarBoundaryState(const std::vector<Detection>& detectio
     const double alpha = clampValue(static_cast<double>(cfg_.car_boundary_smoothing_alpha), 0.0, 1.0);
     if (!car_boundary_active_ || car_left_x_ < 0.0) {
       car_left_x_ = detected_left_x;
+      car_right_x_ = detected_right_x;
+      car_top_y_ = detected_top_y;
+      car_bottom_y_ = detected_bottom_y;
     } else {
       car_left_x_ = alpha * detected_left_x + (1.0 - alpha) * car_left_x_;
+      car_right_x_ = alpha * detected_right_x + (1.0 - alpha) * car_right_x_;
+      car_top_y_ = alpha * detected_top_y + (1.0 - alpha) * car_top_y_;
+      car_bottom_y_ = alpha * detected_bottom_y + (1.0 - alpha) * car_bottom_y_;
     }
-    car_bottom_y_ = clampValue(detected_bottom_y, 0.0, static_cast<double>(image_height - 1));
+    car_left_x_ = clampValue(car_left_x_, 0.0, static_cast<double>(std::max(0, image_width - 1)));
+    car_right_x_ = clampValue(car_right_x_, 0.0, static_cast<double>(std::max(0, image_width - 1)));
+    car_top_y_ = clampValue(car_top_y_, 0.0, static_cast<double>(std::max(0, image_height - 1)));
+    car_bottom_y_ = clampValue(car_bottom_y_, 0.0, static_cast<double>(std::max(0, image_height - 1)));
+    if (car_right_x_ < car_left_x_) {
+      car_right_x_ = car_left_x_;
+    }
+    if (car_bottom_y_ < car_top_y_) {
+      car_bottom_y_ = car_top_y_;
+    }
     car_boundary_active_ = true;
     car_boundary_lost_count_ = 0;
     return;
@@ -1085,6 +1170,8 @@ void LaneDecision::updateCarBoundaryState(const std::vector<Detection>& detectio
     if (car_boundary_lost_count_ >= std::max(1, cfg_.car_boundary_lost_frames)) {
       car_boundary_active_ = false;
       car_left_x_ = -1.0;
+      car_right_x_ = 0.0;
+      car_top_y_ = 0.0;
       car_bottom_y_ = 0.0;
     }
   }
@@ -1113,6 +1200,71 @@ std::vector<cv::Point3f> LaneDecision::filterCarRightBoundaryPoints(
     } else {
       filtered.push_back(point);
     }
+  }
+  return filtered;
+}
+
+std::vector<cv::Point3f> LaneDecision::applyCarPointPushAvoidance(
+    const std::vector<cv::Point3f>& points, int image_width, int image_height,
+    std::vector<cv::Point3f>* pushed_points,
+    std::vector<cv::Point3f>* removed_points) {
+  if (pushed_points) {
+    pushed_points->clear();
+  }
+  if (removed_points) {
+    removed_points->clear();
+  }
+  if (!car_boundary_active_ || car_left_x_ < 0.0 || image_width <= 0 || image_height <= 0) {
+    return points;
+  }
+
+  const double max_x = static_cast<double>(image_width - 1);
+  const double max_y = static_cast<double>(image_height - 1);
+  const double original_left = clampValue(car_left_x_, 0.0, max_x);
+  const double original_right = clampValue(car_right_x_, 0.0, max_x);
+  const double original_top = clampValue(car_top_y_, 0.0, max_y);
+  const double original_bottom = clampValue(car_bottom_y_, 0.0, max_y);
+  const double expanded_left = clampValue(
+      original_left - cfg_.car_push_expand_left_px, 0.0, max_x);
+  const double expanded_right = clampValue(
+      original_right + cfg_.car_push_expand_right_px, 0.0, max_x);
+  const double expanded_top = clampValue(
+      original_top - cfg_.car_push_expand_top_px, 0.0, max_y);
+  const double expanded_bottom = clampValue(
+      original_bottom + cfg_.car_push_expand_bottom_px, 0.0, max_y);
+  const double push_target_x = clampValue(
+      expanded_left - cfg_.car_push_clearance_px, 0.0, max_x);
+
+  const auto inside = [](const cv::Point3f& point, double left, double right,
+                         double top, double bottom) {
+    return static_cast<double>(point.x) >= left &&
+           static_cast<double>(point.x) <= right &&
+           static_cast<double>(point.y) >= top &&
+           static_cast<double>(point.y) <= bottom;
+  };
+
+  std::vector<cv::Point3f> filtered;
+  filtered.reserve(points.size());
+  for (const auto& point : points) {
+    if (inside(point, expanded_left, expanded_right, expanded_top, expanded_bottom)) {
+      cv::Point3f pushed = point;
+      pushed.x = static_cast<float>(push_target_x);
+      filtered.push_back(pushed);
+      if (pushed_points) {
+        pushed_points->push_back(pushed);
+      }
+      continue;
+    }
+
+    const bool outside_original_box =
+        !inside(point, original_left, original_right, original_top, original_bottom);
+    if (static_cast<double>(point.x) > original_left && outside_original_box) {
+      if (removed_points) {
+        removed_points->push_back(point);
+      }
+      continue;
+    }
+    filtered.push_back(point);
   }
   return filtered;
 }
@@ -1255,6 +1407,9 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
   debug_info_.human_effective_left_x = -1.0f;
   debug_info_.human_fit_line_limit_x = -1.0f;
   debug_info_.human_effective_area_ratio = 0.0f;
+  debug_info_.human_right_edge_passable = false;
+  debug_info_.human_right_edge_limit_x = -1.0f;
+  debug_info_.human_right_edge_pass_count = 0;
   debug_info_.human_state = human_state_;
   debug_info_.human_right_clear_confirm_count = human_right_clear_confirm_count_;
   debug_info_.human_stop_confirm_count = human_stop_confirm_count_;
@@ -1271,18 +1426,23 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
   }
 
   const bool fit_available = fit_valid && fit_coeffs.size() >= 2;
-  const int sample_count = std::max(2, cfg_.human_line_sample_count);
-  const double sample_start = clampValue(
-      static_cast<double>(cfg_.human_line_sample_start_ratio), 0.0, 1.0);
   const double area_threshold = clampValue(
       static_cast<double>(cfg_.human_stop_effective_area_ratio), 0.0, 1.0);
   const double image_area = static_cast<double>(image_width) * image_height;
+  const double right_edge_limit_x = cfg_.enable_human_right_edge_pass
+                                        ? clampValue(
+                                            static_cast<double>(image_width) -
+                                                cfg_.human_right_edge_pass_margin_px,
+                                            0.0, static_cast<double>(image_width))
+                                        : -1.0;
 
   bool has_valid_human = false;
   bool all_current_humans_passable = true;
   bool any_nonpassable_human = false;
   bool any_stop_candidate = false;
+  bool any_right_edge_passable = false;
   bool any_no_fit_human = false;
+  int right_edge_pass_count = 0;
   bool have_focus = false;
   double focus_gap = std::numeric_limits<double>::infinity();
 
@@ -1326,22 +1486,20 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
         static_cast<float>(effective_width), static_cast<float>(effective_height));
     human_debug.effective_area_ratio = static_cast<float>(effective_area_ratio);
     human_debug.fit_available = fit_available;
+    const bool right_edge_passable = right_edge_limit_x >= 0.0 &&
+                                     effective_right >= right_edge_limit_x;
+    human_debug.right_edge_passable = right_edge_passable;
 
+    // Compare the midpoint of the expanded box's left edge with the fitted
+    // point at exactly the same image height.  This avoids using a farther
+    // or nearer point on a curved fit to decide whether Human is passable.
+    const double effective_center_y = effective_top + effective_height * 0.5;
     double line_limit_x = -std::numeric_limits<double>::infinity();
     bool line_samples_valid = fit_available;
     if (fit_available) {
-      for (int i = 0; i < sample_count; ++i) {
-        const double sample_ratio = sample_count == 1
-                                        ? 1.0
-                                        : static_cast<double>(i) / (sample_count - 1);
-        const double y = effective_top + effective_height *
-                         (sample_start + (1.0 - sample_start) * sample_ratio);
-        const double line_x = evalPoly(fit_coeffs, y);
-        if (!std::isfinite(line_x)) {
-          line_samples_valid = false;
-          break;
-        }
-        line_limit_x = std::max(line_limit_x, line_x);
+      line_limit_x = evalPoly(fit_coeffs, effective_center_y);
+      if (!std::isfinite(line_limit_x)) {
+        line_samples_valid = false;
       }
     }
     human_debug.fit_available = line_samples_valid;
@@ -1349,8 +1507,9 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
                                        ? static_cast<float>(line_limit_x)
                                        : -1.0f;
 
-    const bool passable = line_samples_valid &&
-                          effective_left > line_limit_x + cfg_.human_line_margin_px;
+    const bool passable = right_edge_passable ||
+                          (line_samples_valid &&
+                           effective_left > line_limit_x + cfg_.human_line_margin_px);
     const bool stop_candidate = !passable && effective_area_ratio >= area_threshold;
     human_debug.passable = passable;
     human_debug.stop_candidate = stop_candidate;
@@ -1359,6 +1518,10 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
     all_current_humans_passable = all_current_humans_passable && passable;
     any_nonpassable_human = any_nonpassable_human || !passable;
     any_stop_candidate = any_stop_candidate || stop_candidate;
+    any_right_edge_passable = any_right_edge_passable || right_edge_passable;
+    if (right_edge_passable) {
+      ++right_edge_pass_count;
+    }
     any_no_fit_human = any_no_fit_human || !line_samples_valid;
 
     const double gap = line_samples_valid
@@ -1379,7 +1542,10 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
     human_left_seen_latched_ = true;
     human_right_clear_confirm_count_ = 0;
   } else if (has_valid_human && all_current_humans_passable) {
-    if (human_left_seen_latched_) {
+    if (human_left_seen_latched_ && any_right_edge_passable) {
+      human_left_seen_latched_ = false;
+      human_right_clear_confirm_count_ = 0;
+    } else if (human_left_seen_latched_) {
       ++human_right_clear_confirm_count_;
       if (human_right_clear_confirm_count_ >= cfg_.human_clear_confirm_frames) {
         human_left_seen_latched_ = false;
@@ -1426,6 +1592,9 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
                                              has_valid_human &&
                                              all_current_humans_passable;
   debug_info_.human_stop_candidate = any_stop_candidate;
+  debug_info_.human_right_edge_passable = any_right_edge_passable;
+  debug_info_.human_right_edge_limit_x = static_cast<float>(right_edge_limit_x);
+  debug_info_.human_right_edge_pass_count = right_edge_pass_count;
   debug_info_.human_state = human_state_;
   debug_info_.human_right_clear_confirm_count = human_right_clear_confirm_count_;
   debug_info_.human_stop_confirm_count = human_stop_confirm_count_;
@@ -1446,17 +1615,52 @@ void LaneDecision::populateDebugInfo(const std::vector<Band>& bands,
                                      const std::vector<cv::Point3f>& raw_points,
                                      const std::vector<cv::Point3f>& fit_points,
                                      const std::vector<cv::Point3f>& removed_fit_points,
+                                     const std::vector<cv::Point3f>& pushed_fit_points,
+                                     int image_width, int image_height,
                                      const std::vector<double>& fit_coeffs) {
   debug_info_.bands.clear();
   debug_info_.obstacle_zones.clear();
   debug_info_.raw_points = raw_points;
   debug_info_.fit_points = fit_points;
   debug_info_.removed_fit_points = removed_fit_points;
+  debug_info_.pushed_fit_points = pushed_fit_points;
   debug_info_.fit_coeffs = fit_coeffs;
   debug_info_.car_boundary_active = car_boundary_active_;
   debug_info_.car_left_x = static_cast<float>(car_left_x_);
   debug_info_.car_filtered_point_count = static_cast<int>(removed_fit_points.size());
   debug_info_.car_boundary_lost_count = car_boundary_lost_count_;
+  debug_info_.car_push_active = cfg_.enable_car_point_push_avoidance && car_boundary_active_;
+  debug_info_.car_pushed_point_count = static_cast<int>(pushed_fit_points.size());
+  debug_info_.car_deleted_point_count = static_cast<int>(removed_fit_points.size());
+  if (car_boundary_active_) {
+    const double max_x = static_cast<double>(std::max(0, image_width - 1));
+    const double max_y = static_cast<double>(std::max(0, image_height - 1));
+    const double bbox_left = clampValue(car_left_x_, 0.0, max_x);
+    const double bbox_right = clampValue(car_right_x_, 0.0, max_x);
+    const double bbox_top = clampValue(car_top_y_, 0.0, max_y);
+    const double bbox_bottom = clampValue(car_bottom_y_, 0.0, max_y);
+    const double expanded_left = clampValue(
+        bbox_left - cfg_.car_push_expand_left_px, 0.0, max_x);
+    const double expanded_right = clampValue(
+        bbox_right + cfg_.car_push_expand_right_px, 0.0, max_x);
+    const double expanded_top = clampValue(
+        bbox_top - cfg_.car_push_expand_top_px, 0.0, max_y);
+    const double expanded_bottom = clampValue(
+        bbox_bottom + cfg_.car_push_expand_bottom_px, 0.0, max_y);
+    const double target_x = clampValue(
+        expanded_left - cfg_.car_push_clearance_px, 0.0, max_x);
+    debug_info_.car_push_target_x = static_cast<float>(target_x);
+    debug_info_.car_push_expand_bottom_y = static_cast<float>(
+        expanded_bottom);
+    debug_info_.car_bbox = cv::Rect2f(
+        static_cast<float>(bbox_left), static_cast<float>(bbox_top),
+        static_cast<float>(std::max(0.0, bbox_right - bbox_left)),
+        static_cast<float>(std::max(0.0, bbox_bottom - bbox_top)));
+    debug_info_.car_expanded_bbox = cv::Rect2f(
+        static_cast<float>(expanded_left), static_cast<float>(expanded_top),
+        static_cast<float>(std::max(0.0, expanded_right - expanded_left)),
+        static_cast<float>(std::max(0.0, expanded_bottom - expanded_top)));
+  }
   debug_info_.fit_hold_active = fit_hold_active_;
   debug_info_.fit_hold_age = fit_hold_age_;
   debug_info_.fit_order = fit_coeffs.empty() ? 0 : static_cast<int>(fit_coeffs.size()) - 1;

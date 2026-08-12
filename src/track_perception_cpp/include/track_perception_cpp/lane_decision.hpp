@@ -26,14 +26,13 @@ struct LaneDecisionConfig {
   float branch_detect_far_band_ratio{0.7f};
   std::string outer_side{"left"};
   bool enable_guideboard_branch_selection{true};
-  std::string guideboard_branch{"right"};
   float guideboard_detect_y0_ratio{0.2f};
   float guideboard_detect_y1_ratio{0.7f};
   bool guideboard_require_hint{false};
   std::string guideboard_unknown_branch{"left"};
   double guideboard_hint_wait_timeout_sec{0.20};
   bool enable_encoder_branch_hold{true};
-  int64_t encoder_hold_counts{5000};
+  int64_t encoder_hold_counts{9000};
   int64_t encoder_hold_right_counts{20000};
   double encoder_feedback_timeout_sec{0.30};
 
@@ -75,11 +74,11 @@ struct LaneDecisionConfig {
   float human_left_expand_px{25.0f};
   float human_left_expand_width_ratio{0.50f};
   float human_line_margin_px{5.0f};
-  int human_line_sample_count{5};
-  float human_line_sample_start_ratio{0.60f};
   float human_stop_effective_area_ratio{0.020f};
   int human_stop_confirm_frames{2};
   int human_clear_confirm_frames{3};
+  bool enable_human_right_edge_pass{true};
+  float human_right_edge_pass_margin_px{45.0f};
 
   bool enable_car_right_boundary_filter{true};
   float car_boundary_x_margin_px{0.0f};
@@ -87,6 +86,12 @@ struct LaneDecisionConfig {
   float car_boundary_smoothing_alpha{0.5f};
   int car_boundary_lost_frames{3};
   double car_fit_hold_timeout_sec{0.20};
+  bool enable_car_point_push_avoidance{false};
+  float car_push_expand_left_px{40.0f};
+  float car_push_expand_bottom_px{20.0f};
+  float car_push_expand_right_px{0.0f};
+  float car_push_expand_top_px{0.0f};
+  float car_push_clearance_px{3.0f};
 
   bool enable_finish_stop{true};
   float finish_stop_min_confidence{0.45f};
@@ -123,6 +128,7 @@ struct LaneHumanDebug {
   float fit_line_limit_x{-1.0f};
   float effective_area_ratio{0.0f};
   bool fit_available{false};
+  bool right_edge_passable{false};
   bool passable{false};
   bool stop_candidate{false};
 };
@@ -133,6 +139,7 @@ struct LaneDebugInfo {
   std::vector<cv::Point3f> raw_points;
   std::vector<cv::Point3f> fit_points;
   std::vector<cv::Point3f> removed_fit_points;
+  std::vector<cv::Point3f> pushed_fit_points;
   std::vector<double> fit_coeffs;
   std::vector<LaneHumanDebug> humans;
   bool human_left_seen_latched{false};
@@ -142,6 +149,9 @@ struct LaneDebugInfo {
   float human_effective_left_x{-1.0f};
   float human_fit_line_limit_x{-1.0f};
   float human_effective_area_ratio{0.0f};
+  bool human_right_edge_passable{false};
+  float human_right_edge_limit_x{-1.0f};
+  int human_right_edge_pass_count{0};
   std::string human_state{"NONE"};
   int human_right_clear_confirm_count{0};
   int human_stop_confirm_count{0};
@@ -149,6 +159,13 @@ struct LaneDebugInfo {
   float car_left_x{-1.0f};
   int car_filtered_point_count{0};
   int car_boundary_lost_count{0};
+  bool car_push_active{false};
+  float car_push_target_x{-1.0f};
+  float car_push_expand_bottom_y{-1.0f};
+  int car_pushed_point_count{0};
+  int car_deleted_point_count{0};
+  cv::Rect2f car_bbox;
+  cv::Rect2f car_expanded_bbox;
   bool fit_hold_active{false};
   double fit_hold_age{0.0};
   int fit_order{0};
@@ -162,6 +179,13 @@ struct LaneDebugInfo {
   bool guideboard_hint_valid{false};
   bool guideboard_waiting_for_hint{false};
   double guideboard_hint_wait_elapsed{0.0};
+  bool guideboard_seen_latched{false};
+  bool branch_event_armed{true};
+  bool branch_event_rearmed{false};
+  bool branch_lock_event{false};
+  bool branch_lock_guideboard{false};
+  uint64_t branch_event_id{0};
+  std::string branch_decision_source;
   bool encoder_hold{false};
   std::string encoder_hold_side;
   int64_t encoder_count{0};
@@ -191,10 +215,13 @@ struct LaneDebugInfo {
 class LaneDecision {
  public:
   void configure(const LaneDecisionConfig& config);
-  void setGuideboardBranchHint(const std::string& branch, bool valid);
+  void setGuideboardBranchHint(const std::string& branch, bool valid,
+                               const std::string& decision_source = "guideboard_hint");
   void setEncoderCount(int64_t count, double timestamp);
   LaneState decide(const cv::Mat& seg_map, const std::vector<Detection>& detections);
   const LaneDebugInfo& debugInfo() const { return debug_info_; }
+  bool branchEventArmed() const { return branch_event_armed_; }
+  uint64_t branchEventId() const { return branch_event_id_; }
 
  private:
   struct Segment {
@@ -255,10 +282,15 @@ class LaneDecision {
   std::vector<cv::Point3f> filterCenterlinePoints(const std::vector<cv::Point3f>& points,
                                                   int image_width,
                                                   std::optional<double> last_center_x) const;
-  void updateCarBoundaryState(const std::vector<Detection>& detections, int image_height);
+  void updateCarBoundaryState(const std::vector<Detection>& detections, int image_width,
+                              int image_height);
   std::vector<cv::Point3f> filterCarRightBoundaryPoints(
       const std::vector<cv::Point3f>& points,
       std::vector<cv::Point3f>* removed_points) const;
+  std::vector<cv::Point3f> applyCarPointPushAvoidance(
+      const std::vector<cv::Point3f>& points, int image_width, int image_height,
+      std::vector<cv::Point3f>* pushed_points,
+      std::vector<cv::Point3f>* removed_points);
   bool fitCenterlineAndComputeGeometry(const std::vector<cv::Point3f>& points, int h,
                                        int fit_order, std::vector<double>* coeffs,
                                        double* heading_error, double* curvature) const;
@@ -275,6 +307,8 @@ class LaneDecision {
                          const std::vector<cv::Point3f>& raw_points,
                          const std::vector<cv::Point3f>& fit_points,
                          const std::vector<cv::Point3f>& removed_fit_points,
+                         const std::vector<cv::Point3f>& pushed_fit_points,
+                         int image_width, int image_height,
                          const std::vector<double>& fit_coeffs);
 
   LaneDecisionConfig cfg_;
@@ -284,10 +318,16 @@ class LaneDecision {
   bool branch_locked_{false};
   std::string locked_branch_side_{"left"};
   std::string guideboard_branch_hint_{"left"};
+  std::string guideboard_branch_hint_source_{"guideboard_hint"};
   bool guideboard_branch_hint_valid_{false};
   double guideboard_hint_wait_start_sec_{0.0};
   double lock_start_time_{0.0};
   int branch_confirm_count_{0};
+  bool guideboard_seen_latched_{false};
+  bool branch_event_armed_{true};
+  bool branch_event_rearmed_{false};
+  int branch_clear_count_{0};
+  uint64_t branch_event_id_{1};
   bool has_encoder_count_{false};
   int64_t latest_encoder_count_{0};
   double last_encoder_update_sec_{0.0};
@@ -309,6 +349,8 @@ class LaneDecision {
 
   bool car_boundary_active_{false};
   double car_left_x_{-1.0};
+  double car_right_x_{0.0};
+  double car_top_y_{0.0};
   double car_bottom_y_{0.0};
   int car_boundary_lost_count_{0};
   bool fit_hold_active_{false};

@@ -40,6 +40,10 @@ cv::Mat branchMask() {
   return mask;
 }
 
+cv::Mat clearMask() {
+  return cv::Mat::zeros(100, 100, CV_8UC1);
+}
+
 std::vector<Detection> guideboardDetection() {
   Detection sign;
   sign.class_name = "GuideBoard";
@@ -76,6 +80,21 @@ TEST(LaneGuideboardWaitTest, StableHintLocksImmediately) {
   EXPECT_EQ(decision.debugInfo().encoder_hold_target, 20000);
 }
 
+TEST(LaneGuideboardWaitTest, NoGuideboardLocksStraightWithoutHintWait) {
+  LaneDecision decision;
+  decision.configure(makeConfig());
+
+  auto state = decision.decide(branchMask(), {});
+
+  EXPECT_EQ(state.branch_side, "left");
+  EXPECT_FALSE(decision.debugInfo().guideboard_waiting_for_hint);
+  EXPECT_TRUE(decision.debugInfo().branch_lock_event);
+  EXPECT_FALSE(decision.debugInfo().branch_lock_guideboard);
+  EXPECT_EQ(decision.debugInfo().branch_decision_source,
+            "no_guideboard_default");
+  EXPECT_EQ(decision.debugInfo().encoder_hold_target, 9000);
+}
+
 TEST(LaneGuideboardWaitTest, UsesLateHintAfterGuideboardLeavesRoi) {
   LaneDecision decision;
   decision.configure(makeConfig());
@@ -90,6 +109,43 @@ TEST(LaneGuideboardWaitTest, UsesLateHintAfterGuideboardLeavesRoi) {
   EXPECT_FALSE(decision.debugInfo().guideboard_seen);
   EXPECT_TRUE(decision.debugInfo().guideboard_hint_valid);
   EXPECT_EQ(state.branch_side, "right");
+}
+
+TEST(LaneGuideboardWaitTest, PropagatesRouteDecisionSource) {
+  LaneDecision decision;
+  decision.configure(makeConfig());
+  decision.setGuideboardBranchHint("right", true, "second_opposite");
+
+  auto state = decision.decide(branchMask(), guideboardDetection());
+
+  EXPECT_EQ(state.branch_side, "right");
+  EXPECT_EQ(decision.debugInfo().branch_decision_source, "second_opposite");
+}
+
+TEST(LaneGuideboardWaitTest, RearmsOnlyAfterHoldEndsAndBranchClears) {
+  LaneDecision decision;
+  decision.configure(makeConfig());
+  decision.setEncoderCount(100, 1.0);
+  decision.setGuideboardBranchHint("right", true, "first_api");
+
+  decision.decide(branchMask(), guideboardDetection());
+  ASSERT_TRUE(decision.debugInfo().branch_lock_event);
+  ASSERT_FALSE(decision.branchEventArmed());
+  const uint64_t first_event_id = decision.branchEventId();
+
+  decision.setEncoderCount(20100, 1.1);
+  decision.decide(branchMask(), guideboardDetection());
+  EXPECT_FALSE(decision.debugInfo().branch_lock_event);
+  EXPECT_FALSE(decision.branchEventArmed());
+
+  decision.decide(branchMask(), guideboardDetection());
+  EXPECT_FALSE(decision.debugInfo().branch_event_rearmed);
+  EXPECT_FALSE(decision.branchEventArmed());
+
+  decision.decide(clearMask(), {});
+  EXPECT_TRUE(decision.debugInfo().branch_event_rearmed);
+  EXPECT_TRUE(decision.branchEventArmed());
+  EXPECT_EQ(decision.branchEventId(), first_event_id + 1);
 }
 
 }  // namespace

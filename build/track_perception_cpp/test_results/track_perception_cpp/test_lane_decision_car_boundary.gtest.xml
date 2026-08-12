@@ -1,18 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites tests="13" failures="0" disabled="0" errors="0" time="0.04" timestamp="2026-07-17T01:38:04" name="AllTests">
-  <testsuite name="LaneDecisionCarBoundaryTest" tests="13" failures="0" disabled="0" errors="0" time="0.04" timestamp="2026-07-17T01:38:04">
-    <testcase name="NoCarKeepsSharpTurnPointsAndQuadraticFit" status="run" result="completed" time="0.002" timestamp="2026-07-17T01:38:04" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
-    <testcase name="RemovesCarSideFarPointsAndKeepsNearLeftPoints" status="run" result="completed" time="0.001" timestamp="2026-07-17T01:38:04" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
-    <testcase name="AppliesLeftEdgeRuleEvenWhenCarIsInImageLeftHalf" status="run" result="completed" time="0.001" timestamp="2026-07-17T01:38:04" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
-    <testcase name="SmoothsBoundaryAndKeepsItAcrossTwoLostFrames" status="run" result="completed" time="0.004" timestamp="2026-07-17T01:38:04" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
-    <testcase name="HoldsLastQuadraticFitThenBecomesLowConfidence" status="run" result="completed" time="0.022" timestamp="2026-07-17T01:38:04" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
-    <testcase name="HumanOnRightPassesRegardlessOfAreaAndDoesNotChangeFit" status="run" result="completed" time="0.001" timestamp="2026-07-17T01:38:04" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
-    <testcase name="LeftHumanLatchesWithoutStoppingBelowAreaThreshold" status="run" result="completed" time="0.001" timestamp="2026-07-17T01:38:04" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
-    <testcase name="HumanNeverEntersLegacyBandExclusionPath" status="run" result="completed" time="0.001" timestamp="2026-07-17T01:38:04" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
-    <testcase name="LargeLeftHumanStopsAndLostDetectionDoesNotReleaseStop" status="run" result="completed" time="0.001" timestamp="2026-07-17T01:38:04" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
-    <testcase name="RightHumanClearsLeftMemoryOnlyAfterConfirmation" status="run" result="completed" time="0.001" timestamp="2026-07-17T01:38:04" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
-    <testcase name="LostFrameResetsRightConfirmationAndDoesNotClearMemory" status="run" result="completed" time="0.002" timestamp="2026-07-17T01:38:04" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
-    <testcase name="HumanCannotBeClearedByRightDetectionWithoutValidFit" status="run" result="completed" time="0.001" timestamp="2026-07-17T01:38:04" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
-    <testcase name="FinishAndLowConfidenceProtectionRemainActive" status="run" result="completed" time="0.001" timestamp="2026-07-17T01:38:04" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+<testsuites tests="22" failures="0" disabled="0" errors="0" time="0.05" timestamp="2026-08-12T01:36:15" name="AllTests">
+  <testsuite name="LaneDecisionCarBoundaryTest" tests="22" failures="0" disabled="0" errors="0" time="0.05" timestamp="2026-08-12T01:36:15">
+    <testcase name="NoCarKeepsSharpTurnPointsAndQuadraticFit" status="run" result="completed" time="0.001" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="RemovesCarSideFarPointsAndKeepsNearLeftPoints" status="run" result="completed" time="0.001" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="AppliesLeftEdgeRuleEvenWhenCarIsInImageLeftHalf" status="run" result="completed" time="0.001" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="PushesExpandedCarPointsAndDeletesOutsideFarPoints" status="run" result="completed" time="0.001" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="PushModeIsSwitchableAndDoesNotStackLegacyDeletion" status="run" result="completed" time="0.002" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="SmoothsBoundaryAndKeepsItAcrossTwoLostFrames" status="run" result="completed" time="0.004" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="HoldsLastQuadraticFitThenBecomesLowConfidence" status="run" result="completed" time="0.024" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="HumanOnRightPassesRegardlessOfAreaAndDoesNotChangeFit" status="run" result="completed" time="0" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="HumanAtRightEdgePassesEvenWhenFitLineLeavesNoRightSpace" status="run" result="completed" time="0.001" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="RightEdgeBoundaryIsInclusiveAndOutsideStillUsesFitLine" status="run" result="completed" time="0" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="RightEdgePassesWhenFitIsInvalid" status="run" result="completed" time="0.001" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="LeftHumanLatchesWithoutStoppingBelowAreaThreshold" status="run" result="completed" time="0.001" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="HumanNeverEntersLegacyBandExclusionPath" status="run" result="completed" time="0" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="LargeLeftHumanStopsAndLostDetectionDoesNotReleaseStop" status="run" result="completed" time="0.001" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="RightHumanClearsLeftMemoryOnlyAfterConfirmation" status="run" result="completed" time="0.001" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="RightEdgeHumanClearsLeftMemoryImmediately" status="run" result="completed" time="0.001" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="RightEdgeHumanReleasesActiveStop" status="run" result="completed" time="0" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="NonpassableHumanBlocksRightEdgeClear" status="run" result="completed" time="0.006" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="DisablingRightEdgePassRestoresFitLineJudgement" status="run" result="completed" time="0" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="LostFrameResetsRightConfirmationAndDoesNotClearMemory" status="run" result="completed" time="0.002" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="HumanCannotBeClearedByRightDetectionWithoutValidFit" status="run" result="completed" time="0" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
+    <testcase name="FinishAndLowConfidenceProtectionRemainActive" status="run" result="completed" time="0.002" timestamp="2026-08-12T01:36:15" classname="track_perception_cpp.LaneDecisionCarBoundaryTest" />
   </testsuite>
 </testsuites>

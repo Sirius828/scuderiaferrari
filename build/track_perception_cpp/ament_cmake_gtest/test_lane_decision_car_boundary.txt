@@ -2,40 +2,58 @@
  - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_decision_car_boundary --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml
 
 Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
-[==========] Running 13 tests from 1 test suite.
+[==========] Running 22 tests from 1 test suite.
 [----------] Global test environment set-up.
-[----------] 13 tests from LaneDecisionCarBoundaryTest
+[----------] 22 tests from LaneDecisionCarBoundaryTest
 [ RUN      ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit
-[       OK ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit (2 ms)
+[       OK ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit (1 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.RemovesCarSideFarPointsAndKeepsNearLeftPoints
 [       OK ] LaneDecisionCarBoundaryTest.RemovesCarSideFarPointsAndKeepsNearLeftPoints (1 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.AppliesLeftEdgeRuleEvenWhenCarIsInImageLeftHalf
 [       OK ] LaneDecisionCarBoundaryTest.AppliesLeftEdgeRuleEvenWhenCarIsInImageLeftHalf (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.PushesExpandedCarPointsAndDeletesOutsideFarPoints
+[       OK ] LaneDecisionCarBoundaryTest.PushesExpandedCarPointsAndDeletesOutsideFarPoints (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.PushModeIsSwitchableAndDoesNotStackLegacyDeletion
+[       OK ] LaneDecisionCarBoundaryTest.PushModeIsSwitchableAndDoesNotStackLegacyDeletion (2 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.SmoothsBoundaryAndKeepsItAcrossTwoLostFrames
 [       OK ] LaneDecisionCarBoundaryTest.SmoothsBoundaryAndKeepsItAcrossTwoLostFrames (4 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence
-[       OK ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence (22 ms)
+[       OK ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence (24 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.HumanOnRightPassesRegardlessOfAreaAndDoesNotChangeFit
-[       OK ] LaneDecisionCarBoundaryTest.HumanOnRightPassesRegardlessOfAreaAndDoesNotChangeFit (1 ms)
+[       OK ] LaneDecisionCarBoundaryTest.HumanOnRightPassesRegardlessOfAreaAndDoesNotChangeFit (0 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.HumanAtRightEdgePassesEvenWhenFitLineLeavesNoRightSpace
+[       OK ] LaneDecisionCarBoundaryTest.HumanAtRightEdgePassesEvenWhenFitLineLeavesNoRightSpace (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RightEdgeBoundaryIsInclusiveAndOutsideStillUsesFitLine
+[       OK ] LaneDecisionCarBoundaryTest.RightEdgeBoundaryIsInclusiveAndOutsideStillUsesFitLine (0 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RightEdgePassesWhenFitIsInvalid
+[       OK ] LaneDecisionCarBoundaryTest.RightEdgePassesWhenFitIsInvalid (1 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.LeftHumanLatchesWithoutStoppingBelowAreaThreshold
 [       OK ] LaneDecisionCarBoundaryTest.LeftHumanLatchesWithoutStoppingBelowAreaThreshold (1 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.HumanNeverEntersLegacyBandExclusionPath
-[       OK ] LaneDecisionCarBoundaryTest.HumanNeverEntersLegacyBandExclusionPath (1 ms)
+[       OK ] LaneDecisionCarBoundaryTest.HumanNeverEntersLegacyBandExclusionPath (0 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.LargeLeftHumanStopsAndLostDetectionDoesNotReleaseStop
 [       OK ] LaneDecisionCarBoundaryTest.LargeLeftHumanStopsAndLostDetectionDoesNotReleaseStop (1 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.RightHumanClearsLeftMemoryOnlyAfterConfirmation
 [       OK ] LaneDecisionCarBoundaryTest.RightHumanClearsLeftMemoryOnlyAfterConfirmation (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RightEdgeHumanClearsLeftMemoryImmediately
+[       OK ] LaneDecisionCarBoundaryTest.RightEdgeHumanClearsLeftMemoryImmediately (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RightEdgeHumanReleasesActiveStop
+[       OK ] LaneDecisionCarBoundaryTest.RightEdgeHumanReleasesActiveStop (0 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.NonpassableHumanBlocksRightEdgeClear
+[       OK ] LaneDecisionCarBoundaryTest.NonpassableHumanBlocksRightEdgeClear (6 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.DisablingRightEdgePassRestoresFitLineJudgement
+[       OK ] LaneDecisionCarBoundaryTest.DisablingRightEdgePassRestoresFitLineJudgement (0 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.LostFrameResetsRightConfirmationAndDoesNotClearMemory
 [       OK ] LaneDecisionCarBoundaryTest.LostFrameResetsRightConfirmationAndDoesNotClearMemory (2 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.HumanCannotBeClearedByRightDetectionWithoutValidFit
-[       OK ] LaneDecisionCarBoundaryTest.HumanCannotBeClearedByRightDetectionWithoutValidFit (1 ms)
+[       OK ] LaneDecisionCarBoundaryTest.HumanCannotBeClearedByRightDetectionWithoutValidFit (0 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive
-[       OK ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive (1 ms)
-[----------] 13 tests from LaneDecisionCarBoundaryTest (40 ms total)
+[       OK ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive (2 ms)
+[----------] 22 tests from LaneDecisionCarBoundaryTest (50 ms total)
 
 [----------] Global test environment tear-down
-[==========] 13 tests from 1 test suite ran. (40 ms total)
-[  PASSED  ] 13 tests.
+[==========] 22 tests from 1 test suite ran. (50 ms total)
+[  PASSED  ] 22 tests.
 
 
 -- run_test.py: return code 0

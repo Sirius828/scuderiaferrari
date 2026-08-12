@@ -23,6 +23,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(CURL REQUIRED)
 
 include_directories(
   include
@@ -35,7 +36,9 @@ include_directories(
 
 add_executable(fused_perception_node
   src/fused_perception_node.cpp
+  src/guideboard_api_client.cpp
   src/guideboard_recognizer.cpp
+  src/guideboard_route_policy.cpp
   src/lane_decision.cpp
   src/rknn_model.cpp
   src/shm_reader.cpp
@@ -65,6 +68,7 @@ ament_target_dependencies(fused_perception_node
 target_link_libraries(fused_perception_node
   ${OpenCV_LIBS}
   ${RKNNRT_LIB}
+  CURL::libcurl
 )
 
 install(TARGETS fused_perception_node
@@ -94,6 +98,12 @@ if(BUILD_TESTING)
     src/guideboard_recognizer.cpp
   )
   target_include_directories(test_guideboard_recognizer PRIVATE include)
+
+  ament_add_gtest(test_guideboard_route_policy
+    test/test_guideboard_route_policy.cpp
+    src/guideboard_route_policy.cpp
+  )
+  target_include_directories(test_guideboard_route_policy PRIVATE include)
 
   ament_add_gtest(test_lane_guideboard_wait
     test/test_lane_guideboard_wait.cpp
