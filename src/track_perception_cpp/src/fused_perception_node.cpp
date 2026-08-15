@@ -478,14 +478,15 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<std::string>("guideboard_api_key", "");
     declare_parameter<std::string>("guideboard_api_url",
                                    "https://qianfan.baidubce.com/v2/chat/completions");
-    declare_parameter<std::string>("guideboard_api_model", "ernie-4.5-turbo-20260402");
-    declare_parameter<double>("guideboard_api_timeout_sec", 1.5);
+    declare_parameter<std::string>("guideboard_api_model", "qwen3.5-35b-a3b");
+    declare_parameter<double>("guideboard_api_timeout_sec", 1.8);
+    declare_parameter<double>("guideboard_api_uncertain_min_confidence", 0.75);
     declare_parameter<int>("guideboard_api_text_history_size", 3);
     declare_parameter<double>("guideboard_api_text_similarity", 0.70);
     declare_parameter<int>("guideboard_api_force_ocr_count_after_stop", 2);
     declare_parameter<double>("guideboard_api_stop_height_ratio", 0.20);
     declare_parameter<bool>("guideboard_api_retry_on_transport_failure", true);
-    declare_parameter<int>("guideboard_api_max_attempts", 2);
+    declare_parameter<int>("guideboard_api_max_attempts", 1);
     declare_parameter<std::string>("ocr_det_model_path", "model/ppocrv4_det.rknn");
     declare_parameter<std::string>("ocr_rec_model_path", "model/ppocrv4_rec.rknn");
     declare_parameter<std::string>("ocr_pipeline_mode", "rec_then_det");
@@ -641,6 +642,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     guideboard_api_model_ = get_parameter("guideboard_api_model").as_string();
     guideboard_api_timeout_sec_ = std::max(
         0.1, get_parameter("guideboard_api_timeout_sec").as_double());
+    guideboard_api_uncertain_min_confidence_ = std::clamp(
+        get_parameter("guideboard_api_uncertain_min_confidence").as_double(), 0.0, 1.0);
     guideboard_api_text_history_size_ = std::max(
         2, static_cast<int>(get_parameter("guideboard_api_text_history_size").as_int()));
     guideboard_api_text_similarity_ = std::clamp(
@@ -971,6 +974,9 @@ class FusedPerceptionNode : public rclcpp::Node {
     api_attempt_count_ = 0;
     last_api_latency_ms_ = -1.0;
     last_api_http_status_ = 0;
+    last_api_confidence_ = 0.0f;
+    last_api_uncertain_ = false;
+    last_api_accepted_uncertain_ = false;
     last_api_corrected_text_.clear();
     lane_decision_.setGuideboardBranchHint("", false);
   }
@@ -1142,6 +1148,10 @@ class FusedPerceptionNode : public rclcpp::Node {
        << ",\"api_attempt_count\":" << api_attempt_count_
        << ",\"api_latency_ms\":" << last_api_latency_ms_
        << ",\"api_http_status\":" << last_api_http_status_
+       << ",\"api_confidence\":" << last_api_confidence_
+       << ",\"api_uncertain\":" << (last_api_uncertain_ ? "true" : "false")
+       << ",\"api_accepted_uncertain\":"
+       << (last_api_accepted_uncertain_ ? "true" : "false")
        << ",\"ocr_history\":" << guideboardOcrHistoryJson() << "}";
     std_msgs::msg::String recognition_msg;
     recognition_msg.data = ss.str();
@@ -1238,6 +1248,10 @@ class FusedPerceptionNode : public rclcpp::Node {
        << ",\"api_trigger_reason\":\"" << jsonEscape(api_trigger_reason_) << "\""
        << ",\"api_latency_ms\":" << last_api_latency_ms_
        << ",\"api_http_status\":" << last_api_http_status_
+       << ",\"api_confidence\":" << last_api_confidence_
+       << ",\"api_uncertain\":" << (last_api_uncertain_ ? "true" : "false")
+       << ",\"api_accepted_uncertain\":"
+       << (last_api_accepted_uncertain_ ? "true" : "false")
        << ",\"api_fallback\":" << (api_fallback_ ? "true" : "false")
        << ",\"stop_wait_active\":"
        << (guideboard_stop_wait_active_ ? "true" : "false")
@@ -1574,24 +1588,28 @@ class FusedPerceptionNode : public rclcpp::Node {
     if (enable_data_log_) {
       RCLCPP_INFO(get_logger(),
                   "GUIDEBOARD_API_REQUEST track_id=%lu sequence=%lu attempt=%d "
-                  "model=%s timeout_sec=%.2f history=%s stop_wait_active=%d",
+                  "model=%s timeout_sec=%.2f uncertain_min_confidence=%.2f "
+                  "history=%s stop_wait_active=%d",
                   static_cast<unsigned long>(task_track_id),
                   static_cast<unsigned long>(guideboard_sequence_), attempt,
                   guideboard_api_model_.c_str(), guideboard_api_timeout_sec_,
+                  guideboard_api_uncertain_min_confidence_,
                   guideboardOcrHistoryJson().c_str(), guideboard_stop_wait_active_);
     }
     guideboard_api_request_in_flight_ = true;
     guideboard_api_future_ = std::async(
         std::launch::async,
         [url = guideboard_api_url_, key = api_key_, model = guideboard_api_model_, samples,
-         timeout_sec = guideboard_api_timeout_sec_, task_track_id,
+         timeout_sec = guideboard_api_timeout_sec_,
+         uncertain_min_confidence = guideboard_api_uncertain_min_confidence_, task_track_id,
          task_route_session_id, task_branch_event_id, attempt]() {
           GuideboardApiTaskResult task;
           task.track_id = task_track_id;
           task.route_session_id = task_route_session_id;
           task.branch_event_id = task_branch_event_id;
           task.attempt = attempt;
-          task.result = GuideboardApiClient::request(url, key, model, samples, timeout_sec);
+          task.result = GuideboardApiClient::request(
+              url, key, model, samples, timeout_sec, uncertain_min_confidence);
           return task;
         });
   }
@@ -1637,16 +1655,21 @@ class FusedPerceptionNode : public rclcpp::Node {
     }
     last_api_latency_ms_ = task.result.latency_ms;
     last_api_http_status_ = task.result.http_status;
+    last_api_confidence_ = task.result.confidence;
+    last_api_uncertain_ = task.result.uncertain;
+    last_api_accepted_uncertain_ = task.result.accepted_uncertain;
     last_api_corrected_text_ = task.result.corrected_text;
     if (enable_data_log_) {
       RCLCPP_INFO(get_logger(),
                   "GUIDEBOARD_API_RESPONSE track_id=%lu sequence=%lu attempt=%d valid=%d "
-                  "uncertain=%d maneuver=%s confidence=%.3f corrected_text=%s "
+                  "uncertain=%d accepted_uncertain=%d maneuver=%s confidence=%.3f "
+                  "corrected_text=%s "
                   "latency_ms=%.1f http_status=%d error=%s",
                   static_cast<unsigned long>(task.track_id),
                   static_cast<unsigned long>(guideboard_sequence_), task.attempt,
-                  task.result.valid, task.result.uncertain, task.result.maneuver.c_str(),
-                  task.result.confidence, task.result.corrected_text.c_str(),
+                  task.result.valid, task.result.uncertain, task.result.accepted_uncertain,
+                  task.result.maneuver.c_str(), task.result.confidence,
+                  task.result.corrected_text.c_str(),
                   task.result.latency_ms, task.result.http_status, task.result.error.c_str());
     }
 
@@ -1875,9 +1898,12 @@ class FusedPerceptionNode : public rclcpp::Node {
       }
       guideboard_ocr_ready_ = true;
       RCLCPP_INFO(get_logger(),
-                  "guideboard OCR ready: mode=%s control=%d api=%d model=%s det=%s rec=%s",
+                  "guideboard OCR ready: mode=%s control=%d api=%d model=%s timeout_sec=%.2f "
+                  "uncertain_min_confidence=%.2f max_attempts=%d det=%s rec=%s",
                   ocr_pipeline_mode_.c_str(), ocr_apply_to_control_,
                   enable_guideboard_api_, guideboard_api_model_.c_str(),
+                  guideboard_api_timeout_sec_, guideboard_api_uncertain_min_confidence_,
+                  guideboard_api_max_attempts_,
                   ocr_pipeline_mode_ == "rec_only" ? "not_loaded" : ocr_det_model_path_.c_str(),
                   ocr_rec_model_path_.c_str());
     }
@@ -2762,15 +2788,16 @@ class FusedPerceptionNode : public rclcpp::Node {
   bool guideboard_ocr_ready_{false};
   bool enable_guideboard_api_{true};
   std::string guideboard_api_url_{"https://qianfan.baidubce.com/v2/chat/completions"};
-  std::string guideboard_api_model_{"ernie-4.5-turbo-20260402"};
+  std::string guideboard_api_model_{"qwen3.5-35b-a3b"};
   std::string api_key_;
-  double guideboard_api_timeout_sec_{1.5};
+  double guideboard_api_timeout_sec_{1.8};
+  double guideboard_api_uncertain_min_confidence_{0.75};
   int guideboard_api_text_history_size_{3};
   double guideboard_api_text_similarity_{0.70};
   int guideboard_api_force_ocr_count_after_stop_{2};
   double guideboard_api_stop_height_ratio_{0.20};
   bool guideboard_api_retry_on_transport_failure_{true};
-  int guideboard_api_max_attempts_{2};
+  int guideboard_api_max_attempts_{1};
   std::string ocr_det_model_path_;
   std::string ocr_rec_model_path_;
   std::string ocr_pipeline_mode_{"rec_then_det"};
@@ -2799,6 +2826,9 @@ class FusedPerceptionNode : public rclcpp::Node {
   int api_attempt_count_{0};
   double last_api_latency_ms_{-1.0};
   int last_api_http_status_{0};
+  float last_api_confidence_{0.0f};
+  bool last_api_uncertain_{false};
+  bool last_api_accepted_uncertain_{false};
   std::string last_api_corrected_text_;
   int ocr_task_crop_width_{0};
   int ocr_task_crop_height_{0};

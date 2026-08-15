@@ -95,6 +95,13 @@ install(DIRECTORY model
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_guideboard_api_client
+    test/test_guideboard_api_client.cpp
+    src/guideboard_api_client.cpp
+  )
+  target_include_directories(test_guideboard_api_client PRIVATE include)
+  target_link_libraries(test_guideboard_api_client CURL::libcurl)
+
   ament_add_gtest(test_guideboard_recognizer
     test/test_guideboard_recognizer.cpp
     src/guideboard_recognizer.cpp

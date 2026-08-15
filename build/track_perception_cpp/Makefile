@@ -211,6 +211,19 @@ fused_perception_node/fast:
 .PHONY : fused_perception_node/fast
 
 #=============================================================================
+# Target rules for targets named test_guideboard_api_client
+
+# Build rule for target.
+test_guideboard_api_client: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_guideboard_api_client
+.PHONY : test_guideboard_api_client
+
+# fast build rule for target.
+test_guideboard_api_client/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_api_client.dir/build.make CMakeFiles/test_guideboard_api_client.dir/build
+.PHONY : test_guideboard_api_client/fast
+
+#=============================================================================
 # Target rules for targets named test_guideboard_recognizer
 
 # Build rule for target.
@@ -318,6 +331,7 @@ src/guideboard_api_client.o: src/guideboard_api_client.cpp.o
 # target to build an object file
 src/guideboard_api_client.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_api_client.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_api_client.dir/build.make CMakeFiles/test_guideboard_api_client.dir/src/guideboard_api_client.cpp.o
 .PHONY : src/guideboard_api_client.cpp.o
 
 src/guideboard_api_client.i: src/guideboard_api_client.cpp.i
@@ -326,6 +340,7 @@ src/guideboard_api_client.i: src/guideboard_api_client.cpp.i
 # target to preprocess a source file
 src/guideboard_api_client.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_api_client.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_api_client.dir/build.make CMakeFiles/test_guideboard_api_client.dir/src/guideboard_api_client.cpp.i
 .PHONY : src/guideboard_api_client.cpp.i
 
 src/guideboard_api_client.s: src/guideboard_api_client.cpp.s
@@ -334,6 +349,7 @@ src/guideboard_api_client.s: src/guideboard_api_client.cpp.s
 # target to generate assembly for a file
 src/guideboard_api_client.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_api_client.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_api_client.dir/build.make CMakeFiles/test_guideboard_api_client.dir/src/guideboard_api_client.cpp.s
 .PHONY : src/guideboard_api_client.cpp.s
 
 src/guideboard_recognizer.o: src/guideboard_recognizer.cpp.o
@@ -515,6 +531,30 @@ src/yolo_seg.s: src/yolo_seg.cpp.s
 src/yolo_seg.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/yolo_seg.cpp.s
 .PHONY : src/yolo_seg.cpp.s
+
+test/test_guideboard_api_client.o: test/test_guideboard_api_client.cpp.o
+.PHONY : test/test_guideboard_api_client.o
+
+# target to build an object file
+test/test_guideboard_api_client.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_api_client.dir/build.make CMakeFiles/test_guideboard_api_client.dir/test/test_guideboard_api_client.cpp.o
+.PHONY : test/test_guideboard_api_client.cpp.o
+
+test/test_guideboard_api_client.i: test/test_guideboard_api_client.cpp.i
+.PHONY : test/test_guideboard_api_client.i
+
+# target to preprocess a source file
+test/test_guideboard_api_client.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_api_client.dir/build.make CMakeFiles/test_guideboard_api_client.dir/test/test_guideboard_api_client.cpp.i
+.PHONY : test/test_guideboard_api_client.cpp.i
+
+test/test_guideboard_api_client.s: test/test_guideboard_api_client.cpp.s
+.PHONY : test/test_guideboard_api_client.s
+
+# target to generate assembly for a file
+test/test_guideboard_api_client.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_api_client.dir/build.make CMakeFiles/test_guideboard_api_client.dir/test/test_guideboard_api_client.cpp.s
+.PHONY : test/test_guideboard_api_client.cpp.s
 
 test/test_guideboard_recognizer.o: test/test_guideboard_recognizer.cpp.o
 .PHONY : test/test_guideboard_recognizer.o
@@ -798,6 +838,7 @@ help:
 	@echo "... fused_perception_node"
 	@echo "... gtest"
 	@echo "... gtest_main"
+	@echo "... test_guideboard_api_client"
 	@echo "... test_guideboard_recognizer"
 	@echo "... test_guideboard_route_policy"
 	@echo "... test_lane_decision_car_boundary"
@@ -829,6 +870,9 @@ help:
 	@echo "... src/yolo_seg.o"
 	@echo "... src/yolo_seg.i"
 	@echo "... src/yolo_seg.s"
+	@echo "... test/test_guideboard_api_client.o"
+	@echo "... test/test_guideboard_api_client.i"
+	@echo "... test/test_guideboard_api_client.s"
 	@echo "... test/test_guideboard_recognizer.o"
 	@echo "... test/test_guideboard_recognizer.i"
 	@echo "... test/test_guideboard_recognizer.s"

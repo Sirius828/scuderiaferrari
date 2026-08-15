@@ -1,6 +1,7 @@
 /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles/uninstall.dir
 /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles/track_perception_cpp_uninstall.dir
 /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles/fused_perception_node.dir
+/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles/test_guideboard_api_client.dir
 /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles/test_guideboard_recognizer.dir
 /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles/test_guideboard_route_policy.dir
 /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles/test_lane_guideboard_wait.dir

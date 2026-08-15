@@ -77,14 +77,16 @@ fused_perception_node:
     # 禁止在仓库中填写 Key；启动前通过环境变量 QIANFAN_API_KEY 注入
     guideboard_api_key: ""
     guideboard_api_url: "https://qianfan.baidubce.com/v2/chat/completions"
-    guideboard_api_model: "ernie-4.5-turbo-20260402"
-    guideboard_api_timeout_sec: 1.5
+    guideboard_api_model: "qwen3.5-35b-a3b"
+    guideboard_api_timeout_sec: 1.8
+    # uncertain=true 不再一票否决；动作合法且置信度达到此阈值时接受
+    guideboard_api_uncertain_min_confidence: 0.75
     guideboard_api_text_history_size: 3
     guideboard_api_text_similarity: 0.70
     guideboard_api_force_ocr_count_after_stop: 2
     guideboard_api_stop_height_ratio: 0.20
     guideboard_api_retry_on_transport_failure: true
-    guideboard_api_max_attempts: 2
+    guideboard_api_max_attempts: 1
     ocr_det_model_path: "model/ppocrv4_det.rknn"
     ocr_rec_model_path: "model/ppocrv4_rec.rknn"
     # rec_only: 固定两行直接识别；det_rec: 文字检测+识别；rec_then_det: Rec优先，必要时回退

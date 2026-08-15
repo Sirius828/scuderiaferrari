@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <mutex>
 #include <sstream>
 
@@ -33,11 +34,17 @@ std::string serializeRequest(const std::string& model,
   document.AddMember("stream", false, allocator);
 
   const char* system_prompt =
-      "你是车载路牌文字纠错和岔路方向判定器。输入是同一个路牌最近几次本地OCR结果，OCR可能有错别字、漏字或多余字。"
-      "请结合所有样本纠正文字并判断这张路牌对应的岔路决策。只能返回 straight 或 right："
-      "straight 表示直走，right 表示右转。不要根据不存在的信息猜测左转；如果无法确定，设置 uncertain=true。"
-      "必须严格返回一个JSON对象，不要Markdown，不要解释，字段必须是 corrected_text(string)、"
-      "maneuver(straight/right)、confidence(0到1的小数)、uncertain(boolean)。";
+      "你是车载路牌OCR纠错与岔路判向器。输入为同一路牌的多次OCR，可能有错字、漏字和多字。"
+      "先综合样本恢复原意，再按完整句意选择实际可行或被建议的路线，不得按‘右、直’等单个关键词计数。"
+      "本赛道左侧、左走或直走都输出straight，右侧或右走输出right。"
+      "若路牌给出左右方向的概率，必须比较数值并选择概率更大的一侧；"
+      "例如左侧49.9%、右侧50.1%应输出right。"
+      "正确处理否定、反问、反讽和不可通行：不让或不能往右表示straight；直道走不了表示right；"
+      "‘右道好走？才怪’表示straight；本赛道‘抄近道’表示right。"
+      "只能选择straight或right；无法确定时uncertain=true，但maneuver仍必须填写straight或right，"
+      "禁止填写unknown或uncertain。只返回JSON对象，不要Markdown或解释："
+      "{\"corrected_text\":\"...\",\"maneuver\":\"straight或right\","
+      "\"confidence\":0到1,\"uncertain\":true或false}。";
 
   rapidjson::Value messages(rapidjson::kArrayType);
   rapidjson::Value system_message(rapidjson::kObjectType);
@@ -78,7 +85,8 @@ std::string serializeRequest(const std::string& model,
   return buffer.GetString();
 }
 
-bool parseDecisionObject(const std::string& json, GuideboardApiResult* result) {
+bool parseDecisionObject(const std::string& json, double uncertain_min_confidence,
+                         GuideboardApiResult* result) {
   rapidjson::Document decision;
   decision.Parse(json.c_str());
   if (decision.HasParseError() || !decision.IsObject()) {
@@ -113,14 +121,17 @@ bool parseDecisionObject(const std::string& json, GuideboardApiResult* result) {
     return false;
   }
   result->uncertain = uncertain_it->value.GetBool();
-  result->valid = !result->uncertain;
+  result->valid = GuideboardApiClient::shouldAcceptDecision(
+      result->uncertain, result->confidence, uncertain_min_confidence);
+  result->accepted_uncertain = result->valid && result->uncertain;
   if (!result->valid) {
-    result->error = "api semantic result is uncertain";
+    result->error = "api semantic result is uncertain below confidence threshold";
   }
   return true;
 }
 
-bool parseResponse(const std::string& body, GuideboardApiResult* result) {
+bool parseResponse(const std::string& body, double uncertain_min_confidence,
+                   GuideboardApiResult* result) {
   rapidjson::Document response;
   response.Parse(body.c_str());
   if (response.HasParseError() || !response.IsObject()) {
@@ -150,13 +161,14 @@ bool parseResponse(const std::string& body, GuideboardApiResult* result) {
   }
 
   const std::string content = content_it->value.GetString();
-  if (parseDecisionObject(content, result)) {
+  if (parseDecisionObject(content, uncertain_min_confidence, result)) {
     return true;
   }
   const size_t begin = content.find('{');
   const size_t end = content.rfind('}');
   if (begin != std::string::npos && end > begin &&
-      parseDecisionObject(content.substr(begin, end - begin + 1), result)) {
+      parseDecisionObject(content.substr(begin, end - begin + 1),
+                          uncertain_min_confidence, result)) {
     return true;
   }
   if (result->error.empty()) {
@@ -167,9 +179,19 @@ bool parseResponse(const std::string& body, GuideboardApiResult* result) {
 
 }  // namespace
 
+bool GuideboardApiClient::shouldAcceptDecision(
+    bool uncertain, float confidence, double uncertain_min_confidence) {
+  if (!uncertain) {
+    return true;
+  }
+  const double threshold = std::clamp(uncertain_min_confidence, 0.0, 1.0);
+  return std::isfinite(confidence) && confidence >= threshold && confidence <= 1.0f;
+}
+
 GuideboardApiResult GuideboardApiClient::request(
     const std::string& url, const std::string& api_key, const std::string& model,
-    const std::vector<GuideboardApiSample>& samples, double timeout_sec) {
+    const std::vector<GuideboardApiSample>& samples, double timeout_sec,
+    double uncertain_min_confidence) {
   GuideboardApiResult result;
   const auto started = std::chrono::steady_clock::now();
   if (url.empty() || api_key.empty()) {
@@ -201,7 +223,10 @@ GuideboardApiResult GuideboardApiClient::request(
   headers = curl_slist_append(headers, authorization.c_str());
 
   const long timeout_ms = static_cast<long>(std::max(1.0, timeout_sec * 1000.0));
-  const long connect_timeout_ms = std::min(500L, timeout_ms);
+  // TLS through the local proxy occasionally needs more than 500 ms.  The
+  // overall request timeout still caps connection plus model inference, so a
+  // shorter independent connection deadline only creates premature failures.
+  const long connect_timeout_ms = timeout_ms;
   curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
   curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
   curl_easy_setopt(curl, CURLOPT_POST, 1L);
@@ -227,7 +252,7 @@ GuideboardApiResult GuideboardApiClient::request(
     result.error = "HTTP status " + std::to_string(http_status);
   } else {
     result.transport_ok = true;
-    parseResponse(response_body, &result);
+    parseResponse(response_body, uncertain_min_confidence, &result);
   }
 
   curl_slist_free_all(headers);

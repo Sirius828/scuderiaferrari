@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/test_guideboard_api_client.dir/test/test_guideboard_api_client.cpp.o CMakeFiles/test_guideboard_api_client.dir/src/guideboard_api_client.cpp.o -o test_guideboard_api_client  gtest/libgtest_main.a gtest/libgtest.a /usr/lib/aarch64-linux-gnu/libcurl.so -pthread 

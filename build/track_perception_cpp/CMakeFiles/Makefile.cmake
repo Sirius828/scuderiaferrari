@@ -684,6 +684,7 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/uninstall.dir/DependInfo.cmake"
   "CMakeFiles/track_perception_cpp_uninstall.dir/DependInfo.cmake"
   "CMakeFiles/fused_perception_node.dir/DependInfo.cmake"
+  "CMakeFiles/test_guideboard_api_client.dir/DependInfo.cmake"
   "CMakeFiles/test_guideboard_recognizer.dir/DependInfo.cmake"
   "CMakeFiles/test_guideboard_route_policy.dir/DependInfo.cmake"
   "CMakeFiles/test_lane_guideboard_wait.dir/DependInfo.cmake"
