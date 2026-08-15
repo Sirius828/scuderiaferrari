@@ -290,6 +290,22 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: /home/oran
   /usr/include/c++/11/pstl/glue_memory_defs.h \
   /opt/ros/humble/include/ament_index_cpp/ament_index_cpp/get_package_share_directory.hpp \
   /opt/ros/humble/include/ament_index_cpp/ament_index_cpp/visibility_control.h \
+  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/twist.hpp \
+  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/twist__struct.hpp \
+  /opt/ros/humble/include/rosidl_runtime_cpp/rosidl_runtime_cpp/bounded_vector.hpp \
+  /opt/ros/humble/include/rosidl_runtime_cpp/rosidl_runtime_cpp/message_initialization.hpp \
+  /opt/ros/humble/include/rosidl_runtime_c/rosidl_runtime_c/message_initialization.h \
+  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/vector3__struct.hpp \
+  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/twist__builder.hpp \
+  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/twist__traits.hpp \
+  /opt/ros/humble/include/rosidl_runtime_cpp/rosidl_runtime_cpp/traits.hpp \
+  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/vector3__traits.hpp \
+  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/twist__type_support.hpp \
+  /opt/ros/humble/include/rosidl_typesupport_interface/rosidl_typesupport_interface/macros.h \
+  /opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/rosidl_generator_cpp__visibility_control.hpp \
+  /opt/ros/humble/include/rosidl_runtime_cpp/rosidl_typesupport_cpp/message_type_support.hpp \
+  /opt/ros/humble/include/rosidl_runtime_c/rosidl_runtime_c/message_type_support_struct.h \
+  /opt/ros/humble/include/rosidl_runtime_c/rosidl_runtime_c/visibility_control.h \
   /opt/ros/humble/include/rclcpp/rclcpp/rclcpp.hpp \
   /usr/include/c++/11/csignal \
   /usr/include/signal.h \
@@ -418,8 +434,6 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: /home/oran
   /opt/ros/humble/include/rcl/rcl/wait.h \
   /opt/ros/humble/include/rcl/rcl/client.h \
   /opt/ros/humble/include/rosidl_runtime_c/rosidl_runtime_c/service_type_support_struct.h \
-  /opt/ros/humble/include/rosidl_runtime_c/rosidl_runtime_c/visibility_control.h \
-  /opt/ros/humble/include/rosidl_typesupport_interface/rosidl_typesupport_interface/macros.h \
   /opt/ros/humble/include/rcl/rcl/event_callback.h \
   /opt/ros/humble/include/rmw/rmw/event_callback_type.h \
   /opt/ros/humble/include/rcl/rcl/node.h \
@@ -427,7 +441,6 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: /home/oran
   /opt/ros/humble/include/rcl/rcl/domain_id.h \
   /opt/ros/humble/include/rcl/rcl/service.h \
   /opt/ros/humble/include/rcl/rcl/subscription.h \
-  /opt/ros/humble/include/rosidl_runtime_c/rosidl_runtime_c/message_type_support_struct.h \
   /opt/ros/humble/include/rmw/rmw/message_sequence.h \
   /opt/ros/humble/include/rcl/rcl/timer.h \
   /opt/ros/humble/include/rcl/rcl/time.h \
@@ -484,15 +497,10 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: /home/oran
   /opt/ros/humble/include/rclcpp/rclcpp/duration.hpp \
   /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/duration.hpp \
   /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__struct.hpp \
-  /opt/ros/humble/include/rosidl_runtime_cpp/rosidl_runtime_cpp/bounded_vector.hpp \
-  /opt/ros/humble/include/rosidl_runtime_cpp/rosidl_runtime_cpp/message_initialization.hpp \
-  /opt/ros/humble/include/rosidl_runtime_c/rosidl_runtime_c/message_initialization.h \
   /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__builder.hpp \
   /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__traits.hpp \
-  /opt/ros/humble/include/rosidl_runtime_cpp/rosidl_runtime_cpp/traits.hpp \
   /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__type_support.hpp \
   /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/rosidl_generator_cpp__visibility_control.hpp \
-  /opt/ros/humble/include/rosidl_runtime_cpp/rosidl_typesupport_cpp/message_type_support.hpp \
   /opt/ros/humble/include/rcl/rcl/logging_rosout.h \
   /opt/ros/humble/include/rmw/rmw/incompatible_qos_events_statuses.h \
   /opt/ros/humble/include/rclcpp/rclcpp/type_support_decl.hpp \
@@ -6043,10 +6051,6 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/libstatistics_collector/libstatistics_collector/topic_statistics_collector/received_message_age.hpp:
 
-/home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/ppocr_direction_system.h:
-
-/opt/ros/humble/include/libstatistics_collector/libstatistics_collector/topic_statistics_collector/constants.hpp:
-
 /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32_multi_array__type_support.hpp:
 
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/describe_parameters__struct.hpp:
@@ -6116,6 +6120,22 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/multi_array_dimension__traits.hpp:
 
 /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/time__struct.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_base_interface.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/time.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/timer.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/subscription_content_filter_options.hpp:
+
+/usr/include/opencv4/opencv2/video.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/experimental/create_intra_process_buffer.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/clock.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/experimental/subscription_intra_process_buffer.hpp:
 
 /usr/include/c++/11/bits/unique_ptr.h:
 
@@ -6245,6 +6265,12 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/ament_index_cpp/ament_index_cpp/get_package_share_directory.hpp:
 
+/usr/include/rapidjson/writer.h:
+
+/opt/ros/humble/include/rclcpp/rclcpp/intra_process_buffer_type.hpp:
+
+/opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/vector3__struct.hpp:
+
 /usr/include/aarch64-linux-gnu/bits/types/__FILE.h:
 
 /usr/include/c++/11/bits/fs_ops.h:
@@ -6254,8 +6280,6 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /usr/include/opencv4/opencv2/stitching/detail/util_inl.hpp:
 
 /usr/include/c++/11/iosfwd:
-
-/usr/include/c++/11/initializer_list:
 
 /usr/include/c++/11/locale:
 
@@ -6422,6 +6446,12 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /usr/include/aarch64-linux-gnu/bits/typesizes.h:
 
 /usr/include/c++/11/bits/streambuf_iterator.h:
+
+/home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/ppocr_direction_system.h:
+
+/opt/ros/humble/include/libstatistics_collector/libstatistics_collector/topic_statistics_collector/constants.hpp:
+
+/opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/twist__builder.hpp:
 
 /usr/include/aarch64-linux-gnu/bits/types/time_t.h:
 
@@ -6895,8 +6925,6 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /usr/include/aarch64-linux-gnu/bits/setjmp.h:
 
-/usr/include/aarch64-linux-gnu/asm/posix_types.h:
-
 /usr/include/aarch64-linux-gnu/bits/types.h:
 
 /usr/include/aarch64-linux-gnu/bits/struct_mutex.h:
@@ -6914,6 +6942,10 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /usr/include/aarch64-linux-gnu/bits/fp-fast.h:
 
 /usr/include/c++/11/bits/exception_defines.h:
+
+/usr/include/aarch64-linux-gnu/asm/posix_types.h:
+
+/opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/twist__struct.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/event.hpp:
 
@@ -6965,6 +6997,10 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /usr/include/c++/11/ostream:
 
+/opt/ros/humble/include/rclcpp/rclcpp/experimental/buffers/ring_buffer_implementation.hpp:
+
+/usr/include/c++/11/bits/ostream.tcc:
+
 /usr/include/c++/11/ext/concurrence.h:
 
 /usr/include/c++/11/mutex:
@@ -7003,6 +7039,30 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/ament_index_cpp/ament_index_cpp/visibility_control.h:
 
+/opt/ros/humble/include/rosidl_runtime_cpp/rosidl_runtime_cpp/bounded_vector.hpp:
+
+/opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/twist__traits.hpp:
+
+/usr/include/c++/11/bits/hashtable.h:
+
+/usr/include/aarch64-linux-gnu/bits/siginfo-arch.h:
+
+/usr/include/c++/11/initializer_list:
+
+/opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/vector3__traits.hpp:
+
+/opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/detail/twist__type_support.hpp:
+
+/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/set_parameters_atomically__builder.hpp:
+
+/opt/ros/humble/include/rclcpp/rclcpp/type_adapter.hpp:
+
+/opt/ros/humble/include/rosidl_typesupport_interface/rosidl_typesupport_interface/macros.h:
+
+/opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/rosidl_generator_cpp__visibility_control.hpp:
+
+/opt/ros/humble/include/rosidl_runtime_cpp/rosidl_typesupport_cpp/message_type_support.hpp:
+
 /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/u_int64__traits.hpp:
 
 /usr/include/aarch64-linux-gnu/bits/sched.h:
@@ -7032,12 +7092,6 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /opt/ros/humble/include/rclcpp/rclcpp/publisher_base.hpp:
 
 /usr/include/aarch64-linux-gnu/bits/types/__sigval_t.h:
-
-/usr/include/c++/11/bits/hashtable.h:
-
-/usr/include/aarch64-linux-gnu/bits/siginfo-arch.h:
-
-/opt/ros/humble/include/rosidl_runtime_cpp/rosidl_runtime_cpp/bounded_vector.hpp:
 
 /usr/include/aarch64-linux-gnu/bits/siginfo-consts-arch.h:
 
@@ -7237,10 +7291,6 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/rmw/rmw/rmw.h:
 
-/usr/include/c++/11/bits/ostream.tcc:
-
-/opt/ros/humble/include/rclcpp/rclcpp/experimental/buffers/ring_buffer_implementation.hpp:
-
 /usr/include/c++/11/ext/atomicity.h:
 
 /opt/ros/humble/include/rcutils/rcutils/types/uint8_array.h:
@@ -7248,8 +7298,6 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /usr/include/c++/11/bits/list.tcc:
 
 /opt/ros/humble/include/rmw/rmw/events_statuses/events_statuses.h:
-
-/opt/ros/humble/include/rclcpp/rclcpp/timer.hpp:
 
 /opt/ros/humble/include/rmw/rmw/events_statuses/incompatible_qos.h:
 
@@ -7293,8 +7341,6 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/rosidl_runtime_c/rosidl_runtime_c/service_type_support_struct.h:
 
-/opt/ros/humble/include/rosidl_typesupport_interface/rosidl_typesupport_interface/macros.h:
-
 /opt/ros/humble/include/rcl/rcl/context.h:
 
 /opt/ros/humble/include/rmw/rmw/event_callback_type.h:
@@ -7322,6 +7368,8 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /opt/ros/humble/include/rcl/rcl/time.h:
 
 /usr/include/aarch64-linux-gnu/bits/waitflags.h:
+
+/opt/ros/humble/include/geometry_msgs/geometry_msgs/msg/twist.hpp:
 
 /opt/ros/humble/include/rosidl_runtime_c/rosidl_runtime_c/sequence_bound.h:
 
@@ -7381,10 +7429,6 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/rclcpp/rclcpp/executor_options.hpp:
 
-/opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_base_interface.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/time.hpp:
-
 /usr/include/fcntl.h:
 
 /usr/include/rapidjson/internal/strfunc.h:
@@ -7423,11 +7467,11 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__struct.hpp:
 
+/opt/ros/humble/include/rosidl_runtime_c/rosidl_runtime_c/message_initialization.h:
+
 /opt/ros/humble/include/rcutils/rcutils/logging.h:
 
 /opt/ros/humble/include/rclcpp/rclcpp/experimental/ros_message_intra_process_buffer.hpp:
-
-/opt/ros/humble/include/rosidl_runtime_c/rosidl_runtime_c/message_initialization.h:
 
 /usr/include/aarch64-linux-gnu/curl/urlapi.h:
 
@@ -7437,11 +7481,7 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__builder.hpp:
 
-/opt/ros/humble/include/rclcpp/rclcpp/subscription_content_filter_options.hpp:
-
 /opt/ros/humble/include/builtin_interfaces/builtin_interfaces/msg/rosidl_generator_cpp__visibility_control.hpp:
-
-/opt/ros/humble/include/rosidl_runtime_cpp/rosidl_typesupport_cpp/message_type_support.hpp:
 
 /opt/ros/humble/include/rcl/rcl/logging_rosout.h:
 
@@ -7497,10 +7537,6 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /opt/ros/humble/include/rclcpp/rclcpp/serialized_message.hpp:
 
-/opt/ros/humble/include/rcl_interfaces/rcl_interfaces/srv/detail/set_parameters_atomically__builder.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/type_adapter.hpp:
-
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/detail/set_parameters_result__struct.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/experimental/intra_process_manager.hpp:
@@ -7508,15 +7544,3 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /opt/ros/humble/include/rclcpp/rclcpp/experimental/subscription_intra_process.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/experimental/buffers/buffer_implementation_base.hpp:
-
-/usr/include/opencv4/opencv2/video.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/experimental/create_intra_process_buffer.hpp:
-
-/usr/include/rapidjson/writer.h:
-
-/opt/ros/humble/include/rclcpp/rclcpp/intra_process_buffer_type.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/experimental/subscription_intra_process_buffer.hpp:
-
-/opt/ros/humble/include/rclcpp/rclcpp/clock.hpp:

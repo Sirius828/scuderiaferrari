@@ -19,6 +19,7 @@ find_library(RKNNRT_LIB
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
@@ -60,6 +61,7 @@ target_compile_definitions(fused_perception_node PRIVATE
 
 ament_target_dependencies(fused_perception_node
   ament_index_cpp
+  geometry_msgs
   rclcpp
   std_msgs
   std_srvs

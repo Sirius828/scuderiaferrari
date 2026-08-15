@@ -190,7 +190,29 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.offset_y08_ratio = clampValue(cfg_.offset_y08_ratio, 0.0f, 1.0f);
   cfg_.offset_y09_ratio = clampValue(cfg_.offset_y09_ratio, 0.0f, 1.0f);
   cfg_.heading_y_ratio = clampValue(cfg_.heading_y_ratio, 0.0f, 1.0f);
+  cfg_.centerline_kalman_measurement_noise =
+      std::max(1e-9f, cfg_.centerline_kalman_measurement_noise);
+  cfg_.centerline_kalman_idle_process_noise =
+      std::max(0.0f, cfg_.centerline_kalman_idle_process_noise);
+  cfg_.centerline_kalman_motion_process_noise =
+      std::max(0.0f, cfg_.centerline_kalman_motion_process_noise);
+  cfg_.centerline_kalman_turn_process_noise =
+      std::max(0.0f, cfg_.centerline_kalman_turn_process_noise);
+  cfg_.centerline_kalman_initial_variance =
+      std::max(1e-9f, cfg_.centerline_kalman_initial_variance);
+  cfg_.centerline_kalman_encoder_reference_counts =
+      std::max(1.0f, cfg_.centerline_kalman_encoder_reference_counts);
+  cfg_.centerline_kalman_reset_innovation =
+      clampValue(cfg_.centerline_kalman_reset_innovation, 0.01f, 2.0f);
+  cfg_.centerline_kalman_state_timeout_sec =
+      std::max(0.0, cfg_.centerline_kalman_state_timeout_sec);
+  cfg_.centerline_kalman_steering_timeout_sec =
+      std::max(0.0, cfg_.centerline_kalman_steering_timeout_sec);
   last_offsets_.fill(0.0);
+  resetCenterlineKalman();
+  latest_steering_command_ = 0.0;
+  last_steering_command_time_ = 0.0;
+  has_steering_command_ = false;
   left_boundary_template_offsets_ = parseDoubleList(cfg_.left_boundary_template_offsets);
   right_boundary_template_offsets_ = parseDoubleList(cfg_.right_boundary_template_offsets);
   branch_locked_ = false;
@@ -252,6 +274,12 @@ void LaneDecision::setEncoderCount(int64_t count, double timestamp) {
   latest_encoder_count_ = count;
   has_encoder_count_ = true;
   last_encoder_update_sec_ = timestamp;
+}
+
+void LaneDecision::setSteeringCommand(double steering_ratio, double timestamp) {
+  latest_steering_command_ = clampValue(steering_ratio, -1.0, 1.0);
+  last_steering_command_time_ = timestamp;
+  has_steering_command_ = true;
 }
 
 LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Detection>& detections) {
@@ -454,6 +482,8 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
       fit_points = filterCarRightBoundaryPoints(fit_points, &removed_fit_points);
     }
     fit_points = filterCenterlinePoints(fit_points, w, last_center_x);
+    fit_points = filterCenterlinePointsKalman(
+        fit_points, bands, w, h, current_time, target_side, template_active);
 
     const bool fit_success = static_cast<int>(fit_points.size()) >= cfg_.fit_min_points &&
                              fitCenterlineAndComputeGeometry(fit_points, h, fit_order, &fit_coeffs,
@@ -463,7 +493,8 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
           cfg_.offset_y07_ratio, cfg_.offset_y08_ratio, cfg_.offset_y09_ratio}};
       for (size_t i = 0; i < ratios.size(); ++i) {
         raw_offsets[i] = offsetAtY(fit_coeffs, h * ratios[i], w);
-        offsets[i] = smoothOffset(raw_offsets[i], i);
+        offsets[i] = raw_offsets[i];
+        last_offsets_[i] = offsets[i];
       }
       debug_info_.offset_y07 = static_cast<float>(offsets[0]);
       debug_info_.offset_y08 = static_cast<float>(offsets[1]);
@@ -1099,6 +1130,150 @@ std::vector<cv::Point3f> LaneDecision::filterCenterlinePoints(
   return trend;
 }
 
+void LaneDecision::resetCenterlineKalman() {
+  centerline_kalman_states_.assign(
+      static_cast<size_t>(std::max(1, cfg_.band_count)), CenterlineKalmanState{});
+  centerline_kalman_context_valid_ = false;
+  centerline_kalman_image_width_ = 0;
+  centerline_kalman_image_height_ = 0;
+  centerline_kalman_branch_locked_ = false;
+  centerline_kalman_template_active_ = false;
+  centerline_kalman_target_side_.clear();
+  centerline_kalman_encoder_baseline_valid_ = false;
+  centerline_kalman_last_encoder_count_ = 0;
+}
+
+std::vector<cv::Point3f> LaneDecision::filterCenterlinePointsKalman(
+    const std::vector<cv::Point3f>& points, const std::vector<Band>& bands,
+    int image_width, int image_height, double timestamp,
+    const std::string& target_side, bool template_active) {
+  debug_info_.centerline_kalman_enabled = cfg_.enable_centerline_kalman;
+  debug_info_.centerline_kalman_point_count = 0;
+  debug_info_.centerline_kalman_encoder_delta = 0;
+  debug_info_.centerline_kalman_motion_ratio = 0.0;
+  debug_info_.centerline_kalman_process_noise = 0.0;
+  debug_info_.centerline_kalman_steering = 0.0;
+  debug_info_.centerline_kalman_reset_count = 0;
+
+  if (!cfg_.enable_centerline_kalman || image_width <= 1 || image_height <= 1) {
+    return points;
+  }
+
+  const bool context_changed =
+      !centerline_kalman_context_valid_ ||
+      centerline_kalman_image_width_ != image_width ||
+      centerline_kalman_image_height_ != image_height ||
+      centerline_kalman_branch_locked_ != branch_locked_ ||
+      centerline_kalman_template_active_ != template_active ||
+      centerline_kalman_target_side_ != target_side ||
+      centerline_kalman_states_.size() != static_cast<size_t>(cfg_.band_count);
+  if (context_changed) {
+    resetCenterlineKalman();
+    centerline_kalman_context_valid_ = true;
+    centerline_kalman_image_width_ = image_width;
+    centerline_kalman_image_height_ = image_height;
+    centerline_kalman_branch_locked_ = branch_locked_;
+    centerline_kalman_template_active_ = template_active;
+    centerline_kalman_target_side_ = target_side;
+    ++debug_info_.centerline_kalman_reset_count;
+  }
+
+  int64_t encoder_delta = 0;
+  const bool encoder_fresh = has_encoder_count_ &&
+      timestamp - last_encoder_update_sec_ <= cfg_.encoder_feedback_timeout_sec;
+  if (encoder_fresh) {
+    if (centerline_kalman_encoder_baseline_valid_) {
+      const long double difference =
+          static_cast<long double>(latest_encoder_count_) -
+          static_cast<long double>(centerline_kalman_last_encoder_count_);
+      const long double restart_limit =
+          static_cast<long double>(cfg_.centerline_kalman_encoder_reference_counts) * 1000.0L;
+      if (std::abs(difference) <= restart_limit) {
+        encoder_delta = static_cast<int64_t>(difference);
+      } else {
+        // A chassis-node restart resets the accumulated counter. Ignore that
+        // discontinuity instead of turning it into a large process noise.
+        centerline_kalman_encoder_baseline_valid_ = false;
+      }
+    }
+    centerline_kalman_last_encoder_count_ = latest_encoder_count_;
+    centerline_kalman_encoder_baseline_valid_ = true;
+  }
+
+  const double motion_ratio = std::clamp(
+      std::abs(static_cast<double>(encoder_delta)) /
+          static_cast<double>(cfg_.centerline_kalman_encoder_reference_counts),
+      0.0, 3.0);
+  const bool steering_fresh = has_steering_command_ &&
+      timestamp - last_steering_command_time_ <= cfg_.centerline_kalman_steering_timeout_sec;
+  const double steering = steering_fresh ? std::abs(latest_steering_command_) : 0.0;
+  const double process_noise =
+      static_cast<double>(cfg_.centerline_kalman_idle_process_noise) +
+      static_cast<double>(cfg_.centerline_kalman_motion_process_noise) * motion_ratio +
+      static_cast<double>(cfg_.centerline_kalman_turn_process_noise) * motion_ratio * steering;
+
+  debug_info_.centerline_kalman_encoder_delta = encoder_delta;
+  debug_info_.centerline_kalman_motion_ratio = motion_ratio;
+  debug_info_.centerline_kalman_process_noise = process_noise;
+  debug_info_.centerline_kalman_steering = steering;
+
+  std::vector<cv::Point3f> filtered = points;
+  for (auto& point : filtered) {
+    const auto nearest_band = std::min_element(
+        bands.begin(), bands.end(), [&](const Band& a, const Band& b) {
+          return std::abs(a.y_center - point.y) < std::abs(b.y_center - point.y);
+        });
+    if (nearest_band == bands.end() || nearest_band->index < 0 ||
+        nearest_band->index >= static_cast<int>(centerline_kalman_states_.size())) {
+      continue;
+    }
+
+    auto& filter = centerline_kalman_states_[static_cast<size_t>(nearest_band->index)];
+    const double measurement = clampValue(
+        (static_cast<double>(point.x) - image_width * 0.5) / (image_width * 0.5),
+        -1.0, 1.0);
+    const double age = filter.initialized ? timestamp - filter.last_update_time : 0.0;
+    const bool expired = filter.initialized &&
+        cfg_.centerline_kalman_state_timeout_sec > 0.0 &&
+        age > cfg_.centerline_kalman_state_timeout_sec;
+
+    if (!filter.initialized || expired) {
+      filter.initialized = true;
+      filter.x_normalized = measurement;
+      filter.variance = cfg_.centerline_kalman_initial_variance;
+      if (expired) {
+        ++debug_info_.centerline_kalman_reset_count;
+      }
+    } else {
+      const double time_scale = std::clamp(age / 0.05, 0.5, 6.0);
+      const double predicted_variance = filter.variance + process_noise * time_scale;
+      const double innovation = measurement - filter.x_normalized;
+      if (std::abs(innovation) > cfg_.centerline_kalman_reset_innovation) {
+        // A large, spatially valid jump is more likely to be a genuine bend or
+        // route transition than usable history. Reinitialize without lag.
+        filter.x_normalized = measurement;
+        filter.variance = cfg_.centerline_kalman_initial_variance;
+        ++debug_info_.centerline_kalman_reset_count;
+      } else {
+        const double measurement_noise =
+            static_cast<double>(cfg_.centerline_kalman_measurement_noise) /
+            clampValue(static_cast<double>(point.z), 0.25, 4.0);
+        const double gain = predicted_variance / (predicted_variance + measurement_noise);
+        filter.x_normalized += gain * innovation;
+        filter.variance = std::max(1e-12, (1.0 - gain) * predicted_variance);
+      }
+    }
+
+    filter.x_normalized = clampValue(filter.x_normalized, -1.0, 1.0);
+    filter.last_update_time = timestamp;
+    point.x = static_cast<float>(clampValue(
+        (filter.x_normalized + 1.0) * image_width * 0.5,
+        0.0, static_cast<double>(image_width - 1)));
+    ++debug_info_.centerline_kalman_point_count;
+  }
+  return filtered;
+}
+
 void LaneDecision::updateCarBoundaryState(const std::vector<Detection>& detections,
                                            int image_width, int image_height) {
   if (!cfg_.enable_car_right_boundary_filter && !cfg_.enable_car_point_push_avoidance) {
@@ -1285,9 +1460,64 @@ bool LaneDecision::fitCenterlineAndComputeGeometry(const std::vector<cv::Point3f
   double heading = 0.0;
   double curv = 0.0;
   if (coeffs->size() > 1) {
-    auto deriv = polyDeriv(*coeffs);
-    double dx_dy = evalPoly(deriv, heading_y);
-    heading = std::atan(dx_dy) / (M_PI / 2.0);
+    // Estimate heading from local line fits at near/mid/far lookahead
+    // positions.  Fitting each window independently prevents the weighted
+    // result from being mathematically equivalent to one derivative sample
+    // on the global quadratic fit.
+    const std::array<double, 3> sample_ratios{{
+        clampValue(static_cast<double>(cfg_.heading_near_ratio), 0.0, 1.0),
+        clampValue(static_cast<double>(cfg_.heading_mid_ratio), 0.0, 1.0),
+        clampValue(static_cast<double>(cfg_.heading_far_ratio), 0.0, 1.0)}};
+    const std::array<double, 3> sample_weights{{
+        std::max(0.0, static_cast<double>(cfg_.heading_near_weight)),
+        std::max(0.0, static_cast<double>(cfg_.heading_mid_weight)),
+        std::max(0.0, static_cast<double>(cfg_.heading_far_weight))}};
+    const double half_window = std::max(
+        1.0, clampValue(static_cast<double>(cfg_.heading_local_window_half_ratio), 0.01, 0.25) * h);
+    const int min_local_points = std::max(2, cfg_.heading_local_min_points);
+    double heading_sum = 0.0;
+    double weight_sum = 0.0;
+
+    for (size_t i = 0; i < sample_ratios.size(); ++i) {
+      if (sample_weights[i] <= 0.0) {
+        continue;
+      }
+      const double sample_y = h * sample_ratios[i];
+      std::vector<cv::Point3f> local_points;
+      local_points.reserve(points.size());
+      for (const auto& point : points) {
+        if (std::abs(static_cast<double>(point.y) - sample_y) <= half_window) {
+          // Center y around the sample to keep the local linear solve well
+          // conditioned even when image coordinates are large.
+          local_points.emplace_back(
+              point.x, static_cast<float>(static_cast<double>(point.y) - sample_y), point.z);
+        }
+      }
+      if (static_cast<int>(local_points.size()) < min_local_points) {
+        continue;
+      }
+      std::vector<double> local_coeffs;
+      if (!weightedPolyfit(local_points, 1, &local_coeffs) || local_coeffs.size() < 2) {
+        continue;
+      }
+      const double local_slope = local_coeffs[0];
+      if (!std::isfinite(local_slope)) {
+        continue;
+      }
+      const double local_heading = std::atan(local_slope) / (M_PI / 2.0);
+      heading_sum += sample_weights[i] * local_heading;
+      weight_sum += sample_weights[i];
+    }
+
+    if (weight_sum > 1e-9) {
+      heading = heading_sum / weight_sum;
+    } else {
+      // Preserve a safe fallback when a frame has too few points in every
+      // local window.
+      auto deriv = polyDeriv(*coeffs);
+      const double dx_dy = evalPoly(deriv, heading_y);
+      heading = std::atan(dx_dy) / (M_PI / 2.0);
+    }
     if (coeffs->size() > 2) {
       auto second = polyDeriv(*coeffs, 2);
       curv = clampValue(evalPoly(second, curvature_y) * h, -1.0, 1.0);
@@ -1304,20 +1534,6 @@ double LaneDecision::offsetAtY(const std::vector<double>& coeffs, double y, int 
   }
   const double x = evalPoly(coeffs, y);
   return clampValue((x - image_width / 2.0) / (image_width / 2.0), -1.0, 1.0);
-}
-
-double LaneDecision::smoothOffset(double raw_offset, size_t index) {
-  if (index >= last_offsets_.size()) {
-    return clampValue(raw_offset, -1.0, 1.0);
-  }
-  double diff = raw_offset - last_offsets_[index];
-  if (cfg_.max_offset_jump > 0.0f && std::abs(diff) > cfg_.max_offset_jump) {
-    raw_offset = last_offsets_[index] + std::copysign(cfg_.max_offset_jump, diff);
-  }
-  double alpha = clampValue(cfg_.offset_smoothing_alpha, 0.0f, 1.0f);
-  double smoothed = alpha * raw_offset + (1.0 - alpha) * last_offsets_[index];
-  last_offsets_[index] = smoothed;
-  return smoothed;
 }
 
 double LaneDecision::fallbackCenterOffset(const cv::Mat& seg_map) const {

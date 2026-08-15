@@ -52,8 +52,26 @@ struct LaneDecisionConfig {
   float offset_y08_ratio{0.80f};
   float offset_y09_ratio{0.90f};
   float heading_y_ratio{0.75f};
-  float max_offset_jump{2.0f};
-  float offset_smoothing_alpha{0.35f};
+  // Heading is estimated from independent local line fits around the
+  // near/mid/far image positions.  Weights are normalized at runtime.
+  float heading_near_ratio{0.81f};
+  float heading_mid_ratio{0.68f};
+  float heading_far_ratio{0.55f};
+  float heading_near_weight{0.10f};
+  float heading_mid_weight{0.50f};
+  float heading_far_weight{0.40f};
+  float heading_local_window_half_ratio{0.06f};
+  int heading_local_min_points{3};
+  bool enable_centerline_kalman{false};
+  float centerline_kalman_measurement_noise{0.0036f};
+  float centerline_kalman_idle_process_noise{0.0001f};
+  float centerline_kalman_motion_process_noise{0.0008f};
+  float centerline_kalman_turn_process_noise{0.0008f};
+  float centerline_kalman_initial_variance{0.01f};
+  float centerline_kalman_encoder_reference_counts{50.0f};
+  float centerline_kalman_reset_innovation{0.25f};
+  double centerline_kalman_state_timeout_sec{0.30};
+  double centerline_kalman_steering_timeout_sec{0.25};
 
   bool enable_left_boundary_template_line{false};
   std::string left_boundary_template_side{"left"};
@@ -193,6 +211,13 @@ struct LaneDebugInfo {
   int64_t encoder_hold_target{0};
   bool encoder_feedback_valid{false};
   double encoder_feedback_age{0.0};
+  bool centerline_kalman_enabled{false};
+  int centerline_kalman_point_count{0};
+  int64_t centerline_kalman_encoder_delta{0};
+  double centerline_kalman_motion_ratio{0.0};
+  double centerline_kalman_process_noise{0.0};
+  double centerline_kalman_steering{0.0};
+  int centerline_kalman_reset_count{0};
   bool left_boundary_template_active{false};
   int left_boundary_template_points{0};
   std::string left_boundary_template_reason;
@@ -218,6 +243,7 @@ class LaneDecision {
   void setGuideboardBranchHint(const std::string& branch, bool valid,
                                const std::string& decision_source = "guideboard_hint");
   void setEncoderCount(int64_t count, double timestamp);
+  void setSteeringCommand(double steering_ratio, double timestamp);
   LaneState decide(const cv::Mat& seg_map, const std::vector<Detection>& detections);
   const LaneDebugInfo& debugInfo() const { return debug_info_; }
   bool branchEventArmed() const { return branch_event_armed_; }
@@ -246,6 +272,13 @@ class LaneDecision {
   struct ObstacleZone {
     cv::Rect2f rect;
     std::string label;
+  };
+
+  struct CenterlineKalmanState {
+    bool initialized{false};
+    double x_normalized{0.0};
+    double variance{0.0};
+    double last_update_time{0.0};
   };
 
   enum class RoadClass {
@@ -282,6 +315,11 @@ class LaneDecision {
   std::vector<cv::Point3f> filterCenterlinePoints(const std::vector<cv::Point3f>& points,
                                                   int image_width,
                                                   std::optional<double> last_center_x) const;
+  std::vector<cv::Point3f> filterCenterlinePointsKalman(
+      const std::vector<cv::Point3f>& points, const std::vector<Band>& bands,
+      int image_width, int image_height, double timestamp,
+      const std::string& target_side, bool template_active);
+  void resetCenterlineKalman();
   void updateCarBoundaryState(const std::vector<Detection>& detections, int image_width,
                               int image_height);
   std::vector<cv::Point3f> filterCarRightBoundaryPoints(
@@ -295,7 +333,6 @@ class LaneDecision {
                                        int fit_order, std::vector<double>* coeffs,
                                        double* heading_error, double* curvature) const;
   double offsetAtY(const std::vector<double>& coeffs, double y, int image_width) const;
-  double smoothOffset(double raw_offset, size_t index);
   double fallbackCenterOffset(const cv::Mat& seg_map) const;
   bool checkGuideboardInFarRoi(const std::vector<Detection>& detections, int h) const;
   void updateFinishStopState(const std::vector<Detection>& detections, int image_height);
@@ -315,6 +352,18 @@ class LaneDecision {
   LaneDebugInfo debug_info_;
 
   std::array<double, 3> last_offsets_{{0.0, 0.0, 0.0}};
+  std::vector<CenterlineKalmanState> centerline_kalman_states_;
+  bool centerline_kalman_context_valid_{false};
+  int centerline_kalman_image_width_{0};
+  int centerline_kalman_image_height_{0};
+  bool centerline_kalman_branch_locked_{false};
+  bool centerline_kalman_template_active_{false};
+  std::string centerline_kalman_target_side_;
+  bool centerline_kalman_encoder_baseline_valid_{false};
+  int64_t centerline_kalman_last_encoder_count_{0};
+  double latest_steering_command_{0.0};
+  double last_steering_command_time_{0.0};
+  bool has_steering_command_{false};
   bool branch_locked_{false};
   std::string locked_branch_side_{"left"};
   std::string guideboard_branch_hint_{"left"};

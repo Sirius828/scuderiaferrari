@@ -42,8 +42,6 @@ LaneDecisionConfig makeConfig() {
   config.car_boundary_smoothing_alpha = 0.5f;
   config.car_boundary_lost_frames = 3;
   config.car_fit_hold_timeout_sec = 0.20;
-  config.offset_smoothing_alpha = 1.0f;
-  config.max_offset_jump = 0.0f;
   return config;
 }
 
@@ -126,6 +124,47 @@ TEST(LaneDecisionCarBoundaryTest, NoCarKeepsSharpTurnPointsAndQuadraticFit) {
   EXPECT_FALSE(debug.car_boundary_active);
   ASSERT_EQ(debug.fit_coeffs.size(), 3u);
   EXPECT_EQ(debug.fit_order, 2);
+}
+
+TEST(LaneDecisionCarBoundaryTest, KalmanFiltersBandCentersBeforeFit) {
+  LaneDecisionConfig config = makeConfig();
+  config.enable_centerline_kalman = true;
+  config.centerline_kalman_idle_process_noise = 0.0f;
+  config.centerline_kalman_motion_process_noise = 0.0f;
+  config.centerline_kalman_turn_process_noise = 0.0f;
+  config.centerline_kalman_measurement_noise = 0.01f;
+  config.centerline_kalman_reset_innovation = 0.50f;
+  config.centerline_kalman_state_timeout_sec = 1.0;
+
+  LaneDecision decision;
+  decision.configure(config);
+  ASSERT_TRUE(decision.decide(makeMask(std::vector<int>(12, 320)), {}).is_valid);
+  const auto first_fit_points = decision.debugInfo().fit_points;
+
+  ASSERT_TRUE(decision.decide(makeMask(std::vector<int>(12, 360)), {}).is_valid);
+  const auto& debug = decision.debugInfo();
+  ASSERT_EQ(debug.fit_points.size(), first_fit_points.size());
+  ASSERT_EQ(debug.fit_points.size(), debug.raw_points.size());
+  EXPECT_TRUE(debug.centerline_kalman_enabled);
+  EXPECT_EQ(debug.centerline_kalman_point_count,
+            static_cast<int>(debug.fit_points.size()));
+  for (size_t i = 0; i < debug.fit_points.size(); ++i) {
+    EXPECT_GT(debug.fit_points[i].x, first_fit_points[i].x);
+    EXPECT_LT(debug.fit_points[i].x, debug.raw_points[i].x);
+  }
+}
+
+TEST(LaneDecisionCarBoundaryTest, OffsetOutputUsesCurrentFittedCurveWithoutSecondFilter) {
+  LaneDecisionConfig config = makeConfig();
+  config.enable_centerline_kalman = false;
+
+  LaneDecision decision;
+  decision.configure(config);
+  const LaneState state = decision.decide(makeMask(std::vector<int>(12, 400)), {});
+
+  ASSERT_TRUE(state.is_valid);
+  EXPECT_GT(state.offset_y09, 0.20f);
+  EXPECT_FLOAT_EQ(state.offset_y09, decision.debugInfo().raw_offset_y09);
 }
 
 TEST(LaneDecisionCarBoundaryTest, RemovesCarSideFarPointsAndKeepsNearLeftPoints) {

@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <geometry_msgs/msg/twist.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/float32.hpp>
@@ -271,6 +272,14 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"encoder_hold_target\":" << debug_info.encoder_hold_target << ","
      << "\"encoder_feedback_valid\":" << (debug_info.encoder_feedback_valid ? "true" : "false") << ","
      << "\"encoder_feedback_age\":" << debug_info.encoder_feedback_age << ","
+     << "\"centerline_kalman_enabled\":"
+     << (debug_info.centerline_kalman_enabled ? "true" : "false") << ","
+     << "\"centerline_kalman_point_count\":" << debug_info.centerline_kalman_point_count << ","
+     << "\"centerline_kalman_encoder_delta\":" << debug_info.centerline_kalman_encoder_delta << ","
+     << "\"centerline_kalman_motion_ratio\":" << debug_info.centerline_kalman_motion_ratio << ","
+     << "\"centerline_kalman_process_noise\":" << debug_info.centerline_kalman_process_noise << ","
+     << "\"centerline_kalman_steering\":" << debug_info.centerline_kalman_steering << ","
+     << "\"centerline_kalman_reset_count\":" << debug_info.centerline_kalman_reset_count << ","
      << "\"lb_template\":" << (debug_info.left_boundary_template_active ? "true" : "false") << ","
      << "\"template_side\":\"" << jsonEscape(debug_info.boundary_template_side) << "\","
      << "\"lb_points\":" << debug_info.left_boundary_template_points << ","
@@ -558,8 +567,25 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("offset_y08_ratio", 0.80);
     declare_parameter<double>("offset_y09_ratio", 0.90);
     declare_parameter<double>("heading_y_ratio", 0.75);
-    declare_parameter<double>("max_offset_jump", 2.0);
-    declare_parameter<double>("offset_smoothing_alpha", 0.35);
+    declare_parameter<double>("heading_near_ratio", 0.81);
+    declare_parameter<double>("heading_mid_ratio", 0.68);
+    declare_parameter<double>("heading_far_ratio", 0.55);
+    declare_parameter<double>("heading_near_weight", 0.10);
+    declare_parameter<double>("heading_mid_weight", 0.50);
+    declare_parameter<double>("heading_far_weight", 0.40);
+    declare_parameter<double>("heading_local_window_half_ratio", 0.06);
+    declare_parameter<int>("heading_local_min_points", 3);
+    declare_parameter<bool>("enable_centerline_kalman", true);
+    declare_parameter<double>("centerline_kalman_measurement_noise", 0.0036);
+    declare_parameter<double>("centerline_kalman_idle_process_noise", 0.0001);
+    declare_parameter<double>("centerline_kalman_motion_process_noise", 0.0008);
+    declare_parameter<double>("centerline_kalman_turn_process_noise", 0.0008);
+    declare_parameter<double>("centerline_kalman_initial_variance", 0.01);
+    declare_parameter<double>("centerline_kalman_encoder_reference_counts", 50.0);
+    declare_parameter<double>("centerline_kalman_reset_innovation", 0.25);
+    declare_parameter<double>("centerline_kalman_state_timeout_sec", 0.30);
+    declare_parameter<double>("centerline_kalman_steering_timeout_sec", 0.25);
+    declare_parameter<std::string>("centerline_kalman_steering_topic", "/cmd_vel");
     declare_parameter<bool>("enable_left_boundary_template_line", false);
     declare_parameter<std::string>("left_boundary_template_side", "left");
     declare_parameter<std::string>("left_boundary_template_offsets", "");
@@ -718,8 +744,37 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.offset_y08_ratio = static_cast<float>(get_parameter("offset_y08_ratio").as_double());
     lane_cfg.offset_y09_ratio = static_cast<float>(get_parameter("offset_y09_ratio").as_double());
     lane_cfg.heading_y_ratio = static_cast<float>(get_parameter("heading_y_ratio").as_double());
-    lane_cfg.max_offset_jump = static_cast<float>(get_parameter("max_offset_jump").as_double());
-    lane_cfg.offset_smoothing_alpha = static_cast<float>(get_parameter("offset_smoothing_alpha").as_double());
+    lane_cfg.heading_near_ratio = static_cast<float>(get_parameter("heading_near_ratio").as_double());
+    lane_cfg.heading_mid_ratio = static_cast<float>(get_parameter("heading_mid_ratio").as_double());
+    lane_cfg.heading_far_ratio = static_cast<float>(get_parameter("heading_far_ratio").as_double());
+    lane_cfg.heading_near_weight = static_cast<float>(get_parameter("heading_near_weight").as_double());
+    lane_cfg.heading_mid_weight = static_cast<float>(get_parameter("heading_mid_weight").as_double());
+    lane_cfg.heading_far_weight = static_cast<float>(get_parameter("heading_far_weight").as_double());
+    lane_cfg.heading_local_window_half_ratio = static_cast<float>(
+        get_parameter("heading_local_window_half_ratio").as_double());
+    lane_cfg.heading_local_min_points = static_cast<int>(
+        get_parameter("heading_local_min_points").as_int());
+    lane_cfg.enable_centerline_kalman = get_parameter("enable_centerline_kalman").as_bool();
+    lane_cfg.centerline_kalman_measurement_noise = static_cast<float>(
+        get_parameter("centerline_kalman_measurement_noise").as_double());
+    lane_cfg.centerline_kalman_idle_process_noise = static_cast<float>(
+        get_parameter("centerline_kalman_idle_process_noise").as_double());
+    lane_cfg.centerline_kalman_motion_process_noise = static_cast<float>(
+        get_parameter("centerline_kalman_motion_process_noise").as_double());
+    lane_cfg.centerline_kalman_turn_process_noise = static_cast<float>(
+        get_parameter("centerline_kalman_turn_process_noise").as_double());
+    lane_cfg.centerline_kalman_initial_variance = static_cast<float>(
+        get_parameter("centerline_kalman_initial_variance").as_double());
+    lane_cfg.centerline_kalman_encoder_reference_counts = static_cast<float>(
+        get_parameter("centerline_kalman_encoder_reference_counts").as_double());
+    lane_cfg.centerline_kalman_reset_innovation = static_cast<float>(
+        get_parameter("centerline_kalman_reset_innovation").as_double());
+    lane_cfg.centerline_kalman_state_timeout_sec =
+        get_parameter("centerline_kalman_state_timeout_sec").as_double();
+    lane_cfg.centerline_kalman_steering_timeout_sec =
+        get_parameter("centerline_kalman_steering_timeout_sec").as_double();
+    centerline_kalman_steering_topic_ =
+        get_parameter("centerline_kalman_steering_topic").as_string();
     lane_cfg.enable_left_boundary_template_line =
         get_parameter("enable_left_boundary_template_line").as_bool();
     lane_cfg.left_boundary_template_side = get_parameter("left_boundary_template_side").as_string();
@@ -1789,6 +1844,11 @@ class FusedPerceptionNode : public rclcpp::Node {
       [this](const std_msgs::msg::Int64::SharedPtr msg) {
         lane_decision_.setEncoderCount(msg->data, nowSeconds());
       });
+    steering_command_sub_ = create_subscription<geometry_msgs::msg::Twist>(
+      centerline_kalman_steering_topic_, rclcpp::QoS(10).reliable(),
+      [this](const geometry_msgs::msg::Twist::SharedPtr msg) {
+        lane_decision_.setSteeringCommand(msg->angular.z, nowSeconds());
+      });
 
     shm_reader_ = std::make_unique<ShmReader>(shm_name_);
     if (!shm_reader_->connect()) {
@@ -2583,6 +2643,7 @@ class FusedPerceptionNode : public rclcpp::Node {
 
   std::string shm_name_;
   std::string encoder_count_topic_{"/chassis/encoder_count"};
+  std::string centerline_kalman_steering_topic_{"/cmd_vel"};
   bool enable_flip_{true};
   int flip_code_{0};
   std::string input_format_{"RGB"};
@@ -2654,6 +2715,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr guideboard_start_client_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr guideboard_stop_client_;
   rclcpp::Subscription<std_msgs::msg::Int64>::SharedPtr encoder_count_sub_;
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr steering_command_sub_;
 
   bool human_stop_desired_{false};
   bool human_service_stop_active_{false};

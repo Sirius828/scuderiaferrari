@@ -141,8 +141,17 @@ fused_perception_node:
     offset_y08_ratio: 0.72
     offset_y09_ratio: 0.86
     heading_y_ratio: 0.65
-    max_offset_jump: 0.80
-    offset_smoothing_alpha: 0.35
+    enable_centerline_kalman: true
+    centerline_kalman_measurement_noise: 0.0036
+    centerline_kalman_idle_process_noise: 0.0001
+    centerline_kalman_motion_process_noise: 0.0008
+    centerline_kalman_turn_process_noise: 0.0008
+    centerline_kalman_initial_variance: 0.01
+    centerline_kalman_encoder_reference_counts: 50.0
+    centerline_kalman_reset_innovation: 0.25
+    centerline_kalman_state_timeout_sec: 0.30
+    centerline_kalman_steering_timeout_sec: 0.25
+    centerline_kalman_steering_topic: "/cmd_vel"
 
     # 左边界模板线：检测到岔路且目标为 left 时，使用 current_left_boundary + template_offset 作为全部拟合点
     enable_left_boundary_template_line: true

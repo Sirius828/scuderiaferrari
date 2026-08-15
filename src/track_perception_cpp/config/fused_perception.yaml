@@ -28,7 +28,7 @@ fused_perception_node:
     # 结果日志：只打印稳定识别、回退、轨迹和最终分支事件
     enable_result_log: true
     # 终端只输出 GuideBoard OCR/API 日志；详细 JSON 仍发布到 ROS 话题
-    enable_data_log: false
+    enable_data_log: true
     guideboard_log_only: true
     # Human 使用带运行状态记忆的专用服务：只有避障前已发车才允许清障后恢复。
     line_follower_start_service: "/line_follower/obstacle_resume"
@@ -36,7 +36,7 @@ fused_perception_node:
     human_service_retry_interval_sec: 0.20
 
     # 目标检测模型
-    det_model_path: "model/det_715.rknn"
+    det_model_path: "model/det_815.rknn"
     label_list_path: "model/label_list.txt"
     det_core_id: 0
     det_input_width: 320 #384
@@ -50,7 +50,7 @@ fused_perception_node:
 
     # 实例分割模型
     seg_model_dir: "/home/orangepi/scuderiaferrari/src/track_perception/model"
-    seg_model_filename: "seg_714v3.rknn"
+    seg_model_filename: "seg_815.rknn"
     seg_core_ids: "1,2"
     seg_input_width: 320 #384
     seg_input_height: 128 #160
@@ -154,8 +154,28 @@ fused_perception_node:
     offset_y08_ratio: 0.72
     offset_y09_ratio: 0.86
     heading_y_ratio: 0.65
-    max_offset_jump: 0.80
-    offset_smoothing_alpha: 0.35
+    # 姿态斜率采用近/中/远三个局部窗口拟合，权重为 0.1/0.5/0.4。
+    heading_near_ratio: 0.81
+    heading_mid_ratio: 0.68
+    heading_far_ratio: 0.55
+    heading_near_weight: 0.20
+    heading_mid_weight: 0.50
+    heading_far_weight: 0.30
+    heading_local_window_half_ratio: 0.06
+    heading_local_min_points: 3
+    # 每个 band 的中心 x 在曲线拟合前独立做一维卡尔曼滤波。
+    # 编码器运动量和舵量越大，过程噪声越大，以降低强弯响应延迟。
+    enable_centerline_kalman: true
+    centerline_kalman_measurement_noise: 0.0036
+    centerline_kalman_idle_process_noise: 0.0001
+    centerline_kalman_motion_process_noise: 0.0008
+    centerline_kalman_turn_process_noise: 0.0008
+    centerline_kalman_initial_variance: 0.01
+    centerline_kalman_encoder_reference_counts: 50.0
+    centerline_kalman_reset_innovation: 0.25
+    centerline_kalman_state_timeout_sec: 0.30
+    centerline_kalman_steering_timeout_sec: 0.25
+    centerline_kalman_steering_topic: "/cmd_vel"
 
     # 左边界模板线：检测到岔路且目标为 left 时，使用 current_left_boundary + template_offset 作为全部拟合点
     enable_left_boundary_template_line: true
@@ -180,7 +200,7 @@ fused_perception_node:
     obstacle_y_margin_px: 20.0
     obstacle_max_age: 0.3
     obstacle_min_bottom_y_ratio: 0.35
-    enable_human_obstacle_stop: true
+    enable_human_obstacle_stop: false
     human_left_expand_px: 10.0
     human_left_expand_width_ratio: 0.20
     human_line_margin_px: 5.0

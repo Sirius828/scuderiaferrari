@@ -31,8 +31,6 @@ LaneDecisionConfig transitionConfig(const std::string& side = "left") {
   config.enable_fit_point_jump_filter = false;
   config.enable_fit_point_trend_filter = false;
   config.enable_left_boundary_template_line = false;
-  config.offset_smoothing_alpha = 1.0f;
-  config.max_offset_jump = 0.0f;
   config.car_fit_hold_timeout_sec = 0.30;
   return config;
 }
