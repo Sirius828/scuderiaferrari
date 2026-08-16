@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="(empty)"
+	BuildStamp="20260816-1643-Experimental"
+	Name="orangepi5"
+	Generator="ctest-3.22.1"
+	CompilerName="/usr/bin/c++"
+	CompilerVersion="11.4.0"
+	OSName="Linux"
+	Hostname="orangepi5"
+	OSRelease="6.1.99-rockchip-rk3588"
+	OSVersion="#1.2.2 SMP Thu Jun 26 14:42:53 CST 2025"
+	OSPlatform="aarch64"
+	Is64Bits="1"
+	VendorString=""
+	VendorID="Unknown Manufacturer"
+	FamilyID="8"
+	ModelID="0"
+	ProcessorCacheSize="0"
+	NumberOfLogicalCPU="8"
+	NumberOfPhysicalCPU="1"
+	TotalVirtualMemory="3967"
+	TotalPhysicalMemory="7934"
+	LogicalProcessorsPerPhysical="8"
+	ProcessorClockFrequency="0"
+	>
+	<Testing>
+		<StartDateTime>Aug 17 00:43 CST</StartDateTime>
+		<StartTestTime>1786898614</StartTestTime>
+		<TestList>
+			<Test>./test_lane_decision_car_boundary</Test>
+		</TestList>
+		<Test Status="failed">
+			<Name>test_lane_decision_car_boundary</Name>
+			<Path>.</Path>
+			<FullName>./test_lane_decision_car_boundary</FullName>
+			<FullCommandLine>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml" "--package-name" "track_perception_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/ament_cmake_gtest/test_lane_decision_car_boundary.txt" "--command" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_decision_car_boundary" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml"</FullCommandLine>
+			<Results>
+				<NamedMeasurement type="text/string" name="Exit Code">
+					<Value>Failed</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Exit Value">
+					<Value>1</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="numeric/double" name="Execution Time">
+					<Value>0.346259</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="numeric/double" name="Processors">
+					<Value>1</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Completion Status">
+					<Value>Completed</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Command Line">
+					<Value>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml" "--package-name" "track_perception_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/ament_cmake_gtest/test_lane_decision_car_boundary.txt" "--command" "/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_decision_car_boundary" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml"</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Environment">
+					<Value>#CTEST_RESOURCE_GROUP_COUNT=</Value>
+				</NamedMeasurement>
+				<Measurement>
+					<Value>-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/track_perception_cpp':
+ - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_decision_car_boundary --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 25 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 25 tests from LaneDecisionCarBoundaryTest
+[ RUN      ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit
+[       OK ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit (0 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.KalmanFiltersBandCentersBeforeFit
+[       OK ] LaneDecisionCarBoundaryTest.KalmanFiltersBandCentersBeforeFit (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.OffsetOutputUsesCurrentFittedCurveWithoutSecondFilter
+[       OK ] LaneDecisionCarBoundaryTest.OffsetOutputUsesCurrentFittedCurveWithoutSecondFilter (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.LeftCarMaskEvidencePushesPointsRight
+[       OK ] LaneDecisionCarBoundaryTest.LeftCarMaskEvidencePushesPointsRight (2 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RightCarMaskEvidencePushesPointsLeft
+[       OK ] LaneDecisionCarBoundaryTest.RightCarMaskEvidencePushesPointsLeft (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.UnknownMaskSideImmediatelyRejectsFit
+[       OK ] LaneDecisionCarBoundaryTest.UnknownMaskSideImmediatelyRejectsFit (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.CurvedFitDoesNotAffectMaskSideDecision
+[       OK ] LaneDecisionCarBoundaryTest.CurvedFitDoesNotAffectMaskSideDecision (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.DoesNotCreateVirtualPointsWhenExpandedBoxHasNoFitPoint
+[       OK ] LaneDecisionCarBoundaryTest.DoesNotCreateVirtualPointsWhenExpandedBoxHasNoFitPoint (3 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.CarPushRunsAfterKalmanAndKeepsTargetCoordinate
+[       OK ] LaneDecisionCarBoundaryTest.CarPushRunsAfterKalmanAndKeepsTargetCoordinate (2 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.KeepsConfirmedCarAcrossTwoLostFramesThenClears
+[       OK ] LaneDecisionCarBoundaryTest.KeepsConfirmedCarAcrossTwoLostFramesThenClears (2 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.SafeCachedFitCanHoldButCollidingCacheCannot
+/home/orangepi/scuderiaferrari/src/track_perception_cpp/test/test_lane_decision_car_boundary.cpp:389: Failure
+Value of: colliding.debugInfo().car_fit_rejected
+  Actual: false
+Expected: true
+[  FAILED  ] LaneDecisionCarBoundaryTest.SafeCachedFitCanHoldButCollidingCacheCannot (4 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence
+[       OK ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence (22 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.NoHumanKeepsHumanStateClear
+[       OK ] LaneDecisionCarBoundaryTest.NoHumanKeepsHumanStateClear (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.HumansOnEitherSidePassAndDoNotChangeFit
+[       OK ] LaneDecisionCarBoundaryTest.HumansOnEitherSidePassAndDoNotChangeFit (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.ExpandedBoundaryContactCountsAsIntersection
+[       OK ] LaneDecisionCarBoundaryTest.ExpandedBoundaryContactCountsAsIntersection (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.FiveSamplesCatchCurveIntersectionNearBoxTop
+[       OK ] LaneDecisionCarBoundaryTest.FiveSamplesCatchCurveIntersectionNearBoxTop (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.FarOverlapKeepsControllerRunning
+[       OK ] LaneDecisionCarBoundaryTest.FarOverlapKeepsControllerRunning (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.NearOverlapStopsAfterConfirmation
+[       OK ] LaneDecisionCarBoundaryTest.NearOverlapStopsAfterConfirmation (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RawAreaDoesNotDependOnExpansionSize
+[       OK ] LaneDecisionCarBoundaryTest.RawAreaDoesNotDependOnExpansionSize (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.InvalidFitStopsOnlyWhenHumanIsNear
+[       OK ] LaneDecisionCarBoundaryTest.InvalidFitStopsOnlyWhenHumanIsNear (10 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.StoppedHumanLossDoesNotReleaseAndSafeFramesDo
+[       OK ] LaneDecisionCarBoundaryTest.StoppedHumanLossDoesNotReleaseAndSafeFramesDo (2 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.MissingHumanInMultipleTargetStopCannotClear
+[       OK ] LaneDecisionCarBoundaryTest.MissingHumanInMultipleTargetStopCannotClear (7 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RightEdgeHasNoSpecialBypass
+[       OK ] LaneDecisionCarBoundaryTest.RightEdgeHasNoSpecialBypass (2 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.HumanNeverEntersLegacyBandExclusionPath
+[       OK ] LaneDecisionCarBoundaryTest.HumanNeverEntersLegacyBandExclusionPath (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive
+[       OK ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive (1 ms)
+[----------] 25 tests from LaneDecisionCarBoundaryTest (77 ms total)
+
+[----------] Global test environment tear-down
+[==========] 25 tests from 1 test suite ran. (77 ms total)
+[  PASSED  ] 24 tests.
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] LaneDecisionCarBoundaryTest.SafeCachedFitCanHoldButCollidingCacheCannot
+
+ 1 FAILED TEST
+-- run_test.py: return code 1
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml'
+</Value>
+				</Measurement>
+			</Results>
+			<Labels>
+				<Label>gtest</Label>
+			</Labels>
+		</Test>
+		<EndDateTime>Aug 17 00:43 CST</EndDateTime>
+		<EndTestTime>1786898615</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>

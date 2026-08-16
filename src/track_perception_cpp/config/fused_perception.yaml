@@ -1,7 +1,7 @@
 # C++ fused_perception_node 参数 - V2 baseline
 # 说明：
 # - V1: 巡线、岔路、GuideBoard、终点停车。
-# - V2: Car 使用右边界约束参与二阶拟合；Human/终点仍通过保护状态停车。
+# - V2: Car 使用实例分割侧别、边界屏蔽和整体平移二次拟合。
 
 fused_perception_node:
   ros__parameters:
@@ -210,19 +210,23 @@ fused_perception_node:
     human_stop_raw_area_ratio: 0.004
     human_stop_confirm_frames: 2
     human_clear_confirm_frames: 2
-    enable_car_right_boundary_filter: true
-    car_boundary_x_margin_px: 0.0
-    car_boundary_y_margin_px: 0.0
-    car_boundary_smoothing_alpha: 0.5
-    car_boundary_lost_frames: 3
-    car_fit_hold_timeout_sec: 0.20
-    # Car 推开模式：默认关闭，开启后替代旧的 Car 左边界删除逻辑
-    enable_car_point_push_avoidance: false
-    car_push_expand_left_px: 100.0
-    car_push_expand_bottom_px: 20.0
-    car_push_expand_right_px: 0.0
-    car_push_expand_top_px: 0.0
-    car_push_clearance_px: 3.0
+    # Car 通过 bbox 两侧实例分割 mask 判断赛道侧，屏蔽障碍侧点后整体平移二次拟合
+    enable_car_obstacle_avoidance: true
+    car_side_mask_strip_width_px: 40
+    car_side_mask_strip_height_px: 150
+    car_side_mask_gap_px: 3
+    # 从 Car 高度 60% 处向图像下方延伸，可超过 bbox 底部
+    car_side_mask_y_start_ratio: 0.60
+    car_side_mask_min_road_ratio: 0.02
+    car_side_mask_min_ratio_diff: 0.05
+    car_side_confirm_frames: 2
+    car_bbox_smoothing_alpha: 0.5
+    car_detection_lost_frames: 3
+    car_expand_toward_lane_width_ratio: 0.7
+    car_expand_bottom_height_ratio: 0.167
+    car_expand_top_height_ratio: 0.0
+    car_shift_clearance_width_ratio: 0.04
+    car_safe_fit_hold_timeout_sec: 0.20
 
     # 终点停车：Stop bbox 底部达到阈值才 FINISH_STOP
     # 联调阶段忽略 Stop 标签，不产生 FINISH_STOP；后续接入专用终点联锁后再开启。

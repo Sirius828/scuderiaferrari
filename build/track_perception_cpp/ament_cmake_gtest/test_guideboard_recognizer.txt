@@ -14,17 +14,17 @@ Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
 [ RUN      ] GuideboardRecognizerTest.ClassifiesAllExactTemplatesAfterTwoFrames
 [       OK ] GuideboardRecognizerTest.ClassifiesAllExactTemplatesAfterTwoFrames (1 ms)
 [ RUN      ] GuideboardRecognizerTest.ToleratesObservedOcrErrors
-[       OK ] GuideboardRecognizerTest.ToleratesObservedOcrErrors (0 ms)
+[       OK ] GuideboardRecognizerTest.ToleratesObservedOcrErrors (1 ms)
 [ RUN      ] GuideboardRecognizerTest.CommonOrWeakTextRemainsUnknown
 [       OK ] GuideboardRecognizerTest.CommonOrWeakTextRemainsUnknown (0 ms)
 [ RUN      ] GuideboardRecognizerTest.ResetClearsStableEvidence
 [       OK ] GuideboardRecognizerTest.ResetClearsStableEvidence (0 ms)
 [ RUN      ] GuideboardRecognizerTest.RejectsInvalidConfiguration
 [       OK ] GuideboardRecognizerTest.RejectsInvalidConfiguration (0 ms)
-[----------] 8 tests from GuideboardRecognizerTest (1 ms total)
+[----------] 8 tests from GuideboardRecognizerTest (2 ms total)
 
 [----------] Global test environment tear-down
-[==========] 8 tests from 1 test suite ran. (1 ms total)
+[==========] 8 tests from 1 test suite ran. (2 ms total)
 [  PASSED  ] 8 tests.
 
 

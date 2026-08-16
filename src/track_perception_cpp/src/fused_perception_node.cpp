@@ -215,20 +215,33 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"raw_points\":" << debug_info.raw_point_count << ","
      << "\"fit_points\":" << debug_info.fit_point_count << ","
      << "\"segments\":" << debug_info.segment_count << ","
-     << "\"car_boundary_active\":" << (debug_info.car_boundary_active ? "true" : "false") << ","
-     << "\"car_left_x\":" << debug_info.car_left_x << ","
-     << "\"car_filtered_point_count\":" << debug_info.car_filtered_point_count << ","
-     << "\"car_boundary_lost_count\":" << debug_info.car_boundary_lost_count << ","
-     << "\"car_push_active\":" << (debug_info.car_push_active ? "true" : "false") << ","
-     << "\"car_push_target_x\":" << debug_info.car_push_target_x << ","
-     << "\"car_push_expand_bottom_y\":" << debug_info.car_push_expand_bottom_y << ","
-     << "\"car_pushed_point_count\":" << debug_info.car_pushed_point_count << ","
+     << "\"car_avoidance_active\":" << (debug_info.car_avoidance_active ? "true" : "false") << ","
+     << "\"car_side\":\"" << jsonEscape(debug_info.car_side) << "\","
+     << "\"car_side_candidate\":\"" << jsonEscape(debug_info.car_side_candidate) << "\","
+     << "\"car_left_mask_ratio\":" << debug_info.car_left_mask_ratio << ","
+     << "\"car_right_mask_ratio\":" << debug_info.car_right_mask_ratio << ","
+     << "\"car_side_confirm_count\":" << debug_info.car_side_confirm_count << ","
+     << "\"car_detection_lost_count\":" << debug_info.car_detection_lost_count << ","
+     << "\"car_initial_fit_success\":"
+     << (debug_info.car_initial_fit_success ? "true" : "false") << ","
+     << "\"car_global_shift_x\":" << debug_info.car_global_shift_x << ","
+     << "\"car_shifted_point_count\":" << debug_info.car_shifted_point_count << ","
+     << "\"car_shift_out_of_bounds\":"
+     << (debug_info.car_shift_out_of_bounds ? "true" : "false") << ","
      << "\"car_deleted_point_count\":" << debug_info.car_deleted_point_count << ","
+     << "\"car_fit_collision\":" << (debug_info.car_fit_collision ? "true" : "false") << ","
+     << "\"car_fit_rejected\":" << (debug_info.car_fit_rejected ? "true" : "false") << ","
      << "\"car_bbox\":[" << debug_info.car_bbox.x << "," << debug_info.car_bbox.y << ","
      << debug_info.car_bbox.width << "," << debug_info.car_bbox.height << "],"
      << "\"car_expanded_bbox\":[" << debug_info.car_expanded_bbox.x << ","
      << debug_info.car_expanded_bbox.y << "," << debug_info.car_expanded_bbox.width << ","
      << debug_info.car_expanded_bbox.height << "],"
+     << "\"car_left_mask_roi\":[" << debug_info.car_left_mask_roi.x << ","
+     << debug_info.car_left_mask_roi.y << "," << debug_info.car_left_mask_roi.width << ","
+     << debug_info.car_left_mask_roi.height << "],"
+     << "\"car_right_mask_roi\":[" << debug_info.car_right_mask_roi.x << ","
+     << debug_info.car_right_mask_roi.y << "," << debug_info.car_right_mask_roi.width << ","
+     << debug_info.car_right_mask_roi.height << "],"
      << "\"human_passable\":" << (debug_info.human_passable ? "true" : "false") << ","
      << "\"human_line_intersects\":"
      << (debug_info.human_line_intersects ? "true" : "false") << ","
@@ -333,12 +346,12 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
     const auto& point = debug_info.removed_fit_points[i];
     ss << "[" << point.x << "," << point.y << "," << point.z << "]";
   }
-  ss << "],\"pushed_fit_points\":[";
-  for (size_t i = 0; i < debug_info.pushed_fit_points.size(); ++i) {
+  ss << "],\"shifted_fit_points\":[";
+  for (size_t i = 0; i < debug_info.shifted_fit_points.size(); ++i) {
     if (i > 0) {
       ss << ",";
     }
-    const auto& point = debug_info.pushed_fit_points[i];
+    const auto& point = debug_info.shifted_fit_points[i];
     ss << "[" << point.x << "," << point.y << "," << point.z << "]";
   }
   ss << "],\"fit_coeffs\":[";
@@ -556,18 +569,21 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("human_stop_raw_area_ratio", 0.004);
     declare_parameter<int>("human_stop_confirm_frames", 2);
     declare_parameter<int>("human_clear_confirm_frames", 2);
-    declare_parameter<bool>("enable_car_right_boundary_filter", true);
-    declare_parameter<double>("car_boundary_x_margin_px", 0.0);
-    declare_parameter<double>("car_boundary_y_margin_px", 0.0);
-    declare_parameter<double>("car_boundary_smoothing_alpha", 0.5);
-    declare_parameter<int>("car_boundary_lost_frames", 3);
-    declare_parameter<double>("car_fit_hold_timeout_sec", 0.20);
-    declare_parameter<bool>("enable_car_point_push_avoidance", false);
-    declare_parameter<double>("car_push_expand_left_px", 40.0);
-    declare_parameter<double>("car_push_expand_bottom_px", 20.0);
-    declare_parameter<double>("car_push_expand_right_px", 0.0);
-    declare_parameter<double>("car_push_expand_top_px", 0.0);
-    declare_parameter<double>("car_push_clearance_px", 3.0);
+    declare_parameter<bool>("enable_car_obstacle_avoidance", true);
+    declare_parameter<int>("car_side_mask_strip_width_px", 40);
+    declare_parameter<int>("car_side_mask_strip_height_px", 60);
+    declare_parameter<int>("car_side_mask_gap_px", 3);
+    declare_parameter<double>("car_side_mask_y_start_ratio", 0.60);
+    declare_parameter<double>("car_side_mask_min_road_ratio", 0.02);
+    declare_parameter<double>("car_side_mask_min_ratio_diff", 0.05);
+    declare_parameter<int>("car_side_confirm_frames", 2);
+    declare_parameter<double>("car_bbox_smoothing_alpha", 0.5);
+    declare_parameter<int>("car_detection_lost_frames", 3);
+    declare_parameter<double>("car_expand_toward_lane_width_ratio", 1.25);
+    declare_parameter<double>("car_expand_bottom_height_ratio", 0.167);
+    declare_parameter<double>("car_expand_top_height_ratio", 0.0);
+    declare_parameter<double>("car_shift_clearance_width_ratio", 0.04);
+    declare_parameter<double>("car_safe_fit_hold_timeout_sec", 0.20);
     declare_parameter<bool>("enable_finish_stop", true);
     declare_parameter<double>("finish_stop_min_confidence", 0.45);
     declare_parameter<double>("finish_stop_arm_y_ratio", 0.70);
@@ -821,29 +837,36 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.human_stop_confirm_frames = static_cast<int>(get_parameter("human_stop_confirm_frames").as_int());
     lane_cfg.human_clear_confirm_frames =
         static_cast<int>(get_parameter("human_clear_confirm_frames").as_int());
-    lane_cfg.enable_car_right_boundary_filter =
-        get_parameter("enable_car_right_boundary_filter").as_bool();
-    lane_cfg.car_boundary_x_margin_px =
-        static_cast<float>(get_parameter("car_boundary_x_margin_px").as_double());
-    lane_cfg.car_boundary_y_margin_px =
-        static_cast<float>(get_parameter("car_boundary_y_margin_px").as_double());
-    lane_cfg.car_boundary_smoothing_alpha =
-        static_cast<float>(get_parameter("car_boundary_smoothing_alpha").as_double());
-    lane_cfg.car_boundary_lost_frames =
-        static_cast<int>(get_parameter("car_boundary_lost_frames").as_int());
-    lane_cfg.car_fit_hold_timeout_sec = get_parameter("car_fit_hold_timeout_sec").as_double();
-    lane_cfg.enable_car_point_push_avoidance =
-        get_parameter("enable_car_point_push_avoidance").as_bool();
-    lane_cfg.car_push_expand_left_px =
-        static_cast<float>(get_parameter("car_push_expand_left_px").as_double());
-    lane_cfg.car_push_expand_bottom_px =
-        static_cast<float>(get_parameter("car_push_expand_bottom_px").as_double());
-    lane_cfg.car_push_expand_right_px =
-        static_cast<float>(get_parameter("car_push_expand_right_px").as_double());
-    lane_cfg.car_push_expand_top_px =
-        static_cast<float>(get_parameter("car_push_expand_top_px").as_double());
-    lane_cfg.car_push_clearance_px =
-        static_cast<float>(get_parameter("car_push_clearance_px").as_double());
+    lane_cfg.enable_car_obstacle_avoidance =
+        get_parameter("enable_car_obstacle_avoidance").as_bool();
+    lane_cfg.car_side_mask_strip_width_px =
+        static_cast<int>(get_parameter("car_side_mask_strip_width_px").as_int());
+    lane_cfg.car_side_mask_strip_height_px =
+        static_cast<int>(get_parameter("car_side_mask_strip_height_px").as_int());
+    lane_cfg.car_side_mask_gap_px =
+        static_cast<int>(get_parameter("car_side_mask_gap_px").as_int());
+    lane_cfg.car_side_mask_y_start_ratio =
+        static_cast<float>(get_parameter("car_side_mask_y_start_ratio").as_double());
+    lane_cfg.car_side_mask_min_road_ratio =
+        static_cast<float>(get_parameter("car_side_mask_min_road_ratio").as_double());
+    lane_cfg.car_side_mask_min_ratio_diff =
+        static_cast<float>(get_parameter("car_side_mask_min_ratio_diff").as_double());
+    lane_cfg.car_side_confirm_frames =
+        static_cast<int>(get_parameter("car_side_confirm_frames").as_int());
+    lane_cfg.car_bbox_smoothing_alpha =
+        static_cast<float>(get_parameter("car_bbox_smoothing_alpha").as_double());
+    lane_cfg.car_detection_lost_frames =
+        static_cast<int>(get_parameter("car_detection_lost_frames").as_int());
+    lane_cfg.car_expand_toward_lane_width_ratio = static_cast<float>(
+        get_parameter("car_expand_toward_lane_width_ratio").as_double());
+    lane_cfg.car_expand_bottom_height_ratio = static_cast<float>(
+        get_parameter("car_expand_bottom_height_ratio").as_double());
+    lane_cfg.car_expand_top_height_ratio = static_cast<float>(
+        get_parameter("car_expand_top_height_ratio").as_double());
+    lane_cfg.car_shift_clearance_width_ratio = static_cast<float>(
+        get_parameter("car_shift_clearance_width_ratio").as_double());
+    lane_cfg.car_safe_fit_hold_timeout_sec =
+        get_parameter("car_safe_fit_hold_timeout_sec").as_double();
     lane_cfg.enable_finish_stop = get_parameter("enable_finish_stop").as_bool();
     lane_cfg.finish_stop_min_confidence = static_cast<float>(get_parameter("finish_stop_min_confidence").as_double());
     lane_cfg.finish_stop_arm_y_ratio = static_cast<float>(get_parameter("finish_stop_arm_y_ratio").as_double());
@@ -2357,26 +2380,34 @@ class FusedPerceptionNode : public rclcpp::Node {
            << " enc_delta=" << debug_info.encoder_hold_delta
            << " lb_tpl=" << (debug_info.left_boundary_template_active ? 1 : 0)
            << " tpl=" << debug_info.boundary_template_side
-           << " car_filter=" << (debug_info.car_boundary_active ? 1 : 0)
-           << " car_x=" << debug_info.car_left_x
-           << " car_rm=" << debug_info.car_filtered_point_count
-           << " car_push=" << (debug_info.car_push_active ? 1 : 0)
-           << " car_ps=" << debug_info.car_pushed_point_count
+           << " car=" << (debug_info.car_avoidance_active ? 1 : 0)
+           << " car_side=" << debug_info.car_side
+           << " car_shift=" << debug_info.car_global_shift_x
            << " car_del=" << debug_info.car_deleted_point_count
-           << " car_lost=" << debug_info.car_boundary_lost_count
+           << " car_lost=" << debug_info.car_detection_lost_count
            << " fit_hold=" << (debug_info.fit_hold_active ? 1 : 0)
            << " alpha=" << std::clamp(blend_alpha_, 0.0f, 1.0f);
     cv::putText(vis, status.str(), cv::Point(12, 28), cv::FONT_HERSHEY_SIMPLEX, 0.65,
                 cv::Scalar(255, 255, 255), 2, cv::LINE_AA);
     std::ostringstream car_status;
-    car_status << "CAR boundary=" << (debug_info.car_boundary_active ? 1 : 0)
-               << " left_x=" << debug_info.car_left_x
-               << " push=" << (debug_info.car_push_active ? 1 : 0)
-               << " pushed=" << debug_info.car_pushed_point_count
+    car_status << "CAR active=" << (debug_info.car_avoidance_active ? 1 : 0)
+               << " side=" << debug_info.car_side
+               << " cand=" << debug_info.car_side_candidate
+               << " mask=" << debug_info.car_left_mask_ratio << "/"
+               << debug_info.car_right_mask_ratio
+               << " roi=" << debug_info.car_left_mask_roi.width << "x"
+               << debug_info.car_left_mask_roi.height << "/"
+               << debug_info.car_right_mask_roi.width << "x"
+               << debug_info.car_right_mask_roi.height
+               << " confirm=" << debug_info.car_side_confirm_count
+               << " prefit=" << (debug_info.car_initial_fit_success ? 1 : 0)
+               << " shift=" << debug_info.car_global_shift_x
+               << " shifted=" << debug_info.car_shifted_point_count
+               << " oob=" << (debug_info.car_shift_out_of_bounds ? 1 : 0)
                << " deleted=" << debug_info.car_deleted_point_count
-               << " target_x=" << debug_info.car_push_target_x
-               << " bottom=" << debug_info.car_push_expand_bottom_y
-               << " lost=" << debug_info.car_boundary_lost_count
+               << " collision=" << (debug_info.car_fit_collision ? 1 : 0)
+               << " rejected=" << (debug_info.car_fit_rejected ? 1 : 0)
+               << " lost=" << debug_info.car_detection_lost_count
                << " hold=" << (debug_info.fit_hold_active ? 1 : 0)
                << " age=" << debug_info.fit_hold_age;
     cv::putText(vis, car_status.str(), cv::Point(12, 52), cv::FONT_HERSHEY_SIMPLEX, 0.55,
@@ -2459,28 +2490,22 @@ class FusedPerceptionNode : public rclcpp::Node {
 
   void drawLaneDebug(cv::Mat& vis, const LaneDebugInfo& debug_info) const {
     bool template_active = debug_info.left_boundary_template_active;
-    if (debug_info.car_boundary_active && debug_info.car_left_x >= 0.0f) {
-      const int car_x = std::clamp(static_cast<int>(std::round(debug_info.car_left_x)),
-                                   0, std::max(0, vis.cols - 1));
-      cv::line(vis, cv::Point(car_x, 0), cv::Point(car_x, vis.rows - 1),
-               cv::Scalar(255, 255, 0), 2, cv::LINE_AA);
+    if (!debug_info.car_left_mask_roi.empty()) {
+      cv::rectangle(vis, debug_info.car_left_mask_roi, cv::Scalar(255, 0, 0), 2,
+                    cv::LINE_AA);
     }
-    if (debug_info.car_push_active && debug_info.car_expanded_bbox.width > 0.0f &&
+    if (!debug_info.car_right_mask_roi.empty()) {
+      cv::rectangle(vis, debug_info.car_right_mask_roi, cv::Scalar(255, 255, 0), 2,
+                    cv::LINE_AA);
+    }
+    if (debug_info.car_bbox.width > 0.0f && debug_info.car_bbox.height > 0.0f) {
+      cv::rectangle(vis, debug_info.car_bbox, cv::Scalar(0, 0, 255), 2,
+                    cv::LINE_AA);
+    }
+    if (debug_info.car_avoidance_active && debug_info.car_expanded_bbox.width > 0.0f &&
         debug_info.car_expanded_bbox.height > 0.0f) {
       cv::rectangle(vis, debug_info.car_expanded_bbox, cv::Scalar(0, 165, 255), 2,
                     cv::LINE_AA);
-      const int target_x = std::clamp(
-          static_cast<int>(std::round(debug_info.car_push_target_x)),
-          0, std::max(0, vis.cols - 1));
-      const int top_y = std::clamp(
-          static_cast<int>(std::round(debug_info.car_expanded_bbox.y)),
-          0, std::max(0, vis.rows - 1));
-      const int bottom_y = std::clamp(
-          static_cast<int>(std::round(debug_info.car_expanded_bbox.y +
-                                      debug_info.car_expanded_bbox.height)),
-          top_y, std::max(0, vis.rows - 1));
-      cv::line(vis, cv::Point(target_x, top_y), cv::Point(target_x, bottom_y),
-               cv::Scalar(0, 165, 255), 2, cv::LINE_AA);
     }
     for (const auto& human : debug_info.humans) {
       const cv::Scalar expanded_color = debug_info.human_stop_active
@@ -2548,10 +2573,16 @@ class FusedPerceptionNode : public rclcpp::Node {
       cv::circle(vis, cv::Point(static_cast<int>(std::round(point.x)), static_cast<int>(std::round(point.y))),
                  template_active ? 3 : 1, cv::Scalar(0, 255, 0), -1);
     }
-    for (const auto& point : debug_info.pushed_fit_points) {
+    for (const auto& point : debug_info.shifted_fit_points) {
+      const cv::Point original(
+          static_cast<int>(std::round(point.x - debug_info.car_global_shift_x)),
+          static_cast<int>(std::round(point.y)));
+      const cv::Point shifted(static_cast<int>(std::round(point.x)),
+                              static_cast<int>(std::round(point.y)));
+      cv::arrowedLine(vis, original, shifted, cv::Scalar(0, 165, 255), 1,
+                      cv::LINE_AA, 0, 0.25);
       cv::drawMarker(vis,
-                     cv::Point(static_cast<int>(std::round(point.x)),
-                               static_cast<int>(std::round(point.y))),
+                     shifted,
                      cv::Scalar(0, 165, 255), cv::MARKER_CROSS, 9, 2, cv::LINE_AA);
     }
 
@@ -2590,7 +2621,7 @@ class FusedPerceptionNode : public rclcpp::Node {
                      static_cast<int>(std::round(points[i].y)));
         if (p0.x >= 0 && p0.x < vis.cols && p0.y >= 0 && p0.y < vis.rows &&
             p1.x >= 0 && p1.x < vis.cols && p1.y >= 0 && p1.y < vis.rows) {
-          cv::line(vis, p0, p1, cv::Scalar(0, 0, 255), 3, cv::LINE_AA);
+          cv::line(vis, p0, p1, cv::Scalar(160, 160, 160), 2, cv::LINE_AA);
         }
       }
     }

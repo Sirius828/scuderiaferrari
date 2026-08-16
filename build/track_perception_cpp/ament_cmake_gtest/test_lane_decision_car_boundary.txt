@@ -2,58 +2,72 @@
  - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_decision_car_boundary --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml
 
 Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
-[==========] Running 22 tests from 1 test suite.
+[==========] Running 29 tests from 1 test suite.
 [----------] Global test environment set-up.
-[----------] 22 tests from LaneDecisionCarBoundaryTest
+[----------] 29 tests from LaneDecisionCarBoundaryTest
 [ RUN      ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit
-[       OK ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit (2 ms)
+[       OK ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.CarSideMaskStripHeightExtendsBelowCarBox
+[       OK ] LaneDecisionCarBoundaryTest.CarSideMaskStripHeightExtendsBelowCarBox (3 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.KalmanFiltersBandCentersBeforeFit
-[       OK ] LaneDecisionCarBoundaryTest.KalmanFiltersBandCentersBeforeFit (6 ms)
+[       OK ] LaneDecisionCarBoundaryTest.KalmanFiltersBandCentersBeforeFit (1 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.OffsetOutputUsesCurrentFittedCurveWithoutSecondFilter
-[       OK ] LaneDecisionCarBoundaryTest.OffsetOutputUsesCurrentFittedCurveWithoutSecondFilter (0 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.RemovesCarSideFarPointsAndKeepsNearLeftPoints
-[       OK ] LaneDecisionCarBoundaryTest.RemovesCarSideFarPointsAndKeepsNearLeftPoints (1 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.AppliesLeftEdgeRuleEvenWhenCarIsInImageLeftHalf
-[       OK ] LaneDecisionCarBoundaryTest.AppliesLeftEdgeRuleEvenWhenCarIsInImageLeftHalf (0 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.PushesExpandedCarPointsAndDeletesOutsideFarPoints
-[       OK ] LaneDecisionCarBoundaryTest.PushesExpandedCarPointsAndDeletesOutsideFarPoints (1 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.PushModeIsSwitchableAndDoesNotStackLegacyDeletion
-[       OK ] LaneDecisionCarBoundaryTest.PushModeIsSwitchableAndDoesNotStackLegacyDeletion (1 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.SmoothsBoundaryAndKeepsItAcrossTwoLostFrames
-[       OK ] LaneDecisionCarBoundaryTest.SmoothsBoundaryAndKeepsItAcrossTwoLostFrames (2 ms)
+[       OK ] LaneDecisionCarBoundaryTest.OffsetOutputUsesCurrentFittedCurveWithoutSecondFilter (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.LeftCarGloballyShiftsScreenedPointsRight
+[       OK ] LaneDecisionCarBoundaryTest.LeftCarGloballyShiftsScreenedPointsRight (2 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RightCarGloballyShiftsScreenedPointsLeft
+[       OK ] LaneDecisionCarBoundaryTest.RightCarGloballyShiftsScreenedPointsLeft (3 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.LeftImageEdgeCarUsesAvailableRightMask
+[       OK ] LaneDecisionCarBoundaryTest.LeftImageEdgeCarUsesAvailableRightMask (2 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.RightImageEdgeCarUsesAvailableLeftMask
+[       OK ] LaneDecisionCarBoundaryTest.RightImageEdgeCarUsesAvailableLeftMask (3 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.UnknownMaskSideImmediatelyRejectsFit
+[       OK ] LaneDecisionCarBoundaryTest.UnknownMaskSideImmediatelyRejectsFit (1 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.CurvedFitDoesNotAffectMaskSideDecision
+[       OK ] LaneDecisionCarBoundaryTest.CurvedFitDoesNotAffectMaskSideDecision (2 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.DoesNotCreateVirtualPointsWhenExpandedBoxHasNoFitPoint
+[       OK ] LaneDecisionCarBoundaryTest.DoesNotCreateVirtualPointsWhenExpandedBoxHasNoFitPoint (2 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.CarGlobalShiftRunsAfterKalmanAndRefitsSafely
+[       OK ] LaneDecisionCarBoundaryTest.CarGlobalShiftRunsAfterKalmanAndRefitsSafely (3 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.GlobalShiftRejectsInsteadOfClippingAtImageEdge
+[       OK ] LaneDecisionCarBoundaryTest.GlobalShiftRejectsInsteadOfClippingAtImageEdge (3 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.KeepsConfirmedCarAcrossTwoLostFramesThenClears
+[       OK ] LaneDecisionCarBoundaryTest.KeepsConfirmedCarAcrossTwoLostFramesThenClears (4 ms)
+[ RUN      ] LaneDecisionCarBoundaryTest.SafeCachedFitCanHoldButCollidingCacheCannot
+[       OK ] LaneDecisionCarBoundaryTest.SafeCachedFitCanHoldButCollidingCacheCannot (4 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence
-[       OK ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence (22 ms)
+[       OK ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence (23 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.NoHumanKeepsHumanStateClear
-[       OK ] LaneDecisionCarBoundaryTest.NoHumanKeepsHumanStateClear (0 ms)
+[       OK ] LaneDecisionCarBoundaryTest.NoHumanKeepsHumanStateClear (2 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.HumansOnEitherSidePassAndDoNotChangeFit
-[       OK ] LaneDecisionCarBoundaryTest.HumansOnEitherSidePassAndDoNotChangeFit (2 ms)
+[       OK ] LaneDecisionCarBoundaryTest.HumansOnEitherSidePassAndDoNotChangeFit (5 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.ExpandedBoundaryContactCountsAsIntersection
-[       OK ] LaneDecisionCarBoundaryTest.ExpandedBoundaryContactCountsAsIntersection (0 ms)
+[       OK ] LaneDecisionCarBoundaryTest.ExpandedBoundaryContactCountsAsIntersection (1 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.FiveSamplesCatchCurveIntersectionNearBoxTop
-[       OK ] LaneDecisionCarBoundaryTest.FiveSamplesCatchCurveIntersectionNearBoxTop (0 ms)
+[       OK ] LaneDecisionCarBoundaryTest.FiveSamplesCatchCurveIntersectionNearBoxTop (2 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.FarOverlapKeepsControllerRunning
-[       OK ] LaneDecisionCarBoundaryTest.FarOverlapKeepsControllerRunning (1 ms)
+[       OK ] LaneDecisionCarBoundaryTest.FarOverlapKeepsControllerRunning (0 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.NearOverlapStopsAfterConfirmation
-[       OK ] LaneDecisionCarBoundaryTest.NearOverlapStopsAfterConfirmation (0 ms)
+[       OK ] LaneDecisionCarBoundaryTest.NearOverlapStopsAfterConfirmation (2 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.RawAreaDoesNotDependOnExpansionSize
 [       OK ] LaneDecisionCarBoundaryTest.RawAreaDoesNotDependOnExpansionSize (1 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.InvalidFitStopsOnlyWhenHumanIsNear
 [       OK ] LaneDecisionCarBoundaryTest.InvalidFitStopsOnlyWhenHumanIsNear (2 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.StoppedHumanLossDoesNotReleaseAndSafeFramesDo
-[       OK ] LaneDecisionCarBoundaryTest.StoppedHumanLossDoesNotReleaseAndSafeFramesDo (2 ms)
+[       OK ] LaneDecisionCarBoundaryTest.StoppedHumanLossDoesNotReleaseAndSafeFramesDo (3 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.MissingHumanInMultipleTargetStopCannotClear
-[       OK ] LaneDecisionCarBoundaryTest.MissingHumanInMultipleTargetStopCannotClear (4 ms)
+[       OK ] LaneDecisionCarBoundaryTest.MissingHumanInMultipleTargetStopCannotClear (3 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.RightEdgeHasNoSpecialBypass
 [       OK ] LaneDecisionCarBoundaryTest.RightEdgeHasNoSpecialBypass (1 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.HumanNeverEntersLegacyBandExclusionPath
-[       OK ] LaneDecisionCarBoundaryTest.HumanNeverEntersLegacyBandExclusionPath (1 ms)
+[       OK ] LaneDecisionCarBoundaryTest.HumanNeverEntersLegacyBandExclusionPath (2 ms)
 [ RUN      ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive
-[       OK ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive (2 ms)
-[----------] 22 tests from LaneDecisionCarBoundaryTest (52 ms total)
+[       OK ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive (1 ms)
+[----------] 29 tests from LaneDecisionCarBoundaryTest (83 ms total)
 
 [----------] Global test environment tear-down
-[==========] 22 tests from 1 test suite ran. (52 ms total)
-[  PASSED  ] 22 tests.
+[==========] 29 tests from 1 test suite ran. (83 ms total)
+[  PASSED  ] 29 tests.
 
 
 -- run_test.py: return code 0
