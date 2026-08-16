@@ -2,7 +2,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "test_guideboard_api_client"
+			"path" : "test_guideboard_recognizer"
 		}
 	],
 	"backtrace" : 4,
@@ -32,7 +32,7 @@
 			{
 				"command" : 3,
 				"file" : 2,
-				"line" : 98,
+				"line" : 107,
 				"parent" : 0
 			},
 			{
@@ -66,15 +66,9 @@
 				"parent" : 3
 			},
 			{
-				"command" : 4,
-				"file" : 2,
-				"line" : 103,
-				"parent" : 0
-			},
-			{
 				"command" : 5,
 				"file" : 2,
-				"line" : 29,
+				"line" : 30,
 				"parent" : 0
 			},
 			{
@@ -100,31 +94,31 @@
 			"includes" : 
 			[
 				{
-					"backtrace" : 8,
+					"backtrace" : 7,
 					"path" : "/home/orangepi/scuderiaferrari/src/track_perception_cpp/include"
 				},
 				{
-					"backtrace" : 8,
+					"backtrace" : 7,
 					"path" : "/home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/rknn/include"
 				},
 				{
-					"backtrace" : 8,
+					"backtrace" : 7,
 					"path" : "/home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr"
 				},
 				{
-					"backtrace" : 8,
+					"backtrace" : 7,
 					"path" : "/home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/utils"
 				},
 				{
-					"backtrace" : 8,
+					"backtrace" : 7,
 					"path" : "/home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/stb"
 				},
 				{
-					"backtrace" : 8,
+					"backtrace" : 7,
 					"path" : "/usr/include/opencv4"
 				},
 				{
-					"backtrace" : 9,
+					"backtrace" : 8,
 					"isSystem" : true,
 					"path" : "/opt/ros/humble/src/gtest_vendor/include"
 				}
@@ -156,7 +150,7 @@
 			"id" : "gtest_main::@0af4add9fe94340e763e"
 		}
 	],
-	"id" : "test_guideboard_api_client::@6890427a1f51a3e7e1df",
+	"id" : "test_guideboard_recognizer::@6890427a1f51a3e7e1df",
 	"link" : 
 	{
 		"commandFragments" : 
@@ -180,19 +174,14 @@
 				"role" : "libraries"
 			},
 			{
-				"backtrace" : 7,
-				"fragment" : "/usr/lib/aarch64-linux-gnu/libcurl.so",
-				"role" : "libraries"
-			},
-			{
 				"fragment" : "-pthread",
 				"role" : "libraries"
 			}
 		],
 		"language" : "CXX"
 	},
-	"name" : "test_guideboard_api_client",
-	"nameOnDisk" : "test_guideboard_api_client",
+	"name" : "test_guideboard_recognizer",
+	"nameOnDisk" : "test_guideboard_recognizer",
 	"paths" : 
 	{
 		"build" : ".",
@@ -214,13 +203,13 @@
 		{
 			"backtrace" : 4,
 			"compileGroupIndex" : 0,
-			"path" : "test/test_guideboard_api_client.cpp",
+			"path" : "test/test_guideboard_recognizer.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{
 			"backtrace" : 4,
 			"compileGroupIndex" : 0,
-			"path" : "src/guideboard_api_client.cpp",
+			"path" : "src/guideboard_recognizer.cpp",
 			"sourceGroupIndex" : 0
 		}
 	],

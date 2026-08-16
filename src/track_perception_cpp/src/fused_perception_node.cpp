@@ -17,6 +17,7 @@
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <rcl_interfaces/msg/set_parameters_result.hpp>
 #include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/float32_multi_array.hpp>
@@ -228,21 +229,19 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"car_expanded_bbox\":[" << debug_info.car_expanded_bbox.x << ","
      << debug_info.car_expanded_bbox.y << "," << debug_info.car_expanded_bbox.width << ","
      << debug_info.car_expanded_bbox.height << "],"
-     << "\"human_left_seen_latched\":" << (debug_info.human_left_seen_latched ? "true" : "false") << ","
      << "\"human_passable\":" << (debug_info.human_passable ? "true" : "false") << ","
-     << "\"human_right_clear_confirming\":"
-     << (debug_info.human_right_clear_confirming ? "true" : "false") << ","
+     << "\"human_line_intersects\":"
+     << (debug_info.human_line_intersects ? "true" : "false") << ","
      << "\"human_stop_candidate\":" << (debug_info.human_stop_candidate ? "true" : "false") << ","
-     << "\"human_effective_left_x\":" << debug_info.human_effective_left_x << ","
-     << "\"human_fit_line_limit_x\":" << debug_info.human_fit_line_limit_x << ","
-     << "\"human_effective_area_ratio\":" << debug_info.human_effective_area_ratio << ","
-     << "\"human_right_edge_passable\":"
-     << (debug_info.human_right_edge_passable ? "true" : "false") << ","
-     << "\"human_right_edge_limit_x\":" << debug_info.human_right_edge_limit_x << ","
-     << "\"human_right_edge_pass_count\":" << debug_info.human_right_edge_pass_count << ","
+     << "\"human_stop_active\":" << (debug_info.human_stop_active ? "true" : "false") << ","
+     << "\"human_clear_confirming\":"
+     << (debug_info.human_clear_confirming ? "true" : "false") << ","
+     << "\"human_raw_area_ratio\":" << debug_info.human_raw_area_ratio << ","
      << "\"human_state\":\"" << jsonEscape(debug_info.human_state) << "\","
-     << "\"human_right_clear_confirm_count\":" << debug_info.human_right_clear_confirm_count << ","
      << "\"human_stop_confirm_count\":" << debug_info.human_stop_confirm_count << ","
+     << "\"human_clear_confirm_count\":" << debug_info.human_clear_confirm_count << ","
+     << "\"human_count_at_stop\":" << debug_info.human_count_at_stop << ","
+     << "\"human_valid_count\":" << debug_info.human_valid_count << ","
      << "\"fit_hold_active\":" << (debug_info.fit_hold_active ? "true" : "false") << ","
      << "\"fit_hold_age\":" << debug_info.fit_hold_age << ","
      << "\"fit_order\":" << debug_info.fit_order << ","
@@ -358,13 +357,22 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
     ss << "{\"raw_bbox\":["
        << human.raw_bbox.x << "," << human.raw_bbox.y << ","
        << human.raw_bbox.width << "," << human.raw_bbox.height << "],"
-       << "\"effective_bbox\":["
-       << human.effective_bbox.x << "," << human.effective_bbox.y << ","
-       << human.effective_bbox.width << "," << human.effective_bbox.height << "],"
-       << "\"fit_line_limit_x\":" << human.fit_line_limit_x << ","
-       << "\"effective_area_ratio\":" << human.effective_area_ratio << ","
+       << "\"expanded_bbox\":["
+       << human.expanded_bbox.x << "," << human.expanded_bbox.y << ","
+       << human.expanded_bbox.width << "," << human.expanded_bbox.height << "],"
+       << "\"fit_sample_points\":[";
+    for (size_t sample_index = 0; sample_index < human.fit_sample_points.size();
+         ++sample_index) {
+      if (sample_index > 0) {
+        ss << ",";
+      }
+      const auto& sample = human.fit_sample_points[sample_index];
+      ss << "[" << sample.x << "," << sample.y << "]";
+    }
+    ss << "],"
+       << "\"raw_area_ratio\":" << human.raw_area_ratio << ","
        << "\"fit_available\":" << (human.fit_available ? "true" : "false") << ","
-       << "\"right_edge_passable\":" << (human.right_edge_passable ? "true" : "false") << ","
+       << "\"line_intersects\":" << (human.line_intersects ? "true" : "false") << ","
        << "\"passable\":" << (human.passable ? "true" : "false") << ","
        << "\"stop_candidate\":" << (human.stop_candidate ? "true" : "false")
        << "}";
@@ -382,6 +390,9 @@ class FusedPerceptionNode : public rclcpp::Node {
     declareParameters();
     loadParameters();
     initialize();
+
+    parameter_callback_handle_ = add_on_set_parameters_callback(
+        std::bind(&FusedPerceptionNode::parametersCallback, this, std::placeholders::_1));
 
     timer_ = create_wall_timer(1ms, std::bind(&FusedPerceptionNode::tick, this));
   }
@@ -484,7 +495,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<int>("guideboard_api_text_history_size", 3);
     declare_parameter<double>("guideboard_api_text_similarity", 0.70);
     declare_parameter<int>("guideboard_api_force_ocr_count_after_stop", 2);
-    declare_parameter<double>("guideboard_api_stop_height_ratio", 0.20);
+    declare_parameter<double>("guideboard_api_stop_height_ratio", 0.12);
     declare_parameter<bool>("guideboard_api_retry_on_transport_failure", true);
     declare_parameter<int>("guideboard_api_max_attempts", 1);
     declare_parameter<std::string>("ocr_det_model_path", "model/ppocrv4_det.rknn");
@@ -539,14 +550,12 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("obstacle_max_age", 0.3);
     declare_parameter<double>("obstacle_min_bottom_y_ratio", 0.30);
     declare_parameter<bool>("enable_human_obstacle_stop", true);
-    declare_parameter<double>("human_left_expand_px", 25.0);
-    declare_parameter<double>("human_left_expand_width_ratio", 0.50);
-    declare_parameter<double>("human_line_margin_px", 5.0);
-    declare_parameter<double>("human_stop_effective_area_ratio", 0.020);
+    declare_parameter<double>("human_horizontal_expand_px", 25.0);
+    declare_parameter<double>("human_horizontal_expand_width_ratio", 0.50);
+    declare_parameter<int>("human_line_sample_count", 5);
+    declare_parameter<double>("human_stop_raw_area_ratio", 0.004);
     declare_parameter<int>("human_stop_confirm_frames", 2);
-    declare_parameter<int>("human_clear_confirm_frames", 3);
-    declare_parameter<bool>("enable_human_right_edge_pass", true);
-    declare_parameter<double>("human_right_edge_pass_margin_px", 45.0);
+    declare_parameter<int>("human_clear_confirm_frames", 2);
     declare_parameter<bool>("enable_car_right_boundary_filter", true);
     declare_parameter<double>("car_boundary_x_margin_px", 0.0);
     declare_parameter<double>("car_boundary_y_margin_px", 0.0);
@@ -750,9 +759,12 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.heading_near_ratio = static_cast<float>(get_parameter("heading_near_ratio").as_double());
     lane_cfg.heading_mid_ratio = static_cast<float>(get_parameter("heading_mid_ratio").as_double());
     lane_cfg.heading_far_ratio = static_cast<float>(get_parameter("heading_far_ratio").as_double());
-    lane_cfg.heading_near_weight = static_cast<float>(get_parameter("heading_near_weight").as_double());
-    lane_cfg.heading_mid_weight = static_cast<float>(get_parameter("heading_mid_weight").as_double());
-    lane_cfg.heading_far_weight = static_cast<float>(get_parameter("heading_far_weight").as_double());
+    heading_near_weight_ = get_parameter("heading_near_weight").as_double();
+    heading_mid_weight_ = get_parameter("heading_mid_weight").as_double();
+    heading_far_weight_ = get_parameter("heading_far_weight").as_double();
+    lane_cfg.heading_near_weight = static_cast<float>(heading_near_weight_);
+    lane_cfg.heading_mid_weight = static_cast<float>(heading_mid_weight_);
+    lane_cfg.heading_far_weight = static_cast<float>(heading_far_weight_);
     lane_cfg.heading_local_window_half_ratio = static_cast<float>(
         get_parameter("heading_local_window_half_ratio").as_double());
     lane_cfg.heading_local_min_points = static_cast<int>(
@@ -798,19 +810,17 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.obstacle_y_margin_px = static_cast<float>(get_parameter("obstacle_y_margin_px").as_double());
     lane_cfg.obstacle_min_bottom_y_ratio = static_cast<float>(get_parameter("obstacle_min_bottom_y_ratio").as_double());
     lane_cfg.enable_human_obstacle_stop = get_parameter("enable_human_obstacle_stop").as_bool();
-    lane_cfg.human_left_expand_px = static_cast<float>(get_parameter("human_left_expand_px").as_double());
-    lane_cfg.human_left_expand_width_ratio =
-        static_cast<float>(get_parameter("human_left_expand_width_ratio").as_double());
-    lane_cfg.human_line_margin_px = static_cast<float>(get_parameter("human_line_margin_px").as_double());
-    lane_cfg.human_stop_effective_area_ratio =
-        static_cast<float>(get_parameter("human_stop_effective_area_ratio").as_double());
+    lane_cfg.human_horizontal_expand_px =
+        static_cast<float>(get_parameter("human_horizontal_expand_px").as_double());
+    lane_cfg.human_horizontal_expand_width_ratio =
+        static_cast<float>(get_parameter("human_horizontal_expand_width_ratio").as_double());
+    lane_cfg.human_line_sample_count =
+        static_cast<int>(get_parameter("human_line_sample_count").as_int());
+    lane_cfg.human_stop_raw_area_ratio =
+        static_cast<float>(get_parameter("human_stop_raw_area_ratio").as_double());
     lane_cfg.human_stop_confirm_frames = static_cast<int>(get_parameter("human_stop_confirm_frames").as_int());
     lane_cfg.human_clear_confirm_frames =
         static_cast<int>(get_parameter("human_clear_confirm_frames").as_int());
-    lane_cfg.enable_human_right_edge_pass =
-        get_parameter("enable_human_right_edge_pass").as_bool();
-    lane_cfg.human_right_edge_pass_margin_px =
-        static_cast<float>(get_parameter("human_right_edge_pass_margin_px").as_double());
     lane_cfg.enable_car_right_boundary_filter =
         get_parameter("enable_car_right_boundary_filter").as_bool();
     lane_cfg.car_boundary_x_margin_px =
@@ -838,7 +848,73 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.finish_stop_min_confidence = static_cast<float>(get_parameter("finish_stop_min_confidence").as_double());
     lane_cfg.finish_stop_arm_y_ratio = static_cast<float>(get_parameter("finish_stop_arm_y_ratio").as_double());
     lane_cfg.finish_stop_lost_frames = static_cast<int>(get_parameter("finish_stop_lost_frames").as_int());
+    human_stop_confirm_frames_ = std::max(1, lane_cfg.human_stop_confirm_frames);
+    human_clear_confirm_frames_ = std::max(1, lane_cfg.human_clear_confirm_frames);
     lane_decision_.configure(lane_cfg);
+  }
+
+  rcl_interfaces::msg::SetParametersResult parametersCallback(
+      const std::vector<rclcpp::Parameter>& parameters) {
+    double near_weight = heading_near_weight_;
+    double mid_weight = heading_mid_weight_;
+    double far_weight = heading_far_weight_;
+    bool heading_weights_changed = false;
+
+    rcl_interfaces::msg::SetParametersResult result;
+    result.successful = true;
+
+    for (const auto& parameter : parameters) {
+      const auto& name = parameter.get_name();
+      if (name != "heading_near_weight" && name != "heading_mid_weight" &&
+          name != "heading_far_weight") {
+        continue;
+      }
+      if (parameter.get_type() != rclcpp::ParameterType::PARAMETER_DOUBLE) {
+        result.successful = false;
+        result.reason = name + " must be a floating-point number";
+        return result;
+      }
+
+      heading_weights_changed = true;
+      if (name == "heading_near_weight") {
+        near_weight = parameter.as_double();
+      } else if (name == "heading_mid_weight") {
+        mid_weight = parameter.as_double();
+      } else {
+        far_weight = parameter.as_double();
+      }
+    }
+
+    if (!heading_weights_changed) {
+      return result;
+    }
+    if (!std::isfinite(near_weight) || !std::isfinite(mid_weight) ||
+        !std::isfinite(far_weight)) {
+      result.successful = false;
+      result.reason = "heading weights must be finite";
+      return result;
+    }
+    if (near_weight < 0.0 || mid_weight < 0.0 || far_weight < 0.0) {
+      result.successful = false;
+      result.reason = "heading weights must be non-negative";
+      return result;
+    }
+    const double weight_sum = near_weight + mid_weight + far_weight;
+    if (weight_sum <= 1e-9) {
+      result.successful = false;
+      result.reason = "at least one heading weight must be greater than zero";
+      return result;
+    }
+
+    heading_near_weight_ = near_weight;
+    heading_mid_weight_ = mid_weight;
+    heading_far_weight_ = far_weight;
+    lane_decision_.setHeadingWeights(near_weight, mid_weight, far_weight);
+    RCLCPP_INFO(get_logger(),
+                "Updated heading weights: near=%.3f mid=%.3f far=%.3f (normalized %.3f/%.3f/%.3f)",
+                near_weight, mid_weight, far_weight, near_weight / weight_sum,
+                mid_weight / weight_sum, far_weight / weight_sum);
+    return result;
   }
 
   std::string resolveTrackPerceptionPath(const std::string& path) const {
@@ -1409,8 +1485,14 @@ class FusedPerceptionNode : public rclcpp::Node {
     if (guideboard_stop_active_ || guideboard_stop_call_pending_) {
       return;
     }
+    const bool first_stop_request = !guideboard_stop_wait_active_;
     guideboard_stop_wait_active_ = true;
     guideboard_start_after_stop_ = false;
+    if (first_stop_request) {
+      logGuideboardResult("stop", guideboard_track_id_, "guideboard", "unknown", "pending",
+                          "decision_pending_height_threshold", last_ocr_score_, 0.0, 0.0,
+                          stable_decision_latency_ms_);
+    }
     logGuideboardApiEvent("GUIDEBOARD_STOP_REQUEST", "bbox_height_reached", last_ocr_text_,
                           last_ocr_score_, current_guideboard_maneuver_, "",
                           current_guideboard_opposite_);
@@ -1443,6 +1525,19 @@ class FusedPerceptionNode : public rclcpp::Node {
             RCLCPP_WARN(get_logger(), "GUIDEBOARD_STOP_REQUEST failed: %s", e.what());
           }
         });
+  }
+
+  void maybeStopForPendingGuideboardDecision() {
+    if (!enable_guideboard_api_ || !has_guideboard_track_ ||
+        !guideboard_track_route_eligible_ ||
+        !guideboard_route_policy_.recognitionRequired() ||
+        guideboard_route_policy_.hasPreparedDecision() ||
+        current_guideboard_decision_valid_) {
+      return;
+    }
+    if (last_guideboard_height_ratio_ >= guideboard_api_stop_height_ratio_) {
+      requestGuideboardStop();
+    }
   }
 
   void requestGuideboardStart() {
@@ -1623,8 +1718,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     }
     logGuideboardApiEvent("GUIDEBOARD_API_FALLBACK", reason, last_ocr_text_, last_ocr_score_,
                           current_guideboard_maneuver_, "", false);
-    requestGuideboardStart();
     applyGuideboardHint();
+    requestGuideboardStart();
   }
 
   void consumeGuideboardApiResult() {
@@ -1683,8 +1778,8 @@ class FusedPerceptionNode : public rclcpp::Node {
       logGuideboardApiEvent("GUIDEBOARD_API_DECISION_READY", "success", last_ocr_text_,
                             last_ocr_score_, current_guideboard_maneuver_,
                             task.result.corrected_text, current_guideboard_opposite_);
-      requestGuideboardStart();
       applyGuideboardHint();
+      requestGuideboardStart();
       return;
     }
 
@@ -1716,9 +1811,6 @@ class FusedPerceptionNode : public rclcpp::Node {
     if (stable) {
       beginGuideboardApiRequest("stable_text");
       return;
-    }
-    if (last_guideboard_height_ratio_ >= guideboard_api_stop_height_ratio_) {
-      requestGuideboardStop();
     }
   }
 
@@ -1768,6 +1860,7 @@ class FusedPerceptionNode : public rclcpp::Node {
                                    guideboard_route_policy_.decisionSource());
     }
     applyGuideboardHint();
+    maybeStopForPendingGuideboardDecision();
 
     if (!guideboard_track_route_eligible_ ||
         !guideboard_route_policy_.recognitionRequired() ||
@@ -2028,9 +2121,9 @@ class FusedPerceptionNode : public rclcpp::Node {
   }
 
   void updateHumanExecution(const LaneDebugInfo& debug_info) {
-    // Human state is the only source for this service pair.  In particular,
-    // LEFT_LATCHED_WAIT_AREA and NO_FIT_LATCHED intentionally do not stop or
-    // start the controller; only a confirmed OBSTACLE_STOP transition does.
+    // Human state is the only source for this service pair.  Far overlap and
+    // no-fit wait states keep the controller running; only a confirmed
+    // OBSTACLE_STOP transition pauses it.
     human_stop_desired_ = debug_info.human_state == "OBSTACLE_STOP";
     const double now = nowSeconds();
     if (now - human_service_last_call_sec_ < human_service_retry_interval_sec_) {
@@ -2291,17 +2384,19 @@ class FusedPerceptionNode : public rclcpp::Node {
     std::ostringstream human_status;
     human_status << "HUMAN state=" << debug_info.human_state
                  << " pass=" << (debug_info.human_passable ? 1 : 0)
-                 << " edge=" << (debug_info.human_right_edge_passable ? 1 : 0)
-                 << " edge_x=" << debug_info.human_right_edge_limit_x
-                 << " edge_n=" << debug_info.human_right_edge_pass_count
-                 << " latched=" << (debug_info.human_left_seen_latched ? 1 : 0)
-                 << " right=" << debug_info.human_right_clear_confirm_count
-                 << " stop=" << debug_info.human_stop_confirm_count
-                 << " area=" << debug_info.human_effective_area_ratio
+                 << " overlap=" << (debug_info.human_line_intersects ? 1 : 0)
+                 << " raw_area=" << debug_info.human_raw_area_ratio
+                 << " stop=" << debug_info.human_stop_confirm_count << "/"
+                 << human_stop_confirm_frames_
+                 << " clear=" << debug_info.human_clear_confirm_count << "/"
+                 << human_clear_confirm_frames_
+                 << " count=" << debug_info.human_valid_count << "/"
+                 << debug_info.human_count_at_stop
                  << " ctrl=" << human_service_action_;
     const cv::Scalar human_status_color = debug_info.human_state == "OBSTACLE_STOP"
                                               ? cv::Scalar(0, 0, 255)
-                                              : (debug_info.human_left_seen_latched
+                                              : (debug_info.human_line_intersects ||
+                                                         debug_info.human_state == "NO_FIT_WAIT_NEAR"
                                                      ? cv::Scalar(0, 165, 255)
                                                      : cv::Scalar(0, 255, 0));
     cv::putText(vis, human_status.str(), cv::Point(12, 76), cv::FONT_HERSHEY_SIMPLEX,
@@ -2388,20 +2483,25 @@ class FusedPerceptionNode : public rclcpp::Node {
                cv::Scalar(0, 165, 255), 2, cv::LINE_AA);
     }
     for (const auto& human : debug_info.humans) {
-      const cv::Scalar color = human.stop_candidate
-                                   ? cv::Scalar(0, 0, 255)
-                                   : (human.right_edge_passable
-                                          ? cv::Scalar(255, 255, 0)
-                                          : (human.passable ? cv::Scalar(0, 200, 0)
-                                                             : cv::Scalar(0, 165, 255)));
-      cv::rectangle(vis, human.effective_bbox, color, 2, cv::LINE_AA);
-      if (human.fit_available && human.fit_line_limit_x >= 0.0f) {
-        const int x = std::clamp(static_cast<int>(std::round(human.fit_line_limit_x)),
+      const cv::Scalar expanded_color = debug_info.human_stop_active
+                                            ? cv::Scalar(0, 0, 255)
+                                            : (human.stop_candidate
+                                                   ? cv::Scalar(0, 165, 255)
+                                                   : cv::Scalar(0, 255, 255));
+      cv::rectangle(vis, human.expanded_bbox, expanded_color, 2, cv::LINE_AA);
+      for (const auto& sample : human.fit_sample_points) {
+        const bool sample_intersects =
+            sample.x >= human.expanded_bbox.x &&
+            sample.x <= human.expanded_bbox.x + human.expanded_bbox.width &&
+            sample.y >= human.expanded_bbox.y &&
+            sample.y <= human.expanded_bbox.y + human.expanded_bbox.height;
+        const cv::Scalar sample_color = sample_intersects ? cv::Scalar(0, 0, 255)
+                                                           : cv::Scalar(0, 255, 0);
+        const int x = std::clamp(static_cast<int>(std::round(sample.x)),
                                  0, std::max(0, vis.cols - 1));
-        const int y = std::clamp(static_cast<int>(std::round(
-            human.effective_bbox.y + human.effective_bbox.height * 0.5f)),
-            0, std::max(0, vis.rows - 1));
-        cv::drawMarker(vis, cv::Point(x, y), cv::Scalar(255, 0, 255),
+        const int y = std::clamp(static_cast<int>(std::round(sample.y)),
+                                 0, std::max(0, vis.rows - 1));
+        cv::drawMarker(vis, cv::Point(x, y), sample_color,
                        cv::MARKER_CROSS, 9, 2, cv::LINE_AA);
       }
     }
@@ -2723,6 +2823,12 @@ class FusedPerceptionNode : public rclcpp::Node {
   LaneDecision lane_decision_;
   std::atomic<bool> busy_{false};
 
+  double heading_near_weight_{0.10};
+  double heading_mid_weight_{0.50};
+  double heading_far_weight_{0.40};
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
+      parameter_callback_handle_;
+
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr detection_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr label_pub_;
@@ -2747,6 +2853,8 @@ class FusedPerceptionNode : public rclcpp::Node {
   bool human_service_stop_active_{false};
   bool human_stop_call_pending_{false};
   bool human_start_call_pending_{false};
+  int human_stop_confirm_frames_{2};
+  int human_clear_confirm_frames_{2};
   double human_service_last_call_sec_{0.0};
   std::string human_service_action_{"idle"};
 
@@ -2795,7 +2903,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   int guideboard_api_text_history_size_{3};
   double guideboard_api_text_similarity_{0.70};
   int guideboard_api_force_ocr_count_after_stop_{2};
-  double guideboard_api_stop_height_ratio_{0.20};
+  double guideboard_api_stop_height_ratio_{0.12};
   bool guideboard_api_retry_on_transport_failure_{true};
   int guideboard_api_max_attempts_{1};
   std::string ocr_det_model_path_;

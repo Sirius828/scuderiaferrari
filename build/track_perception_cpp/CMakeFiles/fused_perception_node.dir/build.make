@@ -394,10 +394,6 @@ fused_perception_node: /opt/ros/humble/lib/libstd_msgs__rosidl_typesupport_c.so
 fused_perception_node: /opt/ros/humble/lib/libstd_msgs__rosidl_generator_c.so
 fused_perception_node: /opt/ros/humble/lib/liblibstatistics_collector.so
 fused_perception_node: /opt/ros/humble/lib/librcl.so
-fused_perception_node: /opt/ros/humble/lib/librmw_implementation.so
-fused_perception_node: /opt/ros/humble/lib/libament_index_cpp.so
-fused_perception_node: /opt/ros/humble/lib/librcl_logging_spdlog.so
-fused_perception_node: /opt/ros/humble/lib/librcl_logging_interface.so
 fused_perception_node: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_fastrtps_c.so
 fused_perception_node: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_introspection_c.so
 fused_perception_node: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_fastrtps_cpp.so
@@ -406,6 +402,10 @@ fused_perception_node: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport
 fused_perception_node: /opt/ros/humble/lib/librcl_interfaces__rosidl_generator_py.so
 fused_perception_node: /opt/ros/humble/lib/librcl_interfaces__rosidl_typesupport_c.so
 fused_perception_node: /opt/ros/humble/lib/librcl_interfaces__rosidl_generator_c.so
+fused_perception_node: /opt/ros/humble/lib/librmw_implementation.so
+fused_perception_node: /opt/ros/humble/lib/libament_index_cpp.so
+fused_perception_node: /opt/ros/humble/lib/librcl_logging_spdlog.so
+fused_perception_node: /opt/ros/humble/lib/librcl_logging_interface.so
 fused_perception_node: /opt/ros/humble/lib/librcl_yaml_param_parser.so
 fused_perception_node: /opt/ros/humble/lib/libyaml.so
 fused_perception_node: /opt/ros/humble/lib/librosgraph_msgs__rosidl_typesupport_fastrtps_c.so

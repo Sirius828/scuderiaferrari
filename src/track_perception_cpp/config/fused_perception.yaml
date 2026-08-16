@@ -80,11 +80,12 @@ fused_perception_node:
     guideboard_api_model: "qwen3.5-35b-a3b"
     guideboard_api_timeout_sec: 1.8
     # uncertain=true 不再一票否决；动作合法且置信度达到此阈值时接受
-    guideboard_api_uncertain_min_confidence: 0.75
+    guideboard_api_uncertain_min_confidence: 0.50
     guideboard_api_text_history_size: 3
     guideboard_api_text_similarity: 0.70
     guideboard_api_force_ocr_count_after_stop: 2
-    guideboard_api_stop_height_ratio: 0.20
+    # 牌框高度达到画面高度的12%即停车，留出OCR/API决策时间
+    guideboard_api_stop_height_ratio: 0.12
     guideboard_api_retry_on_transport_failure: true
     guideboard_api_max_attempts: 1
     ocr_det_model_path: "model/ppocrv4_det.rknn"
@@ -156,7 +157,7 @@ fused_perception_node:
     offset_y08_ratio: 0.72
     offset_y09_ratio: 0.86
     heading_y_ratio: 0.65
-    # 姿态斜率采用近/中/远三个局部窗口拟合，权重为 0.1/0.5/0.4。
+    # 姿态斜率采用近/中/远三个局部窗口拟合；三项可在 RQT 中在线修改并自动归一化。
     heading_near_ratio: 0.81
     heading_mid_ratio: 0.68
     heading_far_ratio: 0.55
@@ -194,23 +195,21 @@ fused_perception_node:
 
     # 障碍保护与 Car 右边界拟合：
     # - enable_obstacle_avoidance 是旧 band 区域扣除路径，默认关闭，保留便于回滚
-    # - Human 不参与 band/拟合点扣除，由右侧确认和有效面积规则单独处理
-    enable_obstacle_avoidance: false
+    # - Human 不参与 band/拟合点扣除，由左右膨胀框与拟合线相交规则单独处理
+    enable_obstacle_avoidance: true
     obstacle_labels: ""
     obstacle_min_confidence: 0.45
     obstacle_x_margin_px: 35.0
     obstacle_y_margin_px: 20.0
     obstacle_max_age: 0.3
     obstacle_min_bottom_y_ratio: 0.35
-    enable_human_obstacle_stop: false
-    human_left_expand_px: 10.0
-    human_left_expand_width_ratio: 0.20
-    human_line_margin_px: 5.0
-    human_stop_effective_area_ratio: 0.004
+    enable_human_obstacle_stop: true
+    human_horizontal_expand_px: 25.0
+    human_horizontal_expand_width_ratio: 2.0
+    human_line_sample_count: 5
+    human_stop_raw_area_ratio: 0.004
     human_stop_confirm_frames: 2
     human_clear_confirm_frames: 2
-    enable_human_right_edge_pass: true
-    human_right_edge_pass_margin_px: 45.0
     enable_car_right_boundary_filter: true
     car_boundary_x_margin_px: 0.0
     car_boundary_y_margin_px: 0.0
