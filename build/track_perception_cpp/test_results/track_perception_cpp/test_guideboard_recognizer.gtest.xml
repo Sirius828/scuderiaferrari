@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites tests="8" failures="0" disabled="0" errors="0" time="0.002" timestamp="2026-08-17T01:46:49" name="AllTests">
-  <testsuite name="GuideboardRecognizerTest" tests="8" failures="0" disabled="0" errors="0" time="0.002" timestamp="2026-08-17T01:46:49">
-    <testcase name="NormalizesUtf8AndPunctuation" status="run" result="completed" time="0" timestamp="2026-08-17T01:46:49" classname="track_perception_cpp.GuideboardRecognizerTest" />
-    <testcase name="ComputesLcsByUnicodeCodepoint" status="run" result="completed" time="0" timestamp="2026-08-17T01:46:49" classname="track_perception_cpp.GuideboardRecognizerTest" />
-    <testcase name="ExactTemplateHasUniqueCharacterBigrams" status="run" result="completed" time="0" timestamp="2026-08-17T01:46:49" classname="track_perception_cpp.GuideboardRecognizerTest" />
-    <testcase name="ClassifiesAllExactTemplatesAfterTwoFrames" status="run" result="completed" time="0.001" timestamp="2026-08-17T01:46:49" classname="track_perception_cpp.GuideboardRecognizerTest" />
-    <testcase name="ToleratesObservedOcrErrors" status="run" result="completed" time="0.001" timestamp="2026-08-17T01:46:49" classname="track_perception_cpp.GuideboardRecognizerTest" />
-    <testcase name="CommonOrWeakTextRemainsUnknown" status="run" result="completed" time="0" timestamp="2026-08-17T01:46:49" classname="track_perception_cpp.GuideboardRecognizerTest" />
-    <testcase name="ResetClearsStableEvidence" status="run" result="completed" time="0" timestamp="2026-08-17T01:46:49" classname="track_perception_cpp.GuideboardRecognizerTest" />
-    <testcase name="RejectsInvalidConfiguration" status="run" result="completed" time="0" timestamp="2026-08-17T01:46:49" classname="track_perception_cpp.GuideboardRecognizerTest" />
+<testsuites tests="8" failures="0" disabled="0" errors="0" time="0.003" timestamp="2026-08-18T02:52:54" name="AllTests">
+  <testsuite name="GuideboardRecognizerTest" tests="8" failures="0" disabled="0" errors="0" time="0.003" timestamp="2026-08-18T02:52:54">
+    <testcase name="NormalizesUtf8AndPunctuation" status="run" result="completed" time="0" timestamp="2026-08-18T02:52:54" classname="track_perception_cpp.GuideboardRecognizerTest" />
+    <testcase name="ComputesLcsByUnicodeCodepoint" status="run" result="completed" time="0" timestamp="2026-08-18T02:52:54" classname="track_perception_cpp.GuideboardRecognizerTest" />
+    <testcase name="ExactTemplateHasUniqueCharacterBigrams" status="run" result="completed" time="0.001" timestamp="2026-08-18T02:52:54" classname="track_perception_cpp.GuideboardRecognizerTest" />
+    <testcase name="ClassifiesAllExactTemplatesAfterTwoFrames" status="run" result="completed" time="0.001" timestamp="2026-08-18T02:52:54" classname="track_perception_cpp.GuideboardRecognizerTest" />
+    <testcase name="ToleratesObservedOcrErrors" status="run" result="completed" time="0.001" timestamp="2026-08-18T02:52:54" classname="track_perception_cpp.GuideboardRecognizerTest" />
+    <testcase name="CommonOrWeakTextRemainsUnknown" status="run" result="completed" time="0" timestamp="2026-08-18T02:52:54" classname="track_perception_cpp.GuideboardRecognizerTest" />
+    <testcase name="ResetClearsStableEvidence" status="run" result="completed" time="0" timestamp="2026-08-18T02:52:54" classname="track_perception_cpp.GuideboardRecognizerTest" />
+    <testcase name="RejectsInvalidConfiguration" status="run" result="completed" time="0" timestamp="2026-08-18T02:52:54" classname="track_perception_cpp.GuideboardRecognizerTest" />
   </testsuite>
 </testsuites>

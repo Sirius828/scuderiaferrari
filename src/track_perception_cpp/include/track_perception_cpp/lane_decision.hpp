@@ -104,13 +104,17 @@ struct LaneDecisionConfig {
   float car_side_mask_min_road_ratio{0.02f};
   float car_side_mask_min_ratio_diff{0.05f};
   int car_side_confirm_frames{2};
-  float car_bbox_smoothing_alpha{0.5f};
-  int car_detection_lost_frames{3};
-  float car_expand_toward_lane_width_ratio{1.25f};
-  float car_expand_bottom_height_ratio{0.167f};
-  float car_expand_top_height_ratio{0.0f};
-  float car_shift_clearance_width_ratio{0.04f};
-  double car_safe_fit_hold_timeout_sec{0.20};
+  float car_avoidance_min_height_ratio{0.08f};
+  int car_avoidance_min_height_px{12};
+  int64_t car_encoder_detour_counts{9000};
+  int64_t car_encoder_return_counts{1000};
+  int car_rearm_clear_frames{3};
+  int car_template_min_points{6};
+  int car_template_fit_order{2};
+  float car_template_weight{1.0f};
+  std::string car_right_template_offsets;
+  std::string car_left_template_offsets;
+  double car_encoder_fault_hold_sec{3.0};
 
   bool enable_finish_stop{true};
   float finish_stop_min_confidence{0.45f};
@@ -157,8 +161,6 @@ struct LaneDebugInfo {
   std::vector<LaneObstacleDebug> obstacle_zones;
   std::vector<cv::Point3f> raw_points;
   std::vector<cv::Point3f> fit_points;
-  std::vector<cv::Point3f> removed_fit_points;
-  std::vector<cv::Point3f> shifted_fit_points;
   std::vector<double> fit_coeffs;
   std::vector<LaneHumanDebug> humans;
   bool human_passable{false};
@@ -178,20 +180,21 @@ struct LaneDebugInfo {
   float car_left_mask_ratio{0.0f};
   float car_right_mask_ratio{0.0f};
   int car_side_confirm_count{0};
-  int car_detection_lost_count{0};
-  bool car_initial_fit_success{false};
-  float car_global_shift_x{0.0f};
-  int car_shifted_point_count{0};
-  bool car_shift_out_of_bounds{false};
-  int car_deleted_point_count{0};
-  bool car_fit_collision{false};
-  bool car_fit_rejected{false};
+  std::string car_template_state{"IDLE"};
+  bool car_template_active{false};
+  std::string car_template_side{"UNKNOWN"};
+  int car_template_point_count{0};
+  bool car_template_cache_active{false};
+  int64_t car_encoder_start_count{0};
+  int64_t car_encoder_delta{0};
+  int64_t car_encoder_detour_target{0};
+  int64_t car_encoder_return_delta{0};
+  float car_encoder_return_progress{0.0f};
+  double car_encoder_fault_age{0.0};
+  int car_rearm_clear_count{0};
   cv::Rect2f car_bbox;
-  cv::Rect2f car_expanded_bbox;
   cv::Rect car_left_mask_roi;
   cv::Rect car_right_mask_roi;
-  bool fit_hold_active{false};
-  double fit_hold_age{0.0};
   int fit_order{0};
   bool branch_detected{false};
   int branch_score{0};
@@ -294,6 +297,13 @@ class LaneDecision {
     LowConfidence,
   };
 
+  enum class CarTemplateState {
+    Idle,
+    Detour,
+    Return,
+    WaitClear,
+  };
+
   std::vector<Band> buildBands(const cv::Mat& road_mask, const std::vector<Detection>& detections);
   std::vector<ObstacleZone> getActiveObstacleZones(const std::vector<Detection>& detections,
                                                    int image_width, int image_height) const;
@@ -331,13 +341,10 @@ class LaneDecision {
   void updateCarAvoidanceState(const cv::Mat& seg_map,
                                const std::vector<Detection>& detections,
                                int image_width, int image_height);
-  std::vector<cv::Point3f> filterCarObstacleSidePoints(
-      const std::vector<cv::Point3f>& points,
-      std::vector<cv::Point3f>* removed_points) const;
-  bool applyCarGlobalFitShift(std::vector<cv::Point3f>* points,
-                              int image_width, int fit_order,
-                              std::vector<cv::Point3f>* shifted_points);
-  bool carFitIntersectsExpandedBox(const std::vector<double>& coeffs) const;
+  std::vector<cv::Point3f> collectCarBoundaryTemplatePoints(
+      std::vector<Band>& bands, int image_width,
+      const std::string& car_side) const;
+  std::string carTemplateStateName() const;
   bool fitCenterlineAndComputeGeometry(const std::vector<cv::Point3f>& points, int h,
                                        int fit_order, std::vector<double>* coeffs,
                                        double* heading_error, double* curvature) const;
@@ -352,8 +359,6 @@ class LaneDecision {
   void populateDebugInfo(const std::vector<Band>& bands, const std::vector<ObstacleZone>& zones,
                          const std::vector<cv::Point3f>& raw_points,
                          const std::vector<cv::Point3f>& fit_points,
-                         const std::vector<cv::Point3f>& removed_fit_points,
-                         const std::vector<cv::Point3f>& shifted_fit_points,
                          int image_width, int image_height,
                          const std::vector<double>& fit_coeffs);
 
@@ -396,6 +401,8 @@ class LaneDecision {
   int64_t encoder_hold_target_{0};
   std::vector<double> left_boundary_template_offsets_;
   std::vector<double> right_boundary_template_offsets_;
+  std::vector<double> car_right_template_offsets_;
+  std::vector<double> car_left_template_offsets_;
   bool finish_stop_active_{false};
   bool human_stop_active_{false};
   std::string finish_stop_state_{"CLEAR"};
@@ -407,7 +414,6 @@ class LaneDecision {
 
   bool car_detection_active_{false};
   bool car_avoidance_active_{false};
-  bool car_requires_low_confidence_{false};
   std::string car_side_{"UNKNOWN"};
   std::string car_side_candidate_{"UNKNOWN"};
   int car_side_confirm_count_{0};
@@ -415,31 +421,33 @@ class LaneDecision {
   double car_right_x_{0.0};
   double car_top_y_{0.0};
   double car_bottom_y_{0.0};
-  double car_expanded_left_x_{0.0};
-  double car_expanded_right_x_{0.0};
-  double car_expanded_top_y_{0.0};
-  double car_expanded_bottom_y_{0.0};
-  bool car_initial_fit_success_{false};
-  double car_global_shift_x_{0.0};
-  bool car_shift_out_of_bounds_{false};
   float car_left_mask_ratio_{0.0f};
   float car_right_mask_ratio_{0.0f};
   cv::Rect car_left_mask_roi_;
   cv::Rect car_right_mask_roi_;
-  int car_detection_lost_count_{0};
-  bool car_fit_collision_{false};
-  bool car_fit_rejected_{false};
-  bool fit_hold_active_{false};
-  double fit_hold_age_{0.0};
-  bool has_last_valid_fit_{false};
-  std::vector<double> last_valid_fit_coeffs_;
-  std::array<double, 3> last_valid_offsets_{{0.0, 0.0, 0.0}};
-  std::array<double, 3> last_valid_raw_offsets_{{0.0, 0.0, 0.0}};
-  double last_valid_fit_heading_{0.0};
-  double last_valid_fit_curvature_{0.0};
-  double last_valid_fit_confidence_{0.0};
-  double last_valid_fit_time_{0.0};
-  std::string last_valid_road_state_{"NORMAL"};
+  CarTemplateState car_template_state_{CarTemplateState::Idle};
+  std::string car_template_side_{"UNKNOWN"};
+  int car_template_point_count_{0};
+  std::vector<cv::Point3f> car_template_cached_points_;
+  std::vector<double> car_template_cached_coeffs_;
+  double car_template_cached_heading_{0.0};
+  double car_template_cached_curvature_{0.0};
+  double car_template_cached_confidence_{0.0};
+  bool car_encoder_baseline_valid_{false};
+  int64_t car_encoder_start_count_{0};
+  int64_t car_encoder_delta_{0};
+  int64_t car_encoder_return_delta_{0};
+  double car_encoder_return_progress_{0.0};
+  double car_encoder_fault_start_sec_{0.0};
+  double car_encoder_fault_age_{0.0};
+  bool car_fault_exit_active_{false};
+  double car_fault_exit_start_sec_{0.0};
+  int car_rearm_clear_count_{0};
+  bool has_last_underlying_fit_{false};
+  std::vector<double> last_underlying_fit_coeffs_;
+  double last_underlying_fit_heading_{0.0};
+  double last_underlying_fit_curvature_{0.0};
+  double last_underlying_fit_confidence_{0.0};
 };
 
 }  // namespace track_perception_cpp

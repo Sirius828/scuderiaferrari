@@ -2,72 +2,50 @@
  - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_decision_car_boundary --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml
 
 Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
-[==========] Running 29 tests from 1 test suite.
+[==========] Running 18 tests from 1 test suite.
 [----------] Global test environment set-up.
-[----------] 29 tests from LaneDecisionCarBoundaryTest
-[ RUN      ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit
-[       OK ] LaneDecisionCarBoundaryTest.NoCarKeepsSharpTurnPointsAndQuadraticFit (1 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.CarSideMaskStripHeightExtendsBelowCarBox
-[       OK ] LaneDecisionCarBoundaryTest.CarSideMaskStripHeightExtendsBelowCarBox (3 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.KalmanFiltersBandCentersBeforeFit
-[       OK ] LaneDecisionCarBoundaryTest.KalmanFiltersBandCentersBeforeFit (1 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.OffsetOutputUsesCurrentFittedCurveWithoutSecondFilter
-[       OK ] LaneDecisionCarBoundaryTest.OffsetOutputUsesCurrentFittedCurveWithoutSecondFilter (1 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.LeftCarGloballyShiftsScreenedPointsRight
-[       OK ] LaneDecisionCarBoundaryTest.LeftCarGloballyShiftsScreenedPointsRight (2 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.RightCarGloballyShiftsScreenedPointsLeft
-[       OK ] LaneDecisionCarBoundaryTest.RightCarGloballyShiftsScreenedPointsLeft (3 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.LeftImageEdgeCarUsesAvailableRightMask
-[       OK ] LaneDecisionCarBoundaryTest.LeftImageEdgeCarUsesAvailableRightMask (2 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.RightImageEdgeCarUsesAvailableLeftMask
-[       OK ] LaneDecisionCarBoundaryTest.RightImageEdgeCarUsesAvailableLeftMask (3 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.UnknownMaskSideImmediatelyRejectsFit
-[       OK ] LaneDecisionCarBoundaryTest.UnknownMaskSideImmediatelyRejectsFit (1 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.CurvedFitDoesNotAffectMaskSideDecision
-[       OK ] LaneDecisionCarBoundaryTest.CurvedFitDoesNotAffectMaskSideDecision (2 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.DoesNotCreateVirtualPointsWhenExpandedBoxHasNoFitPoint
-[       OK ] LaneDecisionCarBoundaryTest.DoesNotCreateVirtualPointsWhenExpandedBoxHasNoFitPoint (2 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.CarGlobalShiftRunsAfterKalmanAndRefitsSafely
-[       OK ] LaneDecisionCarBoundaryTest.CarGlobalShiftRunsAfterKalmanAndRefitsSafely (3 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.GlobalShiftRejectsInsteadOfClippingAtImageEdge
-[       OK ] LaneDecisionCarBoundaryTest.GlobalShiftRejectsInsteadOfClippingAtImageEdge (3 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.KeepsConfirmedCarAcrossTwoLostFramesThenClears
-[       OK ] LaneDecisionCarBoundaryTest.KeepsConfirmedCarAcrossTwoLostFramesThenClears (4 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.SafeCachedFitCanHoldButCollidingCacheCannot
-[       OK ] LaneDecisionCarBoundaryTest.SafeCachedFitCanHoldButCollidingCacheCannot (4 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence
-[       OK ] LaneDecisionCarBoundaryTest.HoldsLastQuadraticFitThenBecomesLowConfidence (23 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.NoHumanKeepsHumanStateClear
-[       OK ] LaneDecisionCarBoundaryTest.NoHumanKeepsHumanStateClear (2 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.HumansOnEitherSidePassAndDoNotChangeFit
-[       OK ] LaneDecisionCarBoundaryTest.HumansOnEitherSidePassAndDoNotChangeFit (5 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.ExpandedBoundaryContactCountsAsIntersection
-[       OK ] LaneDecisionCarBoundaryTest.ExpandedBoundaryContactCountsAsIntersection (1 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.FiveSamplesCatchCurveIntersectionNearBoxTop
-[       OK ] LaneDecisionCarBoundaryTest.FiveSamplesCatchCurveIntersectionNearBoxTop (2 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.FarOverlapKeepsControllerRunning
-[       OK ] LaneDecisionCarBoundaryTest.FarOverlapKeepsControllerRunning (0 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.NearOverlapStopsAfterConfirmation
-[       OK ] LaneDecisionCarBoundaryTest.NearOverlapStopsAfterConfirmation (2 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.RawAreaDoesNotDependOnExpansionSize
-[       OK ] LaneDecisionCarBoundaryTest.RawAreaDoesNotDependOnExpansionSize (1 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.InvalidFitStopsOnlyWhenHumanIsNear
-[       OK ] LaneDecisionCarBoundaryTest.InvalidFitStopsOnlyWhenHumanIsNear (2 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.StoppedHumanLossDoesNotReleaseAndSafeFramesDo
-[       OK ] LaneDecisionCarBoundaryTest.StoppedHumanLossDoesNotReleaseAndSafeFramesDo (3 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.MissingHumanInMultipleTargetStopCannotClear
-[       OK ] LaneDecisionCarBoundaryTest.MissingHumanInMultipleTargetStopCannotClear (3 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.RightEdgeHasNoSpecialBypass
-[       OK ] LaneDecisionCarBoundaryTest.RightEdgeHasNoSpecialBypass (1 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.HumanNeverEntersLegacyBandExclusionPath
-[       OK ] LaneDecisionCarBoundaryTest.HumanNeverEntersLegacyBandExclusionPath (2 ms)
-[ RUN      ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive
-[       OK ] LaneDecisionCarBoundaryTest.FinishAndLowConfidenceProtectionRemainActive (1 ms)
-[----------] 29 tests from LaneDecisionCarBoundaryTest (83 ms total)
+[----------] 18 tests from LaneDecisionCarTemplateTest
+[ RUN      ] LaneDecisionCarTemplateTest.NoCarLeavesOrdinaryQuadraticFitUnchanged
+[       OK ] LaneDecisionCarTemplateTest.NoCarLeavesOrdinaryQuadraticFitUnchanged (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.RightCarUsesAllLeftRoadBoundaries
+[       OK ] LaneDecisionCarTemplateTest.RightCarUsesAllLeftRoadBoundaries (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.FarCarUsesHeightRatioEvenWhenBottomIsNearHorizon
+[       OK ] LaneDecisionCarTemplateTest.FarCarUsesHeightRatioEvenWhenBottomIsNearHorizon (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.BalancedMaskFallsBackToLeftImageSide
+[       OK ] LaneDecisionCarTemplateTest.BalancedMaskFallsBackToLeftImageSide (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.BalancedMaskFallsBackToRightImageSide
+[       OK ] LaneDecisionCarTemplateTest.BalancedMaskFallsBackToRightImageSide (0 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.LeftCarUsesAllRightRoadBoundaries
+[       OK ] LaneDecisionCarTemplateTest.LeftCarUsesAllRightRoadBoundaries (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.PerBandOffsetsMoveTemplateTowardRoadInterior
+[       OK ] LaneDecisionCarTemplateTest.PerBandOffsetsMoveTemplateTowardRoadInterior (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.DoesNotStartWithoutEnoughTemplatePoints
+[       OK ] LaneDecisionCarTemplateTest.DoesNotStartWithoutEnoughTemplatePoints (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.DoesNotStartWithStaleEncoderFeedback
+[       OK ] LaneDecisionCarTemplateTest.DoesNotStartWithStaleEncoderFeedback (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.ActiveDetourKeepsCachedTemplateWhenBandsDisappear
+[       OK ] LaneDecisionCarTemplateTest.ActiveDetourKeepsCachedTemplateWhenBandsDisappear (5 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.EncoderTransitionsAtExactBoundariesAndBlendsReturn
+[       OK ] LaneDecisionCarTemplateTest.EncoderTransitionsAtExactBoundariesAndBlendsReturn (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.WaitClearRequiresThreeConsecutiveNoCarFrames
+[       OK ] LaneDecisionCarTemplateTest.WaitClearRequiresThreeConsecutiveNoCarFrames (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.SideAndTemplateStayLatchedAfterDetectionLoss
+[       OK ] LaneDecisionCarTemplateTest.SideAndTemplateStayLatchedAfterDetectionLoss (0 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.OppositeMaskEvidenceDoesNotChangeLatchedSide
+[       OK ] LaneDecisionCarTemplateTest.OppositeMaskEvidenceDoesNotChangeLatchedSide (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.ShortEncoderFaultHoldsTemplate
+[       OK ] LaneDecisionCarTemplateTest.ShortEncoderFaultHoldsTemplate (0 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.EncoderRollbackUsesFaultExitInsteadOfAbsoluteDelta
+[       OK ] LaneDecisionCarTemplateTest.EncoderRollbackUsesFaultExitInsteadOfAbsoluteDelta (551 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.BranchEncoderContinuesWhileCarOverridesOutput
+[       OK ] LaneDecisionCarTemplateTest.BranchEncoderContinuesWhileCarOverridesOutput (0 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.HumanAndFinishProtectionRemainIndependent
+[       OK ] LaneDecisionCarTemplateTest.HumanAndFinishProtectionRemainIndependent (0 ms)
+[----------] 18 tests from LaneDecisionCarTemplateTest (567 ms total)
 
 [----------] Global test environment tear-down
-[==========] 29 tests from 1 test suite ran. (83 ms total)
-[  PASSED  ] 29 tests.
+[==========] 18 tests from 1 test suite ran. (567 ms total)
+[  PASSED  ] 18 tests.
 
 
 -- run_test.py: return code 0

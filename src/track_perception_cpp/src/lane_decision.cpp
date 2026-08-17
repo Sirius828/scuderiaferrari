@@ -174,18 +174,20 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.car_side_mask_min_ratio_diff =
       clampValue(cfg_.car_side_mask_min_ratio_diff, 0.0f, 1.0f);
   cfg_.car_side_confirm_frames = std::max(1, cfg_.car_side_confirm_frames);
-  cfg_.car_bbox_smoothing_alpha =
-      clampValue(cfg_.car_bbox_smoothing_alpha, 0.0f, 1.0f);
-  cfg_.car_detection_lost_frames = std::max(1, cfg_.car_detection_lost_frames);
-  cfg_.car_expand_toward_lane_width_ratio =
-      std::max(0.0f, cfg_.car_expand_toward_lane_width_ratio);
-  cfg_.car_expand_bottom_height_ratio =
-      std::max(0.0f, cfg_.car_expand_bottom_height_ratio);
-  cfg_.car_expand_top_height_ratio =
-      std::max(0.0f, cfg_.car_expand_top_height_ratio);
-  cfg_.car_shift_clearance_width_ratio =
-      std::max(0.0f, cfg_.car_shift_clearance_width_ratio);
-  cfg_.car_safe_fit_hold_timeout_sec = std::max(0.0, cfg_.car_safe_fit_hold_timeout_sec);
+  cfg_.car_avoidance_min_height_ratio =
+      clampValue(cfg_.car_avoidance_min_height_ratio, 0.0f, 1.0f);
+  cfg_.car_avoidance_min_height_px =
+      std::max(1, cfg_.car_avoidance_min_height_px);
+  cfg_.car_encoder_detour_counts =
+      std::max<int64_t>(0, cfg_.car_encoder_detour_counts);
+  cfg_.car_encoder_return_counts =
+      std::max<int64_t>(1, cfg_.car_encoder_return_counts);
+  cfg_.car_rearm_clear_frames = std::max(1, cfg_.car_rearm_clear_frames);
+  cfg_.car_template_min_points = std::max(3, cfg_.car_template_min_points);
+  cfg_.car_template_fit_order = 2;
+  cfg_.car_template_weight = std::max(0.01f, cfg_.car_template_weight);
+  cfg_.car_encoder_fault_hold_sec =
+      std::max(0.0, cfg_.car_encoder_fault_hold_sec);
   cfg_.human_horizontal_expand_px = std::max(0.0f, cfg_.human_horizontal_expand_px);
   cfg_.human_horizontal_expand_width_ratio =
       std::max(0.0f, cfg_.human_horizontal_expand_width_ratio);
@@ -226,6 +228,8 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   has_steering_command_ = false;
   left_boundary_template_offsets_ = parseDoubleList(cfg_.left_boundary_template_offsets);
   right_boundary_template_offsets_ = parseDoubleList(cfg_.right_boundary_template_offsets);
+  car_right_template_offsets_ = parseDoubleList(cfg_.car_right_template_offsets);
+  car_left_template_offsets_ = parseDoubleList(cfg_.car_left_template_offsets);
   branch_locked_ = false;
   locked_branch_side_ = cfg_.outer_side;
   guideboard_branch_hint_ = cfg_.guideboard_unknown_branch;
@@ -243,17 +247,11 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   encoder_hold_delta_ = 0;
   encoder_hold_target_ = cfg_.encoder_hold_counts;
   resetCarAvoidanceState();
-  fit_hold_active_ = false;
-  fit_hold_age_ = 0.0;
-  has_last_valid_fit_ = false;
-  last_valid_fit_coeffs_.clear();
-  last_valid_offsets_.fill(0.0);
-  last_valid_raw_offsets_.fill(0.0);
-  last_valid_fit_heading_ = 0.0;
-  last_valid_fit_curvature_ = 0.0;
-  last_valid_fit_confidence_ = 0.0;
-  last_valid_fit_time_ = 0.0;
-  last_valid_road_state_ = "NORMAL";
+  has_last_underlying_fit_ = false;
+  last_underlying_fit_coeffs_.clear();
+  last_underlying_fit_heading_ = 0.0;
+  last_underlying_fit_curvature_ = 0.0;
+  last_underlying_fit_confidence_ = 0.0;
   human_stop_active_ = false;
   human_state_ = "NONE";
   human_stop_confirm_count_ = 0;
@@ -309,8 +307,6 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
   int h = seg_map.rows;
   int w = seg_map.cols;
   double current_time = nowSeconds();
-  fit_hold_active_ = false;
-  fit_hold_age_ = 0.0;
   std::array<double, 3> offsets{{0.0, 0.0, 0.0}};
   std::array<double, 3> raw_offsets{{0.0, 0.0, 0.0}};
   double heading_error = 0.0;
@@ -321,8 +317,6 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
   std::vector<Band> bands;
   std::vector<cv::Point3f> raw_points;
   std::vector<cv::Point3f> fit_points;
-  std::vector<cv::Point3f> removed_fit_points;
-  std::vector<cv::Point3f> shifted_fit_points;
   std::vector<double> fit_coeffs;
 
   updateCarAvoidanceState(seg_map, detections, w, h);
@@ -491,19 +485,218 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     fit_points = filterCenterlinePoints(fit_points, w, last_center_x);
     fit_points = filterCenterlinePointsKalman(
         fit_points, bands, w, h, current_time, target_side, template_active);
-    fit_points = filterCarObstacleSidePoints(fit_points, &removed_fit_points);
-    const bool car_shift_success = !car_avoidance_active_ ||
-        applyCarGlobalFitShift(&fit_points, w, fit_order, &shifted_fit_points);
+    const std::vector<cv::Point3f> underlying_points = fit_points;
+    std::vector<double> underlying_coeffs;
+    double underlying_heading = 0.0;
+    double underlying_curvature = 0.0;
+    const bool underlying_fit_success =
+        static_cast<int>(underlying_points.size()) >= cfg_.fit_min_points &&
+        fitCenterlineAndComputeGeometry(
+            underlying_points, h, fit_order, &underlying_coeffs,
+            &underlying_heading, &underlying_curvature);
+    const double underlying_confidence = underlying_fit_success
+        ? calculateLaneConfidence(underlying_points, bands) : 0.0;
+    if (underlying_fit_success) {
+      has_last_underlying_fit_ = true;
+      last_underlying_fit_coeffs_ = underlying_coeffs;
+      last_underlying_fit_heading_ = underlying_heading;
+      last_underlying_fit_curvature_ = underlying_curvature;
+      last_underlying_fit_confidence_ = underlying_confidence;
+    }
 
-    const bool raw_fit_success = !car_requires_low_confidence_ && car_shift_success &&
-                                 static_cast<int>(fit_points.size()) >= cfg_.fit_min_points &&
-                                 fitCenterlineAndComputeGeometry(
-                                     fit_points, h, fit_order, &fit_coeffs,
-                                     &heading_error, &curvature);
-    car_fit_collision_ = raw_fit_success && carFitIntersectsExpandedBox(fit_coeffs);
-    car_fit_rejected_ = car_requires_low_confidence_ || !car_shift_success ||
-                        car_fit_collision_;
-    const bool fit_success = raw_fit_success && !car_fit_collision_;
+    auto refresh_car_template = [&]() {
+      if (car_template_side_ != "LEFT" && car_template_side_ != "RIGHT") {
+        return false;
+      }
+      auto template_points = collectCarBoundaryTemplatePoints(
+          bands, w, car_template_side_);
+      car_template_point_count_ = static_cast<int>(template_points.size());
+      if (car_template_point_count_ < cfg_.car_template_min_points) {
+        return false;
+      }
+      std::vector<double> coeffs;
+      double template_heading = 0.0;
+      double template_curvature = 0.0;
+      if (!fitCenterlineAndComputeGeometry(
+              template_points, h, cfg_.car_template_fit_order, &coeffs,
+              &template_heading, &template_curvature)) {
+        return false;
+      }
+      car_template_cached_points_ = std::move(template_points);
+      car_template_cached_coeffs_ = std::move(coeffs);
+      car_template_cached_heading_ = template_heading;
+      car_template_cached_curvature_ = template_curvature;
+      car_template_cached_confidence_ =
+          calculateLaneConfidence(car_template_cached_points_, bands);
+      return true;
+    };
+
+    if (car_template_state_ == CarTemplateState::WaitClear) {
+      if (car_detection_active_) {
+        car_rearm_clear_count_ = 0;
+      } else {
+        ++car_rearm_clear_count_;
+        if (car_rearm_clear_count_ >= cfg_.car_rearm_clear_frames) {
+          resetCarAvoidanceState();
+        }
+      }
+    }
+
+    const bool encoder_fresh = has_encoder_count_ &&
+        current_time - last_encoder_update_sec_ <= cfg_.encoder_feedback_timeout_sec;
+    if (car_template_state_ == CarTemplateState::Idle &&
+        cfg_.enable_car_obstacle_avoidance && car_detection_active_ &&
+        (car_side_ == "LEFT" || car_side_ == "RIGHT") &&
+        car_side_confirm_count_ >= cfg_.car_side_confirm_frames &&
+        encoder_fresh) {
+      car_template_side_ = car_side_;
+      if (refresh_car_template()) {
+        car_template_state_ = CarTemplateState::Detour;
+        car_avoidance_active_ = true;
+        car_encoder_start_count_ = latest_encoder_count_;
+        car_encoder_baseline_valid_ = true;
+        car_encoder_delta_ = 0;
+        car_encoder_return_delta_ = 0;
+        car_encoder_return_progress_ = 0.0;
+        car_encoder_fault_start_sec_ = 0.0;
+        car_encoder_fault_age_ = 0.0;
+        car_fault_exit_active_ = false;
+        car_rearm_clear_count_ = 0;
+      } else {
+        car_template_side_ = "UNKNOWN";
+      }
+    }
+
+    if (car_template_state_ == CarTemplateState::Detour ||
+        car_template_state_ == CarTemplateState::Return) {
+      car_avoidance_active_ = true;
+      (void)refresh_car_template();
+
+      const bool encoder_progress_valid = encoder_fresh &&
+          car_encoder_baseline_valid_ &&
+          latest_encoder_count_ >= car_encoder_start_count_;
+      if (encoder_progress_valid && !car_fault_exit_active_) {
+        car_encoder_fault_start_sec_ = 0.0;
+        car_encoder_fault_age_ = 0.0;
+        car_encoder_delta_ = latest_encoder_count_ - car_encoder_start_count_;
+        const int64_t total_counts = cfg_.car_encoder_detour_counts +
+                                     cfg_.car_encoder_return_counts;
+        if (car_encoder_delta_ >= total_counts) {
+          car_template_state_ = CarTemplateState::WaitClear;
+          car_avoidance_active_ = false;
+          car_encoder_return_delta_ = cfg_.car_encoder_return_counts;
+          car_encoder_return_progress_ = 1.0;
+        } else if (car_encoder_delta_ >= cfg_.car_encoder_detour_counts) {
+          car_template_state_ = CarTemplateState::Return;
+          car_encoder_return_delta_ =
+              car_encoder_delta_ - cfg_.car_encoder_detour_counts;
+          car_encoder_return_progress_ = clampValue(
+              static_cast<double>(car_encoder_return_delta_) /
+                  static_cast<double>(cfg_.car_encoder_return_counts),
+              0.0, 1.0);
+        } else {
+          car_template_state_ = CarTemplateState::Detour;
+          car_encoder_return_delta_ = 0;
+          car_encoder_return_progress_ = 0.0;
+        }
+      } else if (!car_fault_exit_active_) {
+        if (car_encoder_fault_start_sec_ <= 0.0) {
+          car_encoder_fault_start_sec_ = current_time;
+        }
+        car_encoder_fault_age_ =
+            std::max(0.0, current_time - car_encoder_fault_start_sec_);
+        if (car_encoder_fault_age_ >= cfg_.car_encoder_fault_hold_sec) {
+          if (has_last_underlying_fit_) {
+            car_fault_exit_active_ = true;
+            car_fault_exit_start_sec_ = current_time;
+          } else {
+            car_template_state_ = CarTemplateState::WaitClear;
+            car_avoidance_active_ = false;
+          }
+        }
+      }
+    }
+
+    bool fit_success = underlying_fit_success;
+    fit_coeffs = underlying_coeffs;
+    heading_error = underlying_heading;
+    curvature = underlying_curvature;
+    confidence = underlying_confidence;
+
+    const auto quadraticCoeffs = [](const std::vector<double>& coeffs) {
+      if (coeffs.size() == 3) {
+        return coeffs;
+      }
+      if (coeffs.size() == 2) {
+        return std::vector<double>{0.0, coeffs[0], coeffs[1]};
+      }
+      return std::vector<double>{};
+    };
+    auto use_car_template = [&]() {
+      if (car_template_cached_coeffs_.empty()) {
+        fit_success = false;
+        return;
+      }
+      raw_points = car_template_cached_points_;
+      fit_points = car_template_cached_points_;
+      fit_coeffs = car_template_cached_coeffs_;
+      heading_error = car_template_cached_heading_;
+      curvature = car_template_cached_curvature_;
+      confidence = car_template_cached_confidence_;
+      fit_success = true;
+    };
+    auto blend_from_car = [&](const std::vector<double>& target_coeffs,
+                              double target_heading, double target_curvature,
+                              double target_confidence, double progress) {
+      const auto car_coeffs = quadraticCoeffs(car_template_cached_coeffs_);
+      const auto target = quadraticCoeffs(target_coeffs);
+      if (car_coeffs.size() != 3 || target.size() != 3) {
+        use_car_template();
+        return;
+      }
+      progress = clampValue(progress, 0.0, 1.0);
+      fit_coeffs.resize(3);
+      for (size_t i = 0; i < fit_coeffs.size(); ++i) {
+        fit_coeffs[i] = car_coeffs[i] * (1.0 - progress) +
+                        target[i] * progress;
+      }
+      raw_points = car_template_cached_points_;
+      fit_points = car_template_cached_points_;
+      heading_error = car_template_cached_heading_ * (1.0 - progress) +
+                      target_heading * progress;
+      curvature = car_template_cached_curvature_ * (1.0 - progress) +
+                  target_curvature * progress;
+      confidence = car_template_cached_confidence_ * (1.0 - progress) +
+                   target_confidence * progress;
+      fit_success = true;
+    };
+
+    if (car_fault_exit_active_) {
+      constexpr double kFaultExitBlendSec = 0.5;
+      const double progress = clampValue(
+          (current_time - car_fault_exit_start_sec_) / kFaultExitBlendSec,
+          0.0, 1.0);
+      blend_from_car(last_underlying_fit_coeffs_,
+                     last_underlying_fit_heading_,
+                     last_underlying_fit_curvature_,
+                     last_underlying_fit_confidence_, progress);
+      car_encoder_return_progress_ = progress;
+      if (progress >= 1.0) {
+        car_fault_exit_active_ = false;
+        car_template_state_ = CarTemplateState::WaitClear;
+        car_avoidance_active_ = false;
+      }
+    } else if (car_template_state_ == CarTemplateState::Detour) {
+      use_car_template();
+    } else if (car_template_state_ == CarTemplateState::Return) {
+      if (underlying_fit_success) {
+        blend_from_car(underlying_coeffs, underlying_heading,
+                       underlying_curvature, underlying_confidence,
+                       car_encoder_return_progress_);
+      } else {
+        use_car_template();
+      }
+    }
     if (fit_success) {
       const std::array<float, 3> ratios{{
           cfg_.offset_y07_ratio, cfg_.offset_y08_ratio, cfg_.offset_y09_ratio}};
@@ -520,50 +713,21 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
       debug_info_.raw_offset_y09 = static_cast<float>(raw_offsets[2]);
       debug_info_.image_width = w;
       is_valid = true;
-      confidence = calculateLaneConfidence(fit_points, bands);
-      has_last_valid_fit_ = true;
-      last_valid_fit_coeffs_ = fit_coeffs;
-      last_valid_offsets_ = offsets;
-      last_valid_raw_offsets_ = raw_offsets;
-      last_valid_fit_heading_ = heading_error;
-      last_valid_fit_curvature_ = curvature;
-      last_valid_fit_confidence_ = confidence;
-      last_valid_fit_time_ = current_time;
-      last_valid_road_state_ = road_state;
     } else {
-      fit_hold_age_ = has_last_valid_fit_ ? std::max(0.0, current_time - last_valid_fit_time_) : 0.0;
-      const bool cached_fit_safe = !car_requires_low_confidence_ &&
-                                   (!car_avoidance_active_ ||
-                                    !carFitIntersectsExpandedBox(last_valid_fit_coeffs_));
-      if (has_last_valid_fit_ && car_avoidance_active_ && !cached_fit_safe) {
-        car_fit_rejected_ = true;
+      cv::Mat bottom_seg = seg_map(
+          cv::Range(static_cast<int>(h * 0.8), h), cv::Range::all());
+      const double fallback_offset = fallbackCenterOffset(bottom_seg);
+      offsets.fill(fallback_offset);
+      raw_offsets.fill(fallback_offset);
+      const bool has_fallback_pixels = cv::countNonZero(bottom_seg == 1) > 0;
+      is_valid = false;
+      confidence = 0.0;
+      if (!has_fallback_pixels && std::abs(last_offsets_[2]) > 0.01) {
+        offsets.fill(last_offsets_[2]);
+        raw_offsets.fill(last_offsets_[2]);
       }
-      if (has_last_valid_fit_ && cached_fit_safe &&
-          fit_hold_age_ <= cfg_.car_safe_fit_hold_timeout_sec) {
-        fit_hold_active_ = true;
-        fit_coeffs = last_valid_fit_coeffs_;
-        offsets = last_valid_offsets_;
-        raw_offsets = last_valid_raw_offsets_;
-        heading_error = last_valid_fit_heading_;
-        curvature = last_valid_fit_curvature_;
-        confidence = last_valid_fit_confidence_;
-        road_state = last_valid_road_state_;
-        is_valid = true;
-      } else {
-        cv::Mat bottom_seg = seg_map(cv::Range(static_cast<int>(h * 0.8), h), cv::Range::all());
-        const double fallback_offset = fallbackCenterOffset(bottom_seg);
-        offsets.fill(fallback_offset);
-        raw_offsets.fill(fallback_offset);
-        const bool has_fallback_pixels = cv::countNonZero(bottom_seg == 1) > 0;
-        is_valid = false;
-        confidence = 0.0;
-        if (!has_fallback_pixels && std::abs(last_offsets_[2]) > 0.01) {
-          offsets.fill(last_offsets_[2]);
-          raw_offsets.fill(last_offsets_[2]);
-        }
-        road_state = "LOW_CONFIDENCE";
-        fit_coeffs.clear();
-      }
+      road_state = "LOW_CONFIDENCE";
+      fit_coeffs.clear();
       debug_info_.offset_y07 = static_cast<float>(offsets[0]);
       debug_info_.offset_y08 = static_cast<float>(offsets[1]);
       debug_info_.offset_y09 = static_cast<float>(offsets[2]);
@@ -574,7 +738,7 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     }
     populateDebugInfo(
       bands, getActiveObstacleZones(detections, w, h), raw_points, fit_points,
-      removed_fit_points, shifted_fit_points, w, h, fit_coeffs);
+      w, h, fit_coeffs);
   } else {
     cv::Mat bottom_seg = seg_map(cv::Range(h / 2, h), cv::Range::all());
     offsets.fill(fallbackCenterOffset(bottom_seg));
@@ -1300,7 +1464,6 @@ std::vector<cv::Point3f> LaneDecision::filterCenterlinePointsKalman(
 void LaneDecision::resetCarAvoidanceState() {
   car_detection_active_ = false;
   car_avoidance_active_ = false;
-  car_requires_low_confidence_ = false;
   car_side_ = "UNKNOWN";
   car_side_candidate_ = "UNKNOWN";
   car_side_confirm_count_ = 0;
@@ -1308,39 +1471,45 @@ void LaneDecision::resetCarAvoidanceState() {
   car_right_x_ = 0.0;
   car_top_y_ = 0.0;
   car_bottom_y_ = 0.0;
-  car_expanded_left_x_ = 0.0;
-  car_expanded_right_x_ = 0.0;
-  car_expanded_top_y_ = 0.0;
-  car_expanded_bottom_y_ = 0.0;
-  car_initial_fit_success_ = false;
-  car_global_shift_x_ = 0.0;
-  car_shift_out_of_bounds_ = false;
   car_left_mask_ratio_ = 0.0f;
   car_right_mask_ratio_ = 0.0f;
   car_left_mask_roi_ = cv::Rect();
   car_right_mask_roi_ = cv::Rect();
-  car_detection_lost_count_ = 0;
-  car_fit_collision_ = false;
-  car_fit_rejected_ = false;
-  car_initial_fit_success_ = false;
-  car_global_shift_x_ = 0.0;
-  car_shift_out_of_bounds_ = false;
+  car_template_state_ = CarTemplateState::Idle;
+  car_template_side_ = "UNKNOWN";
+  car_template_point_count_ = 0;
+  car_template_cached_points_.clear();
+  car_template_cached_coeffs_.clear();
+  car_template_cached_heading_ = 0.0;
+  car_template_cached_curvature_ = 0.0;
+  car_template_cached_confidence_ = 0.0;
+  car_encoder_baseline_valid_ = false;
+  car_encoder_start_count_ = 0;
+  car_encoder_delta_ = 0;
+  car_encoder_return_delta_ = 0;
+  car_encoder_return_progress_ = 0.0;
+  car_encoder_fault_start_sec_ = 0.0;
+  car_encoder_fault_age_ = 0.0;
+  car_fault_exit_active_ = false;
+  car_fault_exit_start_sec_ = 0.0;
+  car_rearm_clear_count_ = 0;
 }
 
 void LaneDecision::updateCarAvoidanceState(
     const cv::Mat& seg_map, const std::vector<Detection>& detections,
     int image_width, int image_height) {
-  car_fit_collision_ = false;
-  car_fit_rejected_ = false;
   if (!cfg_.enable_car_obstacle_avoidance || seg_map.empty() ||
       image_width <= 0 || image_height <= 0) {
     resetCarAvoidanceState();
     return;
   }
 
-  const double min_bottom_y = image_height *
-      clampValue(cfg_.obstacle_min_bottom_y_ratio, 0.0f, 1.0f);
+  const double min_height = std::max(
+      static_cast<double>(cfg_.car_avoidance_min_height_px),
+      static_cast<double>(image_height) *
+          static_cast<double>(cfg_.car_avoidance_min_height_ratio));
   const Detection* selected_car = nullptr;
+  double selected_height = -std::numeric_limits<double>::infinity();
   double selected_bottom = -std::numeric_limits<double>::infinity();
   double selected_area = 0.0;
   for (const auto& det : detections) {
@@ -1349,36 +1518,38 @@ void LaneDecision::updateCarAvoidanceState(
         det.bbox.width <= 0.0f || det.bbox.height <= 0.0f) {
       continue;
     }
-    const double bottom = det.bbox.y + det.bbox.height;
-    if (bottom < min_bottom_y) {
+    const double height = det.bbox.height;
+    if (height < min_height) {
       continue;
     }
+    const double bottom = det.bbox.y + det.bbox.height;
     const double area = static_cast<double>(det.bbox.width) * det.bbox.height;
-    if (!selected_car || bottom > selected_bottom ||
-        (std::abs(bottom - selected_bottom) < 1e-6 && area > selected_area)) {
+    if (!selected_car || height > selected_height ||
+        (std::abs(height - selected_height) < 1e-6 &&
+         (bottom > selected_bottom ||
+          (std::abs(bottom - selected_bottom) < 1e-6 && area > selected_area)))) {
       selected_car = &det;
+      selected_height = height;
       selected_bottom = bottom;
       selected_area = area;
     }
   }
 
   if (!selected_car) {
+    car_detection_active_ = false;
     car_side_candidate_ = "UNKNOWN";
-    car_side_confirm_count_ = 0;
     car_left_mask_roi_ = cv::Rect();
     car_right_mask_roi_ = cv::Rect();
-    if (!car_detection_active_) {
-      return;
+    car_left_mask_ratio_ = 0.0f;
+    car_right_mask_ratio_ = 0.0f;
+    car_left_x_ = -1.0;
+    car_right_x_ = 0.0;
+    car_top_y_ = 0.0;
+    car_bottom_y_ = 0.0;
+    if (car_template_state_ == CarTemplateState::Idle) {
+      car_side_ = "UNKNOWN";
+      car_side_confirm_count_ = 0;
     }
-
-    ++car_detection_lost_count_;
-    if (car_detection_lost_count_ >= cfg_.car_detection_lost_frames) {
-      resetCarAvoidanceState();
-      return;
-    }
-
-    car_avoidance_active_ = car_side_ == "LEFT" || car_side_ == "RIGHT";
-    car_requires_low_confidence_ = !car_avoidance_active_;
     return;
   }
 
@@ -1395,21 +1566,11 @@ void LaneDecision::updateCarAvoidanceState(
       static_cast<double>(selected_car->bbox.y + selected_car->bbox.height),
       0.0, max_y);
 
-  const double alpha = clampValue(
-      static_cast<double>(cfg_.car_bbox_smoothing_alpha), 0.0, 1.0);
-  if (!car_detection_active_ || car_left_x_ < 0.0) {
-    car_left_x_ = raw_left;
-    car_right_x_ = raw_right;
-    car_top_y_ = raw_top;
-    car_bottom_y_ = raw_bottom;
-  } else {
-    car_left_x_ = alpha * raw_left + (1.0 - alpha) * car_left_x_;
-    car_right_x_ = alpha * raw_right + (1.0 - alpha) * car_right_x_;
-    car_top_y_ = alpha * raw_top + (1.0 - alpha) * car_top_y_;
-    car_bottom_y_ = alpha * raw_bottom + (1.0 - alpha) * car_bottom_y_;
-  }
+  car_left_x_ = raw_left;
+  car_right_x_ = raw_right;
+  car_top_y_ = raw_top;
+  car_bottom_y_ = raw_bottom;
   car_detection_active_ = true;
-  car_detection_lost_count_ = 0;
 
   const int roi_y0 = clampValue(
       static_cast<int>(std::floor(
@@ -1461,6 +1622,17 @@ void LaneDecision::updateCarAvoidanceState(
                    car_left_mask_ratio_ - car_right_mask_ratio_ >=
                    cfg_.car_side_mask_min_ratio_diff) {
       candidate = "RIGHT";
+    } else if (std::abs(car_left_mask_ratio_ - car_right_mask_ratio_) <
+               cfg_.car_side_mask_min_ratio_diff) {
+      // When the two side strips contain nearly the same mask area, their
+      // occupancy is not useful for deciding which side of the track the Car
+      // occupies.  Fall back to the detection position in image space.  This
+      // is deliberately only a fallback: a sufficiently asymmetric mask
+      // keeps priority over the bbox center.
+      const double car_center_x = (raw_left + raw_right) * 0.5;
+      candidate = car_center_x < static_cast<double>(image_width) * 0.5
+          ? "LEFT"
+          : "RIGHT";
     }
   } else if (!left_roi_available && right_roi_available &&
              car_touches_left_image_edge &&
@@ -1476,12 +1648,17 @@ void LaneDecision::updateCarAvoidanceState(
     candidate = "RIGHT";
   }
 
+  if (car_template_state_ != CarTemplateState::Idle) {
+    car_side_candidate_ = candidate;
+    // Once triggered, the avoidance side is encoder-latched.  Keep current
+    // mask evidence for diagnostics without changing the locked direction.
+    return;
+  }
+
   if (candidate == "UNKNOWN") {
-    car_side_ = "UNKNOWN";
     car_side_candidate_ = "UNKNOWN";
+    car_side_ = "UNKNOWN";
     car_side_confirm_count_ = 0;
-    car_avoidance_active_ = false;
-    car_requires_low_confidence_ = true;
     return;
   }
 
@@ -1495,150 +1672,99 @@ void LaneDecision::updateCarAvoidanceState(
 
   if (car_side_confirm_count_ < cfg_.car_side_confirm_frames) {
     car_side_ = "UNKNOWN";
-    car_avoidance_active_ = false;
-    car_requires_low_confidence_ = true;
     return;
   }
 
   car_side_ = candidate;
-  car_avoidance_active_ = true;
-  car_requires_low_confidence_ = false;
-  const double car_width = std::max(0.0, car_right_x_ - car_left_x_);
-  const double car_height = std::max(0.0, car_bottom_y_ - car_top_y_);
-  const double expand_toward_lane =
-      car_width * cfg_.car_expand_toward_lane_width_ratio;
-  const double expand_bottom =
-      car_height * cfg_.car_expand_bottom_height_ratio;
-  const double expand_top =
-      car_height * cfg_.car_expand_top_height_ratio;
-  car_expanded_top_y_ = clampValue(
-      car_top_y_ - expand_top, 0.0, max_y);
-  car_expanded_bottom_y_ = clampValue(
-      car_bottom_y_ + expand_bottom, 0.0, max_y);
-  if (car_side_ == "RIGHT") {
-    car_expanded_left_x_ = clampValue(
-        car_left_x_ - expand_toward_lane, 0.0, max_x);
-    car_expanded_right_x_ = clampValue(car_right_x_, 0.0, max_x);
-  } else {
-    car_expanded_left_x_ = clampValue(car_left_x_, 0.0, max_x);
-    car_expanded_right_x_ = clampValue(
-        car_right_x_ + expand_toward_lane, 0.0, max_x);
-  }
 }
 
-std::vector<cv::Point3f> LaneDecision::filterCarObstacleSidePoints(
-    const std::vector<cv::Point3f>& points,
-    std::vector<cv::Point3f>* removed_points) const {
-  if (removed_points) {
-    removed_points->clear();
-  }
-  if (!car_avoidance_active_) {
+std::vector<cv::Point3f> LaneDecision::collectCarBoundaryTemplatePoints(
+    std::vector<Band>& bands, int image_width,
+    const std::string& car_side) const {
+  std::vector<cv::Point3f> points;
+  if (car_side != "LEFT" && car_side != "RIGHT") {
     return points;
   }
 
-  std::vector<cv::Point3f> filtered;
-  filtered.reserve(points.size());
-  for (const auto& point : points) {
-    const bool on_obstacle_side =
-        static_cast<double>(point.y) <= car_expanded_bottom_y_ &&
-        ((car_side_ == "RIGHT" && static_cast<double>(point.x) > car_left_x_) ||
-         (car_side_ == "LEFT" && static_cast<double>(point.x) < car_right_x_));
-    if (on_obstacle_side) {
-      if (removed_points) {
-        removed_points->push_back(point);
-      }
+  const bool use_left_boundary = car_side == "RIGHT";
+  const auto& offsets = use_left_boundary ? car_right_template_offsets_
+                                          : car_left_template_offsets_;
+  std::optional<double> last_template_x;
+  for (auto it_band = bands.rbegin(); it_band != bands.rend(); ++it_band) {
+    auto& band = *it_band;
+    if (band.segments.empty()) {
       continue;
     }
-    filtered.push_back(point);
-  }
-  return filtered;
-}
-
-bool LaneDecision::applyCarGlobalFitShift(
-    std::vector<cv::Point3f>* points, int image_width, int fit_order,
-    std::vector<cv::Point3f>* shifted_points) {
-  if (shifted_points) {
-    shifted_points->clear();
-  }
-  car_initial_fit_success_ = false;
-  car_global_shift_x_ = 0.0;
-  car_shift_out_of_bounds_ = false;
-  if (!car_avoidance_active_) {
-    return true;
-  }
-  if (!points || image_width <= 1 ||
-      static_cast<int>(points->size()) < cfg_.fit_min_points ||
-      static_cast<int>(points->size()) <= fit_order) {
-    return false;
-  }
-
-  std::vector<double> initial_coeffs;
-  if (!weightedPolyfit(*points, fit_order, &initial_coeffs)) {
-    return false;
-  }
-  car_initial_fit_success_ = true;
-
-  const double car_width = std::max(0.0, car_right_x_ - car_left_x_);
-  const double clearance =
-      car_width * cfg_.car_shift_clearance_width_ratio;
-  const int y0 = static_cast<int>(std::floor(car_expanded_top_y_));
-  const int y1 = static_cast<int>(std::ceil(car_expanded_bottom_y_));
-  double shift_x = 0.0;
-  for (int y = y0; y <= y1; ++y) {
-    const double fit_x = evalPoly(initial_coeffs, static_cast<double>(y));
-    if (!std::isfinite(fit_x)) {
-      return false;
+    const double offset = band.index < static_cast<int>(offsets.size())
+                              ? offsets[band.index]
+                              : 0.0;
+    if (!std::isfinite(offset)) {
+      continue;
     }
-    if (car_side_ == "LEFT") {
-      shift_x = std::max(
-          shift_x, car_expanded_right_x_ + clearance - fit_x);
-    } else if (car_side_ == "RIGHT") {
-      const double left_shift =
-          fit_x - (car_expanded_left_x_ - clearance);
-      shift_x = std::min(shift_x, -std::max(0.0, left_shift));
+    const auto boundary_x = [&](const Segment& segment) {
+      return use_left_boundary
+                 ? static_cast<double>(segment.x0) + offset
+                 : static_cast<double>(segment.x1) - offset;
+    };
+
+    const Segment* selected = nullptr;
+    if (last_template_x) {
+      const auto it = std::min_element(
+          band.segments.begin(), band.segments.end(),
+          [&](const Segment& a, const Segment& b) {
+            return std::abs(boundary_x(a) - *last_template_x) <
+                   std::abs(boundary_x(b) - *last_template_x);
+          });
+      if (it != band.segments.end()) {
+        selected = &(*it);
+      }
     } else {
-      return false;
+      const auto it = use_left_boundary
+          ? std::min_element(
+                band.segments.begin(), band.segments.end(),
+                [](const Segment& a, const Segment& b) { return a.x0 < b.x0; })
+          : std::max_element(
+                band.segments.begin(), band.segments.end(),
+                [](const Segment& a, const Segment& b) { return a.x1 < b.x1; });
+      if (it != band.segments.end()) {
+        selected = &(*it);
+      }
     }
-  }
+    if (!selected) {
+      continue;
+    }
 
-  car_global_shift_x_ = shift_x;
-  const double max_x = static_cast<double>(image_width - 1);
-  for (const auto& point : *points) {
-    const double shifted_x = static_cast<double>(point.x) + shift_x;
-    if (!std::isfinite(shifted_x) || shifted_x < 0.0 || shifted_x > max_x) {
-      car_shift_out_of_bounds_ = true;
-      return false;
-    }
+    const double x = clampValue(
+        boundary_x(*selected), 0.0,
+        static_cast<double>(std::max(0, image_width - 1)));
+    Segment virtual_segment;
+    virtual_segment.x0 = static_cast<int>(std::round(x));
+    virtual_segment.x1 = virtual_segment.x0;
+    virtual_segment.width = 1.0;
+    virtual_segment.center_x = x;
+    virtual_segment.pixel_count = 1;
+    virtual_segment.virtual_segment = true;
+    band.selected_segment = virtual_segment;
+    points.emplace_back(static_cast<float>(x),
+                        static_cast<float>(band.y_center),
+                        cfg_.car_template_weight);
+    last_template_x = x;
   }
-
-  if (std::abs(shift_x) <= 1e-6) {
-    return true;
-  }
-  for (auto& point : *points) {
-    point.x = static_cast<float>(static_cast<double>(point.x) + shift_x);
-    if (shifted_points) {
-      shifted_points->push_back(point);
-    }
-  }
-  return true;
+  return points;
 }
 
-bool LaneDecision::carFitIntersectsExpandedBox(
-    const std::vector<double>& coeffs) const {
-  if (!car_avoidance_active_ || coeffs.size() < 2) {
-    return false;
+std::string LaneDecision::carTemplateStateName() const {
+  switch (car_template_state_) {
+    case CarTemplateState::Detour:
+      return "DETOUR";
+    case CarTemplateState::Return:
+      return "RETURN";
+    case CarTemplateState::WaitClear:
+      return "WAIT_CLEAR";
+    case CarTemplateState::Idle:
+    default:
+      return "IDLE";
   }
-  const int y0 = static_cast<int>(std::floor(car_expanded_top_y_));
-  const int y1 = static_cast<int>(std::ceil(car_expanded_bottom_y_));
-  for (int y = y0; y <= y1; ++y) {
-    const double fit_x = evalPoly(coeffs, static_cast<double>(y));
-    if (std::isfinite(fit_x) &&
-        fit_x >= car_expanded_left_x_ &&
-        fit_x <= car_expanded_right_x_) {
-      return true;
-    }
-  }
-  return false;
 }
 
 bool LaneDecision::fitCenterlineAndComputeGeometry(const std::vector<cv::Point3f>& points,
@@ -2005,16 +2131,12 @@ void LaneDecision::populateDebugInfo(const std::vector<Band>& bands,
                                      const std::vector<ObstacleZone>& zones,
                                      const std::vector<cv::Point3f>& raw_points,
                                      const std::vector<cv::Point3f>& fit_points,
-                                     const std::vector<cv::Point3f>& removed_fit_points,
-                                     const std::vector<cv::Point3f>& shifted_fit_points,
                                      int image_width, int image_height,
                                      const std::vector<double>& fit_coeffs) {
   debug_info_.bands.clear();
   debug_info_.obstacle_zones.clear();
   debug_info_.raw_points = raw_points;
   debug_info_.fit_points = fit_points;
-  debug_info_.removed_fit_points = removed_fit_points;
-  debug_info_.shifted_fit_points = shifted_fit_points;
   debug_info_.fit_coeffs = fit_coeffs;
   debug_info_.car_avoidance_active = car_avoidance_active_;
   debug_info_.car_side = car_side_;
@@ -2022,14 +2144,19 @@ void LaneDecision::populateDebugInfo(const std::vector<Band>& bands,
   debug_info_.car_left_mask_ratio = car_left_mask_ratio_;
   debug_info_.car_right_mask_ratio = car_right_mask_ratio_;
   debug_info_.car_side_confirm_count = car_side_confirm_count_;
-  debug_info_.car_detection_lost_count = car_detection_lost_count_;
-  debug_info_.car_initial_fit_success = car_initial_fit_success_;
-  debug_info_.car_global_shift_x = static_cast<float>(car_global_shift_x_);
-  debug_info_.car_shifted_point_count = static_cast<int>(shifted_fit_points.size());
-  debug_info_.car_shift_out_of_bounds = car_shift_out_of_bounds_;
-  debug_info_.car_deleted_point_count = static_cast<int>(removed_fit_points.size());
-  debug_info_.car_fit_collision = car_fit_collision_;
-  debug_info_.car_fit_rejected = car_fit_rejected_;
+  debug_info_.car_template_state = carTemplateStateName();
+  debug_info_.car_template_active = car_avoidance_active_;
+  debug_info_.car_template_side = car_template_side_;
+  debug_info_.car_template_point_count = car_template_point_count_;
+  debug_info_.car_template_cache_active = !car_template_cached_coeffs_.empty();
+  debug_info_.car_encoder_start_count = car_encoder_start_count_;
+  debug_info_.car_encoder_delta = car_encoder_delta_;
+  debug_info_.car_encoder_detour_target = cfg_.car_encoder_detour_counts;
+  debug_info_.car_encoder_return_delta = car_encoder_return_delta_;
+  debug_info_.car_encoder_return_progress =
+      static_cast<float>(car_encoder_return_progress_);
+  debug_info_.car_encoder_fault_age = car_encoder_fault_age_;
+  debug_info_.car_rearm_clear_count = car_rearm_clear_count_;
   debug_info_.car_left_mask_roi = car_left_mask_roi_;
   debug_info_.car_right_mask_roi = car_right_mask_roi_;
   if (car_detection_active_) {
@@ -2038,17 +2165,6 @@ void LaneDecision::populateDebugInfo(const std::vector<Band>& bands,
         static_cast<float>(std::max(0.0, car_right_x_ - car_left_x_)),
         static_cast<float>(std::max(0.0, car_bottom_y_ - car_top_y_)));
   }
-  if (car_avoidance_active_) {
-    debug_info_.car_expanded_bbox = cv::Rect2f(
-        static_cast<float>(car_expanded_left_x_),
-        static_cast<float>(car_expanded_top_y_),
-        static_cast<float>(std::max(
-            0.0, car_expanded_right_x_ - car_expanded_left_x_)),
-        static_cast<float>(std::max(
-            0.0, car_expanded_bottom_y_ - car_expanded_top_y_)));
-  }
-  debug_info_.fit_hold_active = fit_hold_active_;
-  debug_info_.fit_hold_age = fit_hold_age_;
   debug_info_.fit_order = fit_coeffs.empty() ? 0 : static_cast<int>(fit_coeffs.size()) - 1;
   if (fit_points.empty()) {
     debug_info_.fit_y_min = 0;

@@ -31,7 +31,7 @@ LaneDecisionConfig transitionConfig(const std::string& side = "left") {
   config.enable_fit_point_jump_filter = false;
   config.enable_fit_point_trend_filter = false;
   config.enable_left_boundary_template_line = false;
-  config.car_safe_fit_hold_timeout_sec = 0.30;
+  config.enable_car_obstacle_avoidance = false;
   return config;
 }
 
@@ -125,8 +125,7 @@ TEST(LaneFitTransitionTest, FailedFitHoldsAndPausesTransition) {
 
   std::this_thread::sleep_for(std::chrono::milliseconds(60));
   const LaneState held = decision.decide(failedMask(), {});
-  EXPECT_TRUE(held.is_valid);
-  EXPECT_TRUE(decision.debugInfo().fit_hold_active);
+  EXPECT_FALSE(held.is_valid);
   EXPECT_TRUE(decision.debugInfo().fit_transition_active);
   EXPECT_DOUBLE_EQ(decision.debugInfo().fit_transition_ratio, 0.0);
 
