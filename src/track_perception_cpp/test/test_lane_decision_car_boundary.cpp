@@ -34,7 +34,6 @@ LaneDecisionConfig makeConfig() {
   config.enable_fit_point_jump_filter = false;
   config.enable_fit_point_trend_filter = false;
   config.enable_centerline_kalman = false;
-  config.enable_obstacle_avoidance = false;
   config.enable_human_obstacle_stop = true;
   config.enable_finish_stop = true;
 
@@ -42,13 +41,8 @@ LaneDecisionConfig makeConfig() {
   config.obstacle_min_confidence = 0.45f;
   config.car_avoidance_min_height_ratio = 0.08f;
   config.car_avoidance_min_height_px = 12;
-  config.car_side_mask_strip_width_px = 20;
-  config.car_side_mask_strip_height_px = 60;
-  config.car_side_mask_gap_px = 2;
-  config.car_side_mask_y_start_ratio = 0.60f;
-  config.car_side_mask_min_road_ratio = 0.10f;
-  config.car_side_mask_min_ratio_diff = 0.10f;
   config.car_side_confirm_frames = 2;
+  config.car_side_fit_downward_extension_px = 0;
   config.car_encoder_detour_counts = 9000;
   config.car_encoder_return_counts = 1000;
   config.car_rearm_clear_frames = 3;
@@ -165,7 +159,7 @@ TEST(LaneDecisionCarTemplateTest, FarCarUsesHeightRatioEvenWhenBottomIsNearHoriz
   EXPECT_EQ(decision.debugInfo().car_template_side, "RIGHT");
 }
 
-TEST(LaneDecisionCarTemplateTest, BalancedMaskFallsBackToLeftImageSide) {
+TEST(LaneDecisionCarTemplateTest, SameHeightFitPointRightOfCarMeansCarIsLeft) {
   LaneDecision decision;
   decision.configure(makeConfig());
 
@@ -173,9 +167,11 @@ TEST(LaneDecisionCarTemplateTest, BalancedMaskFallsBackToLeftImageSide) {
       &decision, "LEFT", fullRoadMask());
   EXPECT_TRUE(state.is_valid);
   EXPECT_EQ(decision.debugInfo().car_template_side, "LEFT");
+  EXPECT_EQ(decision.debugInfo().car_side_fit_relation, "RIGHT_OF_CAR");
+  EXPECT_NEAR(decision.debugInfo().car_side_fit_y, 150.0, 1.0);
 }
 
-TEST(LaneDecisionCarTemplateTest, BalancedMaskFallsBackToRightImageSide) {
+TEST(LaneDecisionCarTemplateTest, SameHeightFitPointLeftOfCarMeansCarIsRight) {
   LaneDecision decision;
   decision.configure(makeConfig());
 
@@ -183,6 +179,19 @@ TEST(LaneDecisionCarTemplateTest, BalancedMaskFallsBackToRightImageSide) {
       &decision, "RIGHT", fullRoadMask());
   EXPECT_TRUE(state.is_valid);
   EXPECT_EQ(decision.debugInfo().car_template_side, "RIGHT");
+  EXPECT_EQ(decision.debugInfo().car_side_fit_relation, "LEFT_OF_CAR");
+}
+
+TEST(LaneDecisionCarTemplateTest, CarSideUsesLowestFitPointInDownwardExtension) {
+  auto config = makeConfig();
+  config.car_side_fit_downward_extension_px = 100;
+  LaneDecision decision;
+  decision.configure(config);
+
+  const LaneState state = confirmAndTrigger(&decision, "LEFT", roadMask());
+  EXPECT_TRUE(state.is_valid);
+  EXPECT_EQ(decision.debugInfo().car_side_fit_relation, "RIGHT_OF_CAR");
+  EXPECT_GT(decision.debugInfo().car_side_fit_y, 160.0f);
 }
 
 TEST(LaneDecisionCarTemplateTest, LeftCarUsesAllRightRoadBoundaries) {
@@ -323,7 +332,7 @@ TEST(LaneDecisionCarTemplateTest, SideAndTemplateStayLatchedAfterDetectionLoss) 
   EXPECT_NEAR(meanPointX(decision.debugInfo().fit_points), 239.0, 1.0);
 }
 
-TEST(LaneDecisionCarTemplateTest, OppositeMaskEvidenceDoesNotChangeLatchedSide) {
+TEST(LaneDecisionCarTemplateTest, OppositeFitPointEvidenceDoesNotChangeLatchedSide) {
   LaneDecision decision;
   decision.configure(makeConfig());
   (void)confirmAndTrigger(&decision, "RIGHT", roadMask());
@@ -405,6 +414,40 @@ TEST(LaneDecisionCarTemplateTest, HumanAndFinishProtectionRemainIndependent) {
   const LaneState state = decision.decide(roadMask(), {human});
   EXPECT_EQ(state.task_state, "OBSTACLE_STOP");
   EXPECT_EQ(decision.debugInfo().car_template_state, "IDLE");
+
+  const LaneState cleared_state = decision.decide(roadMask(), {});
+  EXPECT_EQ(cleared_state.task_state, "CLEAR");
+  EXPECT_FALSE(decision.debugInfo().human_stop_active);
+  EXPECT_EQ(decision.debugInfo().human_state, "NONE");
+}
+
+TEST(LaneDecisionCarTemplateTest, OnlyNearestHumanControlsAvoidance) {
+  auto config = makeConfig();
+  config.human_stop_confirm_frames = 1;
+  config.human_stop_raw_area_ratio = 0.001f;
+  LaneDecision decision;
+  decision.configure(config);
+
+  Detection far_human;
+  far_human.class_name = "Human";
+  far_human.confidence = 0.95f;
+  far_human.bbox = cv::Rect2f(140.0f, 20.0f, 40.0f, 80.0f);
+  far_human.center = cv::Point2f(160.0f, 60.0f);
+
+  Detection near_human;
+  near_human.class_name = "Human";
+  near_human.confidence = 0.95f;
+  near_human.bbox = cv::Rect2f(240.0f, 120.0f, 20.0f, 80.0f);
+  near_human.center = cv::Point2f(250.0f, 160.0f);
+
+  const LaneState state = decision.decide(roadMask(), {far_human, near_human});
+  ASSERT_EQ(decision.debugInfo().humans.size(), 2u);
+  EXPECT_EQ(decision.debugInfo().human_candidate_count, 2);
+  EXPECT_EQ(decision.debugInfo().human_valid_count, 1);
+  EXPECT_EQ(state.task_state, "CLEAR");
+  EXPECT_EQ(decision.debugInfo().human_state, "PASSABLE");
+  EXPECT_FALSE(decision.debugInfo().humans[0].active);
+  EXPECT_TRUE(decision.debugInfo().humans[1].active);
 }
 
 }  // namespace

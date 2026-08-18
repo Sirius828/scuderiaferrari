@@ -166,16 +166,8 @@ fused_perception_node:
     right_boundary_template_min_points: 6
     right_boundary_template_weight: 1.0
 
-    # 障碍保护与 Car 右边界拟合：
-    # - enable_obstacle_avoidance 是旧 band 区域扣除路径，默认关闭，保留便于回滚
-    # - Human 不参与 band/拟合点扣除，由右侧确认和有效面积规则单独处理
-    enable_obstacle_avoidance: false
-    obstacle_labels: ""
+    # Human 和 Car 使用各自独立的避障逻辑，不再通过通用 band 区域扣除拟合点。
     obstacle_min_confidence: 0.45
-    obstacle_x_margin_px: 35.0
-    obstacle_y_margin_px: 20.0
-    obstacle_max_age: 0.3
-    obstacle_min_bottom_y_ratio: 0.35
     enable_human_obstacle_stop: true
     human_horizontal_expand_px: 25.0
     human_horizontal_expand_width_ratio: 0.50
@@ -183,17 +175,10 @@ fused_perception_node:
     human_stop_raw_area_ratio: 0.004
     human_stop_confirm_frames: 2
     human_clear_confirm_frames: 2
-    # Car 通过 bbox 两侧 mask 确认侧别，再按编码器锁存安全侧边界模板绕行
+    # Car 通过同高度拟合点相对 bbox 的位置确认侧别，再按编码器锁存安全侧边界模板绕行
     enable_car_obstacle_avoidance: true
-    car_side_mask_strip_width_px: 40
-    car_side_mask_strip_height_px: 60
-    car_side_mask_gap_px: 3
-    # 从 Car 高度 60% 处向图像下方延伸，可超过 bbox 底部
-    car_side_mask_y_start_ratio: 0.60
-    car_side_mask_min_road_ratio: 0.02
-    car_side_mask_min_ratio_diff: 0.05
-    # 左右 mask 面积差小于上述阈值时，回退到 Car bbox 中心相对画面中心判定侧别
     car_side_confirm_frames: 2
+    car_side_fit_downward_extension_px: 200
     car_avoidance_min_height_ratio: 0.08
     car_avoidance_min_height_px: 12
     car_encoder_detour_counts: 9000
@@ -202,8 +187,9 @@ fused_perception_node:
     car_template_min_points: 6
     car_template_fit_order: 2
     car_template_weight: 1.0
-    car_right_template_offsets: "0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0"
-    car_left_template_offsets: "0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0"
+    # 两种 Car 模板都以 band 左边界为参考；左侧 Car 先加 band 宽度保持原右边界绝对 x
+    car_right_template_offsets: "10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0"
+    car_left_template_offsets: "-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0"
     car_encoder_fault_hold_sec: 3.0
 
     # 终点停车：Stop bbox 底部达到阈值才 FINISH_STOP

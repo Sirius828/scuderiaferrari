@@ -4,7 +4,6 @@
 #include <optional>
 #include <cstdint>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 #include "track_perception_cpp/types.hpp"
@@ -82,12 +81,7 @@ struct LaneDecisionConfig {
   int right_boundary_template_min_points{6};
   float right_boundary_template_weight{1.0f};
 
-  bool enable_obstacle_avoidance{false};
-  std::unordered_set<std::string> obstacle_labels{"Car"};
   float obstacle_min_confidence{0.45f};
-  float obstacle_x_margin_px{25.0f};
-  float obstacle_y_margin_px{20.0f};
-  float obstacle_min_bottom_y_ratio{0.30f};
   bool enable_human_obstacle_stop{true};
   float human_horizontal_expand_px{25.0f};
   float human_horizontal_expand_width_ratio{0.50f};
@@ -97,13 +91,8 @@ struct LaneDecisionConfig {
   int human_clear_confirm_frames{2};
 
   bool enable_car_obstacle_avoidance{true};
-  int car_side_mask_strip_width_px{40};
-  int car_side_mask_strip_height_px{60};
-  int car_side_mask_gap_px{3};
-  float car_side_mask_y_start_ratio{0.60f};
-  float car_side_mask_min_road_ratio{0.02f};
-  float car_side_mask_min_ratio_diff{0.05f};
   int car_side_confirm_frames{2};
+  int car_side_fit_downward_extension_px{200};
   float car_avoidance_min_height_ratio{0.08f};
   int car_avoidance_min_height_px{12};
   int64_t car_encoder_detour_counts{9000};
@@ -130,7 +119,6 @@ struct LaneSegmentDebug {
   int pixel_count{0};
   bool selected{false};
   bool virtual_segment{false};
-  bool obstacle_cut{false};
 };
 
 struct LaneBandDebug {
@@ -140,16 +128,12 @@ struct LaneBandDebug {
   int selected_center_x{-1};
 };
 
-struct LaneObstacleDebug {
-  cv::Rect2f rect;
-  std::string label;
-};
-
 struct LaneHumanDebug {
   cv::Rect2f raw_bbox;
   cv::Rect2f expanded_bbox;
   std::vector<cv::Point2f> fit_sample_points;
   float raw_area_ratio{0.0f};
+  bool active{false};
   bool fit_available{false};
   bool line_intersects{false};
   bool passable{false};
@@ -158,7 +142,6 @@ struct LaneHumanDebug {
 
 struct LaneDebugInfo {
   std::vector<LaneBandDebug> bands;
-  std::vector<LaneObstacleDebug> obstacle_zones;
   std::vector<cv::Point3f> raw_points;
   std::vector<cv::Point3f> fit_points;
   std::vector<double> fit_coeffs;
@@ -174,11 +157,14 @@ struct LaneDebugInfo {
   int human_clear_confirm_count{0};
   int human_count_at_stop{0};
   int human_valid_count{0};
+  int human_candidate_count{0};
   bool car_avoidance_active{false};
   std::string car_side{"UNKNOWN"};
   std::string car_side_candidate{"UNKNOWN"};
-  float car_left_mask_ratio{0.0f};
-  float car_right_mask_ratio{0.0f};
+  bool car_side_fit_valid{false};
+  float car_side_fit_x{-1.0f};
+  float car_side_fit_y{-1.0f};
+  std::string car_side_fit_relation{"UNKNOWN"};
   int car_side_confirm_count{0};
   std::string car_template_state{"IDLE"};
   bool car_template_active{false};
@@ -193,8 +179,6 @@ struct LaneDebugInfo {
   double car_encoder_fault_age{0.0};
   int car_rearm_clear_count{0};
   cv::Rect2f car_bbox;
-  cv::Rect car_left_mask_roi;
-  cv::Rect car_right_mask_roi;
   int fit_order{0};
   bool branch_detected{false};
   int branch_score{0};
@@ -266,7 +250,6 @@ class LaneDecision {
     double width{0.0};
     double center_x{0.0};
     int pixel_count{0};
-    bool obstacle_cut{false};
     bool virtual_segment{false};
   };
 
@@ -277,11 +260,6 @@ class LaneDecision {
     double y_center{0.0};
     std::vector<Segment> segments;
     std::optional<Segment> selected_segment;
-  };
-
-  struct ObstacleZone {
-    cv::Rect2f rect;
-    std::string label;
   };
 
   struct CenterlineKalmanState {
@@ -304,13 +282,8 @@ class LaneDecision {
     WaitClear,
   };
 
-  std::vector<Band> buildBands(const cv::Mat& road_mask, const std::vector<Detection>& detections);
-  std::vector<ObstacleZone> getActiveObstacleZones(const std::vector<Detection>& detections,
-                                                   int image_width, int image_height) const;
+  std::vector<Band> buildBands(const cv::Mat& road_mask);
   std::vector<Segment> extractSegmentsInBand(const cv::Mat& band_mask) const;
-  std::vector<Segment> applyObstacleExclusionToSegments(const std::vector<Segment>& segments,
-                                                        int band_y0, int band_y1,
-                                                        const std::vector<ObstacleZone>& zones) const;
   std::pair<bool, int> detectBranchFromBands(const std::vector<Band>& bands) const;
   std::optional<Segment> chooseTargetSegment(const Band& band, const std::string& side) const;
   RoadClass classifyRoadGeometry(const std::vector<Band>& bands,
@@ -338,8 +311,8 @@ class LaneDecision {
       const std::string& target_side, bool template_active);
   void resetCenterlineKalman();
   void resetCarAvoidanceState();
-  void updateCarAvoidanceState(const cv::Mat& seg_map,
-                               const std::vector<Detection>& detections,
+  void updateCarAvoidanceState(const std::vector<Detection>& detections,
+                               const std::vector<cv::Point3f>& fit_points,
                                int image_width, int image_height);
   std::vector<cv::Point3f> collectCarBoundaryTemplatePoints(
       std::vector<Band>& bands, int image_width,
@@ -356,7 +329,7 @@ class LaneDecision {
                             int image_height, const std::vector<double>& fit_coeffs,
                             bool fit_valid);
   std::string taskState() const;
-  void populateDebugInfo(const std::vector<Band>& bands, const std::vector<ObstacleZone>& zones,
+  void populateDebugInfo(const std::vector<Band>& bands,
                          const std::vector<cv::Point3f>& raw_points,
                          const std::vector<cv::Point3f>& fit_points,
                          int image_width, int image_height,
@@ -421,10 +394,10 @@ class LaneDecision {
   double car_right_x_{0.0};
   double car_top_y_{0.0};
   double car_bottom_y_{0.0};
-  float car_left_mask_ratio_{0.0f};
-  float car_right_mask_ratio_{0.0f};
-  cv::Rect car_left_mask_roi_;
-  cv::Rect car_right_mask_roi_;
+  bool car_side_fit_valid_{false};
+  double car_side_fit_x_{-1.0};
+  double car_side_fit_y_{-1.0};
+  std::string car_side_fit_relation_{"UNKNOWN"};
   CarTemplateState car_template_state_{CarTemplateState::Idle};
   std::string car_template_side_{"UNKNOWN"};
   int car_template_point_count_{0};

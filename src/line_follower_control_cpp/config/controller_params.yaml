@@ -17,8 +17,8 @@
 /**:
   ros__parameters:
     # 机械转向连杆消除大死区后的重新标定基线：先低速只调 P，再逐步增加 Kd。
-    Kd: 0.4
-    Kp: 0.95
+    Kd: 0.35
+    Kp: 1.02
     autonomous_enabled_on_start: false
     branch_error_recovery_rate: 0.0
     branch_error_slew_rate: 0.0
@@ -53,24 +53,23 @@
     enable_dynamic_speed: false
     enable_dynamic_steering_limit: false
     enable_geometry_stall_auto_resume: true
+    enable_line_loss_command_hold: true
     far_offset_speed_weight: 0.0
     geometry_stall_recovery_time: 0.5
     geometry_stall_timeout: 0.2
     heading_error_topic: /segmentation/heading_error
-    heading_feedback_gain: 0.1
+    heading_feedback_gain: 0.12
     high_error_rescue_speed: 0.0
     high_error_rescue_start: 0.7
     inner_side_min_linear_speed: 0.0
     inner_side_offset_threshold: 0.05
     invalid_hold_speed: 0.1
-    # 失线/LOW_CONFIDENCE 后持续重发最后一次速度和舵量，避免避障出赛道后停车
-    enable_line_loss_command_hold: true
     lane_state_topic: /perception/lane_state
     linear_speed: 1.0
     lock_branch_outer_bias: false
     lookahead_transition_gain: 0.0
-    max_steering: 0.65
-    min_linear_speed: 0.60
+    max_steering: 1.0
+    min_linear_speed: 0.6
     min_perception_confidence: 0.5
     near_offset_advantage_full: 0.3
     near_offset_advantage_start: 0.06
@@ -88,7 +87,7 @@
     qos_overrides./parameter_events.publisher.durability: volatile
     qos_overrides./parameter_events.publisher.history: keep_last
     qos_overrides./parameter_events.publisher.reliability: reliable
-    speed_accel_rate: 0.5
+    speed_accel_rate: 1.5
     speed_decel_rate: 5.0
     speed_error_rate_full: 3.0
     speed_error_rate_start: 1.5
@@ -103,4 +102,4 @@
     straight_allowed_offset: 0.05
     straight_max_steering: 0.65
     use_sim_time: false
-    wheel_radius: 0.0275 #0.032
+    wheel_radius: 0.0275

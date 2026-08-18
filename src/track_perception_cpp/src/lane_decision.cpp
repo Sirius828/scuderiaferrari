@@ -164,16 +164,9 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.encoder_feedback_timeout_sec = std::max(0.0, cfg_.encoder_feedback_timeout_sec);
   cfg_.guideboard_hint_wait_timeout_sec =
       std::max(0.0, cfg_.guideboard_hint_wait_timeout_sec);
-  cfg_.car_side_mask_strip_width_px = std::max(1, cfg_.car_side_mask_strip_width_px);
-  cfg_.car_side_mask_strip_height_px = std::max(1, cfg_.car_side_mask_strip_height_px);
-  cfg_.car_side_mask_gap_px = std::max(0, cfg_.car_side_mask_gap_px);
-  cfg_.car_side_mask_y_start_ratio =
-      clampValue(cfg_.car_side_mask_y_start_ratio, 0.0f, 1.0f);
-  cfg_.car_side_mask_min_road_ratio =
-      clampValue(cfg_.car_side_mask_min_road_ratio, 0.0f, 1.0f);
-  cfg_.car_side_mask_min_ratio_diff =
-      clampValue(cfg_.car_side_mask_min_ratio_diff, 0.0f, 1.0f);
   cfg_.car_side_confirm_frames = std::max(1, cfg_.car_side_confirm_frames);
+  cfg_.car_side_fit_downward_extension_px = std::max(
+      0, cfg_.car_side_fit_downward_extension_px);
   cfg_.car_avoidance_min_height_ratio =
       clampValue(cfg_.car_avoidance_min_height_ratio, 0.0f, 1.0f);
   cfg_.car_avoidance_min_height_px =
@@ -319,10 +312,8 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
   std::vector<cv::Point3f> fit_points;
   std::vector<double> fit_coeffs;
 
-  updateCarAvoidanceState(seg_map, detections, w, h);
-
   if (cfg_.enable_segment_branch_logic) {
-    bands = buildBands(seg_map, detections);
+    bands = buildBands(seg_map);
     auto [branch_detected, branch_score] = detectBranchFromBands(bands);
     int guideboard_count = 0;
     int guideboard_roi_count = 0;
@@ -485,6 +476,10 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     fit_points = filterCenterlinePoints(fit_points, w, last_center_x);
     fit_points = filterCenterlinePointsKalman(
         fit_points, bands, w, h, current_time, target_side, template_active);
+    // Car side detection uses the current frame's selected centerline points
+    // (the yellow band points in the debug image), before any Car template
+    // replaces the output line.
+    updateCarAvoidanceState(detections, raw_points, w, h);
     const std::vector<cv::Point3f> underlying_points = fit_points;
     std::vector<double> underlying_coeffs;
     double underlying_heading = 0.0;
@@ -736,9 +731,7 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
       debug_info_.raw_offset_y09 = static_cast<float>(raw_offsets[2]);
       debug_info_.image_width = w;
     }
-    populateDebugInfo(
-      bands, getActiveObstacleZones(detections, w, h), raw_points, fit_points,
-      w, h, fit_coeffs);
+    populateDebugInfo(bands, raw_points, fit_points, w, h, fit_coeffs);
   } else {
     cv::Mat bottom_seg = seg_map(cv::Range(h / 2, h), cv::Range::all());
     offsets.fill(fallbackCenterOffset(bottom_seg));
@@ -773,11 +766,9 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
   return state;
 }
 
-std::vector<LaneDecision::Band> LaneDecision::buildBands(
-    const cv::Mat& road_mask, const std::vector<Detection>& detections) {
+std::vector<LaneDecision::Band> LaneDecision::buildBands(const cv::Mat& road_mask) {
   int h = road_mask.rows;
   int w = road_mask.cols;
-  auto zones = getActiveObstacleZones(detections, w, h);
   int y_min = clampValue(static_cast<int>(h * cfg_.band_y_min_ratio), 0, std::max(0, h - 1));
   int y_max = clampValue(static_cast<int>(h * cfg_.band_y_max_ratio), y_min + 1, h);
   int band_height = std::max(1, static_cast<int>(h * cfg_.band_height_ratio));
@@ -796,42 +787,10 @@ std::vector<LaneDecision::Band> LaneDecision::buildBands(
     band.y1 = y1;
     band.y_center = (y0 + y1) / 2.0;
     cv::Mat band_mask = road_mask(cv::Range(y0, y1), cv::Range::all());
-    band.segments = applyObstacleExclusionToSegments(extractSegmentsInBand(band_mask), y0, y1, zones);
+    band.segments = extractSegmentsInBand(band_mask);
     bands.push_back(std::move(band));
   }
   return bands;
-}
-
-std::vector<LaneDecision::ObstacleZone> LaneDecision::getActiveObstacleZones(
-    const std::vector<Detection>& detections, int image_width, int image_height) const {
-  if (!cfg_.enable_obstacle_avoidance) {
-    return {};
-  }
-  std::vector<ObstacleZone> zones;
-  double min_bottom_y = image_height * clampValue(cfg_.obstacle_min_bottom_y_ratio, 0.0f, 1.0f);
-  for (const auto& det : detections) {
-    // Human is handled after fitting by the side-memory state machine. It must
-    // never remove road-mask segments or fit points through the legacy path.
-    if (det.class_name == "Human") {
-      continue;
-    }
-    if (!cfg_.obstacle_labels.count(det.class_name) || det.confidence < cfg_.obstacle_min_confidence) {
-      continue;
-    }
-    if (det.bbox.y + det.bbox.height < min_bottom_y) {
-      continue;
-    }
-    float x0 = std::max(0.0f, det.bbox.x - cfg_.obstacle_x_margin_px);
-    float y0 = std::max(0.0f, det.bbox.y - cfg_.obstacle_y_margin_px);
-    float x1 = std::min(static_cast<float>(image_width - 1),
-                        det.bbox.x + det.bbox.width + cfg_.obstacle_x_margin_px);
-    float y1 = std::min(static_cast<float>(image_height - 1),
-                        det.bbox.y + det.bbox.height + cfg_.obstacle_y_margin_px);
-    if (x1 > x0 && y1 > y0) {
-      zones.push_back({cv::Rect2f(x0, y0, x1 - x0, y1 - y0), det.class_name});
-    }
-  }
-  return zones;
 }
 
 std::vector<LaneDecision::Segment> LaneDecision::extractSegmentsInBand(const cv::Mat& band_mask) const {
@@ -875,57 +834,6 @@ std::vector<LaneDecision::Segment> LaneDecision::extractSegmentsInBand(const cv:
   return segments;
 }
 
-std::vector<LaneDecision::Segment> LaneDecision::applyObstacleExclusionToSegments(
-    const std::vector<Segment>& segments, int band_y0, int band_y1,
-    const std::vector<ObstacleZone>& zones) const {
-  if (segments.empty() || zones.empty()) {
-    return segments;
-  }
-  std::vector<Segment> split;
-  for (const auto& seg : segments) {
-    std::vector<std::pair<double, double>> intervals{{static_cast<double>(seg.x0), static_cast<double>(seg.x1)}};
-    for (const auto& zone : zones) {
-      if (zone.rect.y + zone.rect.height < band_y0 || zone.rect.y > band_y1) {
-        continue;
-      }
-      std::vector<std::pair<double, double>> next;
-      for (auto [x0, x1] : intervals) {
-        double cut_x0 = std::max(x0, static_cast<double>(zone.rect.x));
-        double cut_x1 = std::min(x1, static_cast<double>(zone.rect.x + zone.rect.width));
-        if (cut_x1 < x0 || cut_x0 > x1) {
-          next.emplace_back(x0, x1);
-          continue;
-        }
-        if (cut_x0 - x0 >= cfg_.min_segment_width_px) {
-          next.emplace_back(x0, cut_x0);
-        }
-        if (x1 - cut_x1 >= cfg_.min_segment_width_px) {
-          next.emplace_back(cut_x1, x1);
-        }
-      }
-      intervals = std::move(next);
-      if (intervals.empty()) {
-        break;
-      }
-    }
-    for (auto [x0, x1] : intervals) {
-      double width = x1 - x0;
-      if (width < cfg_.min_segment_width_px) {
-        continue;
-      }
-      Segment out;
-      out.x0 = static_cast<int>(std::round(x0));
-      out.x1 = static_cast<int>(std::round(x1));
-      out.width = width;
-      out.center_x = (x0 + x1) / 2.0;
-      out.pixel_count = std::max(cfg_.min_pixels_per_band,
-                                 static_cast<int>(seg.pixel_count * width / std::max(1.0, seg.width)));
-      out.obstacle_cut = true;
-      split.push_back(out);
-    }
-  }
-  return split;
-}
 
 std::pair<bool, int> LaneDecision::detectBranchFromBands(const std::vector<Band>& bands) const {
   int far_count = static_cast<int>(bands.size() * cfg_.branch_detect_far_band_ratio);
@@ -1471,10 +1379,10 @@ void LaneDecision::resetCarAvoidanceState() {
   car_right_x_ = 0.0;
   car_top_y_ = 0.0;
   car_bottom_y_ = 0.0;
-  car_left_mask_ratio_ = 0.0f;
-  car_right_mask_ratio_ = 0.0f;
-  car_left_mask_roi_ = cv::Rect();
-  car_right_mask_roi_ = cv::Rect();
+  car_side_fit_valid_ = false;
+  car_side_fit_x_ = -1.0;
+  car_side_fit_y_ = -1.0;
+  car_side_fit_relation_ = "UNKNOWN";
   car_template_state_ = CarTemplateState::Idle;
   car_template_side_ = "UNKNOWN";
   car_template_point_count_ = 0;
@@ -1496,10 +1404,11 @@ void LaneDecision::resetCarAvoidanceState() {
 }
 
 void LaneDecision::updateCarAvoidanceState(
-    const cv::Mat& seg_map, const std::vector<Detection>& detections,
+    const std::vector<Detection>& detections,
+    const std::vector<cv::Point3f>& fit_points,
     int image_width, int image_height) {
-  if (!cfg_.enable_car_obstacle_avoidance || seg_map.empty() ||
-      image_width <= 0 || image_height <= 0) {
+  if (!cfg_.enable_car_obstacle_avoidance || image_width <= 0 ||
+      image_height <= 0) {
     resetCarAvoidanceState();
     return;
   }
@@ -1538,10 +1447,10 @@ void LaneDecision::updateCarAvoidanceState(
   if (!selected_car) {
     car_detection_active_ = false;
     car_side_candidate_ = "UNKNOWN";
-    car_left_mask_roi_ = cv::Rect();
-    car_right_mask_roi_ = cv::Rect();
-    car_left_mask_ratio_ = 0.0f;
-    car_right_mask_ratio_ = 0.0f;
+    car_side_fit_valid_ = false;
+    car_side_fit_x_ = -1.0;
+    car_side_fit_y_ = -1.0;
+    car_side_fit_relation_ = "UNKNOWN";
     car_left_x_ = -1.0;
     car_right_x_ = 0.0;
     car_top_y_ = 0.0;
@@ -1572,80 +1481,64 @@ void LaneDecision::updateCarAvoidanceState(
   car_bottom_y_ = raw_bottom;
   car_detection_active_ = true;
 
-  const int roi_y0 = clampValue(
-      static_cast<int>(std::floor(
-          raw_top + (raw_bottom - raw_top) * cfg_.car_side_mask_y_start_ratio)),
-      0, image_height);
-  const int roi_y1 = clampValue(
-      roi_y0 + cfg_.car_side_mask_strip_height_px, 0, image_height);
-  const int gap = cfg_.car_side_mask_gap_px;
-  const int strip_width = cfg_.car_side_mask_strip_width_px;
-  const int left_x1 = clampValue(
-      static_cast<int>(std::floor(raw_left)) - gap, 0, image_width);
-  const int left_x0 = clampValue(left_x1 - strip_width, 0, image_width);
-  const int right_x0 = clampValue(
-      static_cast<int>(std::ceil(raw_right)) + gap, 0, image_width);
-  const int right_x1 = clampValue(right_x0 + strip_width, 0, image_width);
+  car_side_fit_valid_ = false;
+  car_side_fit_x_ = -1.0;
+  car_side_fit_y_ = -1.0;
+  car_side_fit_relation_ = "UNKNOWN";
 
-  car_left_mask_roi_ = (left_x1 > left_x0 && roi_y1 > roi_y0)
-      ? cv::Rect(left_x0, roi_y0, left_x1 - left_x0, roi_y1 - roi_y0)
-      : cv::Rect();
-  car_right_mask_roi_ = (right_x1 > right_x0 && roi_y1 > roi_y0)
-      ? cv::Rect(right_x0, roi_y0, right_x1 - right_x0, roi_y1 - roi_y0)
-      : cv::Rect();
-
-  const auto maskRatio = [&seg_map](const cv::Rect& roi) {
-    if (roi.empty()) {
-      return 0.0f;
+  // Use centerline points at the Car's vertical height.  The point does not
+  // need to be inside the bbox: a point on the Car's left means the Car
+  // occupies the road's right side, and vice versa.
+  std::vector<cv::Point3f> side_points;
+  const double sample_bottom = std::min(
+      raw_bottom + static_cast<double>(cfg_.car_side_fit_downward_extension_px),
+      max_y);
+  for (const auto& point : fit_points) {
+    if (!std::isfinite(point.x) || !std::isfinite(point.y) ||
+        point.y < raw_top || point.y > sample_bottom) {
+      continue;
     }
-    return static_cast<float>(cv::countNonZero(seg_map(roi))) /
-           static_cast<float>(roi.area());
-  };
-  car_left_mask_ratio_ = maskRatio(car_left_mask_roi_);
-  car_right_mask_ratio_ = maskRatio(car_right_mask_roi_);
+    if (point.x < raw_left || point.x > raw_right) {
+      side_points.push_back(point);
+    }
+  }
 
   std::string candidate = "UNKNOWN";
-  const bool left_roi_available = !car_left_mask_roi_.empty();
-  const bool right_roi_available = !car_right_mask_roi_.empty();
-  const bool car_touches_left_image_edge =
-      !left_roi_available && raw_left <= static_cast<double>(gap);
-  const bool car_touches_right_image_edge =
-      !right_roi_available &&
-      raw_right >= static_cast<double>(image_width - 1 - gap);
-
-  if (left_roi_available && right_roi_available) {
-    if (car_right_mask_ratio_ >= cfg_.car_side_mask_min_road_ratio &&
-        car_right_mask_ratio_ - car_left_mask_ratio_ >=
-            cfg_.car_side_mask_min_ratio_diff) {
-      candidate = "LEFT";
-    } else if (car_left_mask_ratio_ >= cfg_.car_side_mask_min_road_ratio &&
-                   car_left_mask_ratio_ - car_right_mask_ratio_ >=
-                   cfg_.car_side_mask_min_ratio_diff) {
-      candidate = "RIGHT";
-    } else if (std::abs(car_left_mask_ratio_ - car_right_mask_ratio_) <
-               cfg_.car_side_mask_min_ratio_diff) {
-      // When the two side strips contain nearly the same mask area, their
-      // occupancy is not useful for deciding which side of the track the Car
-      // occupies.  Fall back to the detection position in image space.  This
-      // is deliberately only a fallback: a sufficiently asymmetric mask
-      // keeps priority over the bbox center.
-      const double car_center_x = (raw_left + raw_right) * 0.5;
-      candidate = car_center_x < static_cast<double>(image_width) * 0.5
-          ? "LEFT"
-          : "RIGHT";
+  if (!side_points.empty()) {
+    // Prefer the point with the largest y in the Car's vertical span: it is
+    // the fitting point at the height closest to the Car's lower edge.
+    const double sample_y = std::max_element(
+        side_points.begin(), side_points.end(),
+        [](const cv::Point3f& a, const cv::Point3f& b) {
+          return a.y < b.y;
+        })->y;
+    std::vector<cv::Point3f> lowest_height_points;
+    for (const auto& point : side_points) {
+      if (std::abs(static_cast<double>(point.y) - sample_y) <= 1.0) {
+        lowest_height_points.push_back(point);
+      }
     }
-  } else if (!left_roi_available && right_roi_available &&
-             car_touches_left_image_edge &&
-             car_right_mask_ratio_ >= cfg_.car_side_mask_min_road_ratio) {
-    // The left strip is outside the image.  The valid right-side road mask
-    // is sufficient to identify a Car clipped against the left edge.
-    candidate = "LEFT";
-  } else if (left_roi_available && !right_roi_available &&
-             car_touches_right_image_edge &&
-             car_left_mask_ratio_ >= cfg_.car_side_mask_min_road_ratio) {
-    // The right strip is outside the image.  The valid left-side road mask
-    // is sufficient to identify a Car clipped against the right edge.
-    candidate = "RIGHT";
+    bool has_left_point = false;
+    bool has_right_point = false;
+    for (const auto& point : lowest_height_points) {
+      has_left_point = has_left_point || point.x < raw_left;
+      has_right_point = has_right_point || point.x > raw_right;
+    }
+    if (has_left_point && has_right_point) {
+      car_side_fit_relation_ = "AMBIGUOUS_BOTH_SIDES";
+    } else {
+      const cv::Point3f& selected_point = lowest_height_points.front();
+      car_side_fit_valid_ = true;
+      car_side_fit_x_ = selected_point.x;
+      car_side_fit_y_ = selected_point.y;
+      if (has_left_point) {
+        car_side_fit_relation_ = "LEFT_OF_CAR";
+        candidate = "RIGHT";
+      } else {
+        car_side_fit_relation_ = "RIGHT_OF_CAR";
+        candidate = "LEFT";
+      }
+    }
   }
 
   if (car_template_state_ != CarTemplateState::Idle) {
@@ -1686,9 +1579,9 @@ std::vector<cv::Point3f> LaneDecision::collectCarBoundaryTemplatePoints(
     return points;
   }
 
-  const bool use_left_boundary = car_side == "RIGHT";
-  const auto& offsets = use_left_boundary ? car_right_template_offsets_
-                                          : car_left_template_offsets_;
+  const bool car_is_on_right = car_side == "RIGHT";
+  const auto& offsets = car_is_on_right ? car_right_template_offsets_
+                                        : car_left_template_offsets_;
   std::optional<double> last_template_x;
   for (auto it_band = bands.rbegin(); it_band != bands.rend(); ++it_band) {
     auto& band = *it_band;
@@ -1701,10 +1594,17 @@ std::vector<cv::Point3f> LaneDecision::collectCarBoundaryTemplatePoints(
     if (!std::isfinite(offset)) {
       continue;
     }
+    // Both Car templates use the segment's left edge as the geometric
+    // reference.  For a Car on the left, preserve the old right-edge result
+    // by adding the detected segment width before applying the configured
+    // offset: x0 + (x1 - x0) - offset == x1 - offset.
     const auto boundary_x = [&](const Segment& segment) {
-      return use_left_boundary
-                 ? static_cast<double>(segment.x0) + offset
-                 : static_cast<double>(segment.x1) - offset;
+      const double left_reference = static_cast<double>(segment.x0);
+      if (car_is_on_right) {
+        return left_reference + offset;
+      }
+      const double segment_width = std::max(0.0, segment.width - 1.0);
+      return left_reference + segment_width - offset;
     };
 
     const Segment* selected = nullptr;
@@ -1719,13 +1619,17 @@ std::vector<cv::Point3f> LaneDecision::collectCarBoundaryTemplatePoints(
         selected = &(*it);
       }
     } else {
-      const auto it = use_left_boundary
+      const auto it = car_is_on_right
           ? std::min_element(
                 band.segments.begin(), band.segments.end(),
-                [](const Segment& a, const Segment& b) { return a.x0 < b.x0; })
+                [&](const Segment& a, const Segment& b) {
+                  return boundary_x(a) < boundary_x(b);
+                })
           : std::max_element(
                 band.segments.begin(), band.segments.end(),
-                [](const Segment& a, const Segment& b) { return a.x1 < b.x1; });
+                [&](const Segment& a, const Segment& b) {
+                  return boundary_x(a) < boundary_x(b);
+                });
       if (it != band.segments.end()) {
         selected = &(*it);
       }
@@ -1950,6 +1854,7 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
   debug_info_.human_clear_confirm_count = human_clear_confirm_count_;
   debug_info_.human_count_at_stop = human_count_at_stop_;
   debug_info_.human_valid_count = 0;
+  debug_info_.human_candidate_count = 0;
 
   if (!cfg_.enable_human_obstacle_stop || image_width <= 0 || image_height <= 0) {
     human_stop_active_ = false;
@@ -1962,6 +1867,7 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
     debug_info_.human_stop_confirm_count = 0;
     debug_info_.human_clear_confirm_count = 0;
     debug_info_.human_count_at_stop = 0;
+    debug_info_.human_candidate_count = 0;
     return;
   }
 
@@ -1977,6 +1883,17 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
   bool any_no_fit_human = false;
   int valid_human_count = 0;
   double maximum_raw_area_ratio = 0.0;
+
+  struct HumanCandidate {
+    const Detection* detection{nullptr};
+    double raw_bottom{0.0};
+    double raw_area_ratio{0.0};
+    double expanded_left{0.0};
+    double expanded_right{0.0};
+    double expanded_top{0.0};
+    double expanded_bottom{0.0};
+  };
+  std::vector<HumanCandidate> candidates;
 
   for (const auto& det : detections) {
     if (det.class_name != "Human" ||
@@ -2004,61 +1921,92 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
       continue;
     }
 
-    has_valid_human = true;
-    ++valid_human_count;
-    const double expanded_width = expanded_right - expanded_left;
-    const double expanded_height = expanded_bottom - expanded_top;
     const double raw_area_ratio = image_area > 0.0
                                       ? clampValue(static_cast<double>(det.bbox.width) *
                                                        det.bbox.height / image_area,
                                                    0.0, 1.0)
                                       : 0.0;
-    maximum_raw_area_ratio = std::max(maximum_raw_area_ratio, raw_area_ratio);
+    candidates.push_back({
+        &det, raw_bottom, raw_area_ratio, expanded_left, expanded_right,
+        expanded_top, expanded_bottom});
+  }
 
-    LaneHumanDebug human_debug;
-    human_debug.raw_bbox = det.bbox;
-    human_debug.expanded_bbox = cv::Rect2f(
-        static_cast<float>(expanded_left), static_cast<float>(expanded_top),
-        static_cast<float>(expanded_width), static_cast<float>(expanded_height));
-    human_debug.raw_area_ratio = static_cast<float>(raw_area_ratio);
+  debug_info_.human_candidate_count = static_cast<int>(candidates.size());
+  if (!candidates.empty()) {
+    const auto nearest_it = std::max_element(
+        candidates.begin(), candidates.end(),
+        [](const HumanCandidate& a, const HumanCandidate& b) {
+          if (a.raw_bottom != b.raw_bottom) {
+            return a.raw_bottom < b.raw_bottom;
+          }
+          if (a.raw_area_ratio != b.raw_area_ratio) {
+            return a.raw_area_ratio < b.raw_area_ratio;
+          }
+          return a.detection->confidence < b.detection->confidence;
+        });
+    const size_t nearest_index = static_cast<size_t>(nearest_it - candidates.begin());
+    has_valid_human = true;
+    valid_human_count = 1;
 
-    bool line_samples_valid = fit_available;
-    bool line_intersects = false;
-    if (line_samples_valid) {
-      human_debug.fit_sample_points.reserve(
-          static_cast<size_t>(cfg_.human_line_sample_count));
-      const double sample_denominator =
-          static_cast<double>(cfg_.human_line_sample_count - 1);
-      for (int sample_index = 0; sample_index < cfg_.human_line_sample_count;
-           ++sample_index) {
-        const double ratio = static_cast<double>(sample_index) / sample_denominator;
-        const double sample_y = expanded_top + expanded_height * ratio;
-        const double sample_x = evalPoly(fit_coeffs, sample_y);
-        if (!std::isfinite(sample_x)) {
-          line_samples_valid = false;
-          human_debug.fit_sample_points.clear();
-          break;
-        }
-        human_debug.fit_sample_points.emplace_back(static_cast<float>(sample_x),
-                                                    static_cast<float>(sample_y));
-        if (sample_x >= expanded_left && sample_x <= expanded_right) {
-          line_intersects = true;
+    for (size_t candidate_index = 0; candidate_index < candidates.size(); ++candidate_index) {
+      const auto& candidate = candidates[candidate_index];
+      const auto& det = *candidate.detection;
+      const bool active = candidate_index == nearest_index;
+      const double expanded_width = candidate.expanded_right - candidate.expanded_left;
+      const double expanded_height = candidate.expanded_bottom - candidate.expanded_top;
+
+      LaneHumanDebug human_debug;
+      human_debug.raw_bbox = det.bbox;
+      human_debug.expanded_bbox = cv::Rect2f(
+          static_cast<float>(candidate.expanded_left),
+          static_cast<float>(candidate.expanded_top),
+          static_cast<float>(expanded_width),
+          static_cast<float>(expanded_height));
+      human_debug.raw_area_ratio = static_cast<float>(candidate.raw_area_ratio);
+      human_debug.active = active;
+
+      bool line_samples_valid = fit_available;
+      bool line_intersects = false;
+      if (line_samples_valid) {
+        human_debug.fit_sample_points.reserve(
+            static_cast<size_t>(cfg_.human_line_sample_count));
+        const double sample_denominator =
+            static_cast<double>(cfg_.human_line_sample_count - 1);
+        for (int sample_index = 0; sample_index < cfg_.human_line_sample_count;
+             ++sample_index) {
+          const double ratio = static_cast<double>(sample_index) / sample_denominator;
+          const double sample_y = candidate.expanded_top + expanded_height * ratio;
+          const double sample_x = evalPoly(fit_coeffs, sample_y);
+          if (!std::isfinite(sample_x)) {
+            line_samples_valid = false;
+            human_debug.fit_sample_points.clear();
+            break;
+          }
+          human_debug.fit_sample_points.emplace_back(static_cast<float>(sample_x),
+                                                      static_cast<float>(sample_y));
+          if (sample_x >= candidate.expanded_left &&
+              sample_x <= candidate.expanded_right) {
+            line_intersects = true;
+          }
         }
       }
+      human_debug.fit_available = line_samples_valid;
+      human_debug.line_intersects = line_samples_valid && line_intersects;
+
+      const bool passable = line_samples_valid && !line_intersects;
+      const bool stop_candidate = !passable && candidate.raw_area_ratio >= area_threshold;
+      human_debug.passable = passable;
+      human_debug.stop_candidate = stop_candidate;
+      debug_info_.humans.push_back(human_debug);
+
+      if (active) {
+        maximum_raw_area_ratio = candidate.raw_area_ratio;
+        all_current_humans_passable = passable;
+        any_line_intersects = human_debug.line_intersects;
+        any_stop_candidate = stop_candidate;
+        any_no_fit_human = !line_samples_valid;
+      }
     }
-    human_debug.fit_available = line_samples_valid;
-    human_debug.line_intersects = line_samples_valid && line_intersects;
-
-    const bool passable = line_samples_valid && !line_intersects;
-    const bool stop_candidate = !passable && raw_area_ratio >= area_threshold;
-    human_debug.passable = passable;
-    human_debug.stop_candidate = stop_candidate;
-    debug_info_.humans.push_back(human_debug);
-
-    all_current_humans_passable = all_current_humans_passable && passable;
-    any_line_intersects = any_line_intersects || human_debug.line_intersects;
-    any_stop_candidate = any_stop_candidate || stop_candidate;
-    any_no_fit_human = any_no_fit_human || !line_samples_valid;
   }
 
   if (!human_stop_active_) {
@@ -2074,19 +2022,28 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
       human_count_at_stop_ = valid_human_count;
     }
   } else {
-    const bool clear_evidence = has_valid_human && fit_available &&
-                                all_current_humans_passable &&
-                                valid_human_count >= human_count_at_stop_;
-    if (clear_evidence) {
-      ++human_clear_confirm_count_;
-      if (human_clear_confirm_count_ >= cfg_.human_clear_confirm_frames) {
-        human_stop_active_ = false;
-        human_stop_confirm_count_ = 0;
-        human_clear_confirm_count_ = 0;
-        human_count_at_stop_ = 0;
-      }
-    } else {
+    // Detection loss is now treated as clearance.  Keep the stop latched
+    // while a Human is still observed but unsafe; once no valid Human remains
+    // in the current frame, let the execution layer resume the controller.
+    if (!has_valid_human) {
+      human_stop_active_ = false;
+      human_stop_confirm_count_ = 0;
       human_clear_confirm_count_ = 0;
+      human_count_at_stop_ = 0;
+    } else {
+      const bool clear_evidence = fit_available && all_current_humans_passable &&
+                                  valid_human_count >= human_count_at_stop_;
+      if (clear_evidence) {
+        ++human_clear_confirm_count_;
+        if (human_clear_confirm_count_ >= cfg_.human_clear_confirm_frames) {
+          human_stop_active_ = false;
+          human_stop_confirm_count_ = 0;
+          human_clear_confirm_count_ = 0;
+          human_count_at_stop_ = 0;
+        }
+      } else {
+        human_clear_confirm_count_ = 0;
+      }
     }
   }
 
@@ -2128,21 +2085,21 @@ std::string LaneDecision::taskState() const {
 }
 
 void LaneDecision::populateDebugInfo(const std::vector<Band>& bands,
-                                     const std::vector<ObstacleZone>& zones,
                                      const std::vector<cv::Point3f>& raw_points,
                                      const std::vector<cv::Point3f>& fit_points,
                                      int image_width, int image_height,
                                      const std::vector<double>& fit_coeffs) {
   debug_info_.bands.clear();
-  debug_info_.obstacle_zones.clear();
   debug_info_.raw_points = raw_points;
   debug_info_.fit_points = fit_points;
   debug_info_.fit_coeffs = fit_coeffs;
   debug_info_.car_avoidance_active = car_avoidance_active_;
   debug_info_.car_side = car_side_;
   debug_info_.car_side_candidate = car_side_candidate_;
-  debug_info_.car_left_mask_ratio = car_left_mask_ratio_;
-  debug_info_.car_right_mask_ratio = car_right_mask_ratio_;
+  debug_info_.car_side_fit_valid = car_side_fit_valid_;
+  debug_info_.car_side_fit_x = static_cast<float>(car_side_fit_x_);
+  debug_info_.car_side_fit_y = static_cast<float>(car_side_fit_y_);
+  debug_info_.car_side_fit_relation = car_side_fit_relation_;
   debug_info_.car_side_confirm_count = car_side_confirm_count_;
   debug_info_.car_template_state = carTemplateStateName();
   debug_info_.car_template_active = car_avoidance_active_;
@@ -2157,8 +2114,6 @@ void LaneDecision::populateDebugInfo(const std::vector<Band>& bands,
       static_cast<float>(car_encoder_return_progress_);
   debug_info_.car_encoder_fault_age = car_encoder_fault_age_;
   debug_info_.car_rearm_clear_count = car_rearm_clear_count_;
-  debug_info_.car_left_mask_roi = car_left_mask_roi_;
-  debug_info_.car_right_mask_roi = car_right_mask_roi_;
   if (car_detection_active_) {
     debug_info_.car_bbox = cv::Rect2f(
         static_cast<float>(car_left_x_), static_cast<float>(car_top_y_),
@@ -2191,9 +2146,6 @@ void LaneDecision::populateDebugInfo(const std::vector<Band>& bands,
   debug_info_.fit_point_count = static_cast<int>(fit_points.size());
   debug_info_.segment_count = 0;
 
-  for (const auto& zone : zones) {
-    debug_info_.obstacle_zones.push_back({zone.rect, zone.label});
-  }
   for (const auto& band : bands) {
     LaneBandDebug bd;
     bd.y0 = band.y0;
@@ -2209,7 +2161,6 @@ void LaneDecision::populateDebugInfo(const std::vector<Band>& bands,
       sd.x1 = seg.x1;
       sd.center_x = static_cast<int>(std::round(seg.center_x));
       sd.pixel_count = seg.pixel_count;
-      sd.obstacle_cut = seg.obstacle_cut;
       if (band.selected_segment && std::abs(band.selected_segment->center_x - seg.center_x) < 1e-3) {
         sd.selected = true;
       }

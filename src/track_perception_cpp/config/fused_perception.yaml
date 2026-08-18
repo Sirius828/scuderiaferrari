@@ -57,7 +57,7 @@ fused_perception_node:
     seg_crop_y0_ratio: 0.45
     seg_crop_y1_ratio: 1.0
     seg_pad_value: 114
-    seg_conf_threshold: 0.15
+    seg_conf_threshold: 0.30
     # 与 Ultralytics predict(..., iou=0.7) 对齐：同类别仅按 box IoU 做 NMS。
     # 不再使用 containment 抑制，否则大框会把其中真实的小区域 mask 筛掉。
     seg_nms_threshold: 0.70
@@ -161,9 +161,9 @@ fused_perception_node:
     heading_near_ratio: 0.81
     heading_mid_ratio: 0.68
     heading_far_ratio: 0.55
-    heading_near_weight: 0.20
+    heading_near_weight: 0.10
     heading_mid_weight: 0.50
-    heading_far_weight: 0.30
+    heading_far_weight: 0.40
     heading_local_window_half_ratio: 0.06
     heading_local_min_points: 3
     # 每个 band 的中心 x 在曲线拟合前独立做一维卡尔曼滤波。
@@ -193,44 +193,30 @@ fused_perception_node:
     right_boundary_template_min_points: 6
     right_boundary_template_weight: 1.0
 
-    # 障碍保护与 Car 右边界拟合：
-    # - enable_obstacle_avoidance 是旧 band 区域扣除路径，默认关闭，保留便于回滚
-    # - Human 不参与 band/拟合点扣除，由左右膨胀框与拟合线相交规则单独处理
-    enable_obstacle_avoidance: true
-    obstacle_labels: ""
+    # Human 和 Car 使用各自独立的避障逻辑，不再通过通用 band 区域扣除拟合点。
     obstacle_min_confidence: 0.45
-    obstacle_x_margin_px: 35.0
-    obstacle_y_margin_px: 20.0
-    obstacle_max_age: 0.3
-    obstacle_min_bottom_y_ratio: 0.35
     enable_human_obstacle_stop: true
-    human_horizontal_expand_px: 25.0
+    human_horizontal_expand_px: 10.0
     human_horizontal_expand_width_ratio: 2.0
     human_line_sample_count: 5
-    human_stop_raw_area_ratio: 0.004
+    human_stop_raw_area_ratio: 0.003
     human_stop_confirm_frames: 2
     human_clear_confirm_frames: 2
-    # Car 通过 bbox 两侧 mask 确认侧别，再按编码器锁存安全侧边界模板绕行
+    # Car 通过同高度拟合点相对 bbox 的位置确认侧别，再按编码器锁存安全侧边界模板绕行
     enable_car_obstacle_avoidance: true
-    car_side_mask_strip_width_px: 40
-    car_side_mask_strip_height_px: 150
-    car_side_mask_gap_px: 3
-    # 从 Car 高度 60% 处向图像下方延伸，可超过 bbox 底部
-    car_side_mask_y_start_ratio: 0.60
-    car_side_mask_min_road_ratio: 0.02
-    car_side_mask_min_ratio_diff: 0.05
-    # 左右 mask 面积差小于上述阈值时，回退到 Car bbox 中心相对画面中心判定侧别
     car_side_confirm_frames: 2
-    car_avoidance_min_height_ratio: 0.07
+    car_side_fit_downward_extension_px: 20
+    car_avoidance_min_height_ratio: 0.065
     car_avoidance_min_height_px: 12
-    car_encoder_detour_counts: 8000
-    car_encoder_return_counts: 1000
+    car_encoder_detour_counts: 7500
+    car_encoder_return_counts: 4000
     car_rearm_clear_frames: 3
     car_template_min_points: 6
     car_template_fit_order: 2
     car_template_weight: 1.0
-    car_right_template_offsets: "0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0"
-    car_left_template_offsets: "0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0"
+    # 两种 Car 模板都以 band 左边界为参考；左侧 Car 先加 band 宽度保持原右边界绝对 x
+    car_right_template_offsets: "-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0,-20.0"
+    car_left_template_offsets: "-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0,-40.0"
     car_encoder_fault_hold_sec: 3.0
 
     # 终点停车：Stop bbox 底部达到阈值才 FINISH_STOP
