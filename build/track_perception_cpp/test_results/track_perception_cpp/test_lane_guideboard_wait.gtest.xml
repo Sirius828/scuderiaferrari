@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites tests="6" failures="0" disabled="0" errors="0" time="0.032" timestamp="2026-08-18T02:52:55" name="AllTests">
-  <testsuite name="LaneGuideboardWaitTest" tests="6" failures="0" disabled="0" errors="0" time="0.032" timestamp="2026-08-18T02:52:55">
-    <testcase name="WaitsForHintThenFallsBackStraight" status="run" result="completed" time="0.031" timestamp="2026-08-18T02:52:55" classname="track_perception_cpp.LaneGuideboardWaitTest" />
-    <testcase name="StableHintLocksImmediately" status="run" result="completed" time="0" timestamp="2026-08-18T02:52:55" classname="track_perception_cpp.LaneGuideboardWaitTest" />
-    <testcase name="NoGuideboardLocksStraightWithoutHintWait" status="run" result="completed" time="0" timestamp="2026-08-18T02:52:55" classname="track_perception_cpp.LaneGuideboardWaitTest" />
-    <testcase name="UsesLateHintAfterGuideboardLeavesRoi" status="run" result="completed" time="0" timestamp="2026-08-18T02:52:55" classname="track_perception_cpp.LaneGuideboardWaitTest" />
-    <testcase name="PropagatesRouteDecisionSource" status="run" result="completed" time="0" timestamp="2026-08-18T02:52:55" classname="track_perception_cpp.LaneGuideboardWaitTest" />
-    <testcase name="RearmsOnlyAfterHoldEndsAndBranchClears" status="run" result="completed" time="0.001" timestamp="2026-08-18T02:52:55" classname="track_perception_cpp.LaneGuideboardWaitTest" />
+<testsuites tests="6" failures="0" disabled="0" errors="0" time="0.031" timestamp="2026-08-19T04:13:46" name="AllTests">
+  <testsuite name="LaneGuideboardWaitTest" tests="6" failures="0" disabled="0" errors="0" time="0.031" timestamp="2026-08-19T04:13:46">
+    <testcase name="WaitsForHintThenFallsBackStraight" status="run" result="completed" time="0.03" timestamp="2026-08-19T04:13:46" classname="track_perception_cpp.LaneGuideboardWaitTest" />
+    <testcase name="StableHintLocksImmediately" status="run" result="completed" time="0" timestamp="2026-08-19T04:13:46" classname="track_perception_cpp.LaneGuideboardWaitTest" />
+    <testcase name="NoGuideboardLocksStraightWithoutHintWait" status="run" result="completed" time="0" timestamp="2026-08-19T04:13:46" classname="track_perception_cpp.LaneGuideboardWaitTest" />
+    <testcase name="UsesLateHintAfterGuideboardLeavesRoi" status="run" result="completed" time="0" timestamp="2026-08-19T04:13:46" classname="track_perception_cpp.LaneGuideboardWaitTest" />
+    <testcase name="PropagatesRouteDecisionSource" status="run" result="completed" time="0" timestamp="2026-08-19T04:13:46" classname="track_perception_cpp.LaneGuideboardWaitTest" />
+    <testcase name="RearmsOnlyAfterHoldEndsAndBranchClears" status="run" result="completed" time="0" timestamp="2026-08-19T04:13:46" classname="track_perception_cpp.LaneGuideboardWaitTest" />
   </testsuite>
 </testsuites>

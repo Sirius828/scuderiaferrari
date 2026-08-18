@@ -2,50 +2,56 @@
  - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_decision_car_boundary --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_car_boundary.gtest.xml
 
 Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
-[==========] Running 18 tests from 1 test suite.
+[==========] Running 21 tests from 1 test suite.
 [----------] Global test environment set-up.
-[----------] 18 tests from LaneDecisionCarTemplateTest
+[----------] 21 tests from LaneDecisionCarTemplateTest
 [ RUN      ] LaneDecisionCarTemplateTest.NoCarLeavesOrdinaryQuadraticFitUnchanged
 [       OK ] LaneDecisionCarTemplateTest.NoCarLeavesOrdinaryQuadraticFitUnchanged (1 ms)
 [ RUN      ] LaneDecisionCarTemplateTest.RightCarUsesAllLeftRoadBoundaries
-[       OK ] LaneDecisionCarTemplateTest.RightCarUsesAllLeftRoadBoundaries (1 ms)
+[       OK ] LaneDecisionCarTemplateTest.RightCarUsesAllLeftRoadBoundaries (0 ms)
 [ RUN      ] LaneDecisionCarTemplateTest.FarCarUsesHeightRatioEvenWhenBottomIsNearHorizon
 [       OK ] LaneDecisionCarTemplateTest.FarCarUsesHeightRatioEvenWhenBottomIsNearHorizon (1 ms)
-[ RUN      ] LaneDecisionCarTemplateTest.BalancedMaskFallsBackToLeftImageSide
-[       OK ] LaneDecisionCarTemplateTest.BalancedMaskFallsBackToLeftImageSide (1 ms)
-[ RUN      ] LaneDecisionCarTemplateTest.BalancedMaskFallsBackToRightImageSide
-[       OK ] LaneDecisionCarTemplateTest.BalancedMaskFallsBackToRightImageSide (0 ms)
-[ RUN      ] LaneDecisionCarTemplateTest.LeftCarUsesAllRightRoadBoundaries
-[       OK ] LaneDecisionCarTemplateTest.LeftCarUsesAllRightRoadBoundaries (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.SameHeightFitPointRightOfCarMeansCarIsLeft
+[       OK ] LaneDecisionCarTemplateTest.SameHeightFitPointRightOfCarMeansCarIsLeft (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.SameHeightFitPointLeftOfCarMeansCarIsRight
+[       OK ] LaneDecisionCarTemplateTest.SameHeightFitPointLeftOfCarMeansCarIsRight (0 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.CarSideUsesLowestFitPointInDownwardExtension
+[       OK ] LaneDecisionCarTemplateTest.CarSideUsesLowestFitPointInDownwardExtension (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.LeftCarUsesLeftBoundaryOffsets
+[       OK ] LaneDecisionCarTemplateTest.LeftCarUsesLeftBoundaryOffsets (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.LeftCarUsesDirectPerBandEmpiricalOffsets
+[       OK ] LaneDecisionCarTemplateTest.LeftCarUsesDirectPerBandEmpiricalOffsets (0 ms)
 [ RUN      ] LaneDecisionCarTemplateTest.PerBandOffsetsMoveTemplateTowardRoadInterior
 [       OK ] LaneDecisionCarTemplateTest.PerBandOffsetsMoveTemplateTowardRoadInterior (1 ms)
 [ RUN      ] LaneDecisionCarTemplateTest.DoesNotStartWithoutEnoughTemplatePoints
 [       OK ] LaneDecisionCarTemplateTest.DoesNotStartWithoutEnoughTemplatePoints (1 ms)
 [ RUN      ] LaneDecisionCarTemplateTest.DoesNotStartWithStaleEncoderFeedback
-[       OK ] LaneDecisionCarTemplateTest.DoesNotStartWithStaleEncoderFeedback (1 ms)
+[       OK ] LaneDecisionCarTemplateTest.DoesNotStartWithStaleEncoderFeedback (0 ms)
 [ RUN      ] LaneDecisionCarTemplateTest.ActiveDetourKeepsCachedTemplateWhenBandsDisappear
-[       OK ] LaneDecisionCarTemplateTest.ActiveDetourKeepsCachedTemplateWhenBandsDisappear (5 ms)
+[       OK ] LaneDecisionCarTemplateTest.ActiveDetourKeepsCachedTemplateWhenBandsDisappear (1 ms)
 [ RUN      ] LaneDecisionCarTemplateTest.EncoderTransitionsAtExactBoundariesAndBlendsReturn
-[       OK ] LaneDecisionCarTemplateTest.EncoderTransitionsAtExactBoundariesAndBlendsReturn (1 ms)
+[       OK ] LaneDecisionCarTemplateTest.EncoderTransitionsAtExactBoundariesAndBlendsReturn (2 ms)
 [ RUN      ] LaneDecisionCarTemplateTest.WaitClearRequiresThreeConsecutiveNoCarFrames
-[       OK ] LaneDecisionCarTemplateTest.WaitClearRequiresThreeConsecutiveNoCarFrames (1 ms)
+[       OK ] LaneDecisionCarTemplateTest.WaitClearRequiresThreeConsecutiveNoCarFrames (2 ms)
 [ RUN      ] LaneDecisionCarTemplateTest.SideAndTemplateStayLatchedAfterDetectionLoss
-[       OK ] LaneDecisionCarTemplateTest.SideAndTemplateStayLatchedAfterDetectionLoss (0 ms)
-[ RUN      ] LaneDecisionCarTemplateTest.OppositeMaskEvidenceDoesNotChangeLatchedSide
-[       OK ] LaneDecisionCarTemplateTest.OppositeMaskEvidenceDoesNotChangeLatchedSide (1 ms)
+[       OK ] LaneDecisionCarTemplateTest.SideAndTemplateStayLatchedAfterDetectionLoss (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.OppositeFitPointEvidenceDoesNotChangeLatchedSide
+[       OK ] LaneDecisionCarTemplateTest.OppositeFitPointEvidenceDoesNotChangeLatchedSide (1 ms)
 [ RUN      ] LaneDecisionCarTemplateTest.ShortEncoderFaultHoldsTemplate
-[       OK ] LaneDecisionCarTemplateTest.ShortEncoderFaultHoldsTemplate (0 ms)
+[       OK ] LaneDecisionCarTemplateTest.ShortEncoderFaultHoldsTemplate (1 ms)
 [ RUN      ] LaneDecisionCarTemplateTest.EncoderRollbackUsesFaultExitInsteadOfAbsoluteDelta
-[       OK ] LaneDecisionCarTemplateTest.EncoderRollbackUsesFaultExitInsteadOfAbsoluteDelta (551 ms)
+[       OK ] LaneDecisionCarTemplateTest.EncoderRollbackUsesFaultExitInsteadOfAbsoluteDelta (552 ms)
 [ RUN      ] LaneDecisionCarTemplateTest.BranchEncoderContinuesWhileCarOverridesOutput
-[       OK ] LaneDecisionCarTemplateTest.BranchEncoderContinuesWhileCarOverridesOutput (0 ms)
+[       OK ] LaneDecisionCarTemplateTest.BranchEncoderContinuesWhileCarOverridesOutput (1 ms)
 [ RUN      ] LaneDecisionCarTemplateTest.HumanAndFinishProtectionRemainIndependent
-[       OK ] LaneDecisionCarTemplateTest.HumanAndFinishProtectionRemainIndependent (0 ms)
-[----------] 18 tests from LaneDecisionCarTemplateTest (567 ms total)
+[       OK ] LaneDecisionCarTemplateTest.HumanAndFinishProtectionRemainIndependent (1 ms)
+[ RUN      ] LaneDecisionCarTemplateTest.OnlyNearestHumanControlsAvoidance
+[       OK ] LaneDecisionCarTemplateTest.OnlyNearestHumanControlsAvoidance (0 ms)
+[----------] 21 tests from LaneDecisionCarTemplateTest (569 ms total)
 
 [----------] Global test environment tear-down
-[==========] 18 tests from 1 test suite ran. (567 ms total)
-[  PASSED  ] 18 tests.
+[==========] 21 tests from 1 test suite ran. (569 ms total)
+[  PASSED  ] 21 tests.
 
 
 -- run_test.py: return code 0

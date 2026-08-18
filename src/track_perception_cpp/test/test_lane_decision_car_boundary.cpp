@@ -194,7 +194,7 @@ TEST(LaneDecisionCarTemplateTest, CarSideUsesLowestFitPointInDownwardExtension) 
   EXPECT_GT(decision.debugInfo().car_side_fit_y, 160.0f);
 }
 
-TEST(LaneDecisionCarTemplateTest, LeftCarUsesAllRightRoadBoundaries) {
+TEST(LaneDecisionCarTemplateTest, LeftCarUsesLeftBoundaryOffsets) {
   LaneDecision decision;
   decision.configure(makeConfig());
 
@@ -204,13 +204,30 @@ TEST(LaneDecisionCarTemplateTest, LeftCarUsesAllRightRoadBoundaries) {
   EXPECT_EQ(debug.car_template_state, "DETOUR");
   EXPECT_EQ(debug.car_template_side, "LEFT");
   for (const auto& point : debug.fit_points) {
-    EXPECT_NEAR(point.x, 239.0, 1.0);
+    EXPECT_NEAR(point.x, 80.0, 1.0);
+  }
+}
+
+TEST(LaneDecisionCarTemplateTest, LeftCarUsesDirectPerBandEmpiricalOffsets) {
+  auto config = makeConfig();
+  config.car_left_template_offsets = "100,100,100,100,100,100,100,100,100,100,100,100";
+  LaneDecision decision;
+  decision.configure(config);
+
+  const LaneState state = confirmAndTrigger(&decision, "LEFT", roadMask());
+  const auto& debug = decision.debugInfo();
+  EXPECT_TRUE(state.is_valid);
+  EXPECT_EQ(debug.car_template_state, "DETOUR");
+  EXPECT_EQ(debug.car_template_side, "LEFT");
+  ASSERT_EQ(debug.fit_points.size(), 12u);
+  for (const auto& point : debug.fit_points) {
+    EXPECT_NEAR(point.x, 180.0, 1.0);
   }
 }
 
 TEST(LaneDecisionCarTemplateTest, PerBandOffsetsMoveTemplateTowardRoadInterior) {
   auto config = makeConfig();
-  config.car_right_template_offsets = "5,5,5";
+  config.car_right_template_offsets = "5,5,5,0,0,0,0,0,0,0,0,0";
   LaneDecision decision;
   decision.configure(config);
 
@@ -329,7 +346,7 @@ TEST(LaneDecisionCarTemplateTest, SideAndTemplateStayLatchedAfterDetectionLoss) 
   (void)decision.decide(roadMask(), {});
   EXPECT_EQ(decision.debugInfo().car_template_state, "DETOUR");
   EXPECT_EQ(decision.debugInfo().car_template_side, "LEFT");
-  EXPECT_NEAR(meanPointX(decision.debugInfo().fit_points), 239.0, 1.0);
+  EXPECT_NEAR(meanPointX(decision.debugInfo().fit_points), 80.0, 1.0);
 }
 
 TEST(LaneDecisionCarTemplateTest, OppositeFitPointEvidenceDoesNotChangeLatchedSide) {

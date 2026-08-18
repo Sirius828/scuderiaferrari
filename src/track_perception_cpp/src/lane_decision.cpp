@@ -1585,26 +1585,20 @@ std::vector<cv::Point3f> LaneDecision::collectCarBoundaryTemplatePoints(
   std::optional<double> last_template_x;
   for (auto it_band = bands.rbegin(); it_band != bands.rend(); ++it_band) {
     auto& band = *it_band;
-    if (band.segments.empty()) {
+    if (band.segments.empty() || band.index < 0 ||
+        band.index >= static_cast<int>(offsets.size())) {
       continue;
     }
-    const double offset = band.index < static_cast<int>(offsets.size())
-                              ? offsets[band.index]
-                              : 0.0;
+    const double offset = offsets[band.index];
     if (!std::isfinite(offset)) {
       continue;
     }
-    // Both Car templates use the segment's left edge as the geometric
-    // reference.  For a Car on the left, preserve the old right-edge result
-    // by adding the detected segment width before applying the configured
-    // offset: x0 + (x1 - x0) - offset == x1 - offset.
+    // Both Car directions use the continuous road left boundary as the only
+    // geometric reference.  The per-band offset is empirical and is applied
+    // directly; it is intentionally not normalized by image height, segment
+    // width, or any other detected geometry.
     const auto boundary_x = [&](const Segment& segment) {
-      const double left_reference = static_cast<double>(segment.x0);
-      if (car_is_on_right) {
-        return left_reference + offset;
-      }
-      const double segment_width = std::max(0.0, segment.width - 1.0);
-      return left_reference + segment_width - offset;
+      return static_cast<double>(segment.x0) + offset;
     };
 
     const Segment* selected = nullptr;
@@ -1619,17 +1613,11 @@ std::vector<cv::Point3f> LaneDecision::collectCarBoundaryTemplatePoints(
         selected = &(*it);
       }
     } else {
-      const auto it = car_is_on_right
-          ? std::min_element(
-                band.segments.begin(), band.segments.end(),
-                [&](const Segment& a, const Segment& b) {
-                  return boundary_x(a) < boundary_x(b);
-                })
-          : std::max_element(
-                band.segments.begin(), band.segments.end(),
-                [&](const Segment& a, const Segment& b) {
-                  return boundary_x(a) < boundary_x(b);
-                });
+      const auto it = std::min_element(
+          band.segments.begin(), band.segments.end(),
+          [&](const Segment& a, const Segment& b) {
+            return boundary_x(a) < boundary_x(b);
+          });
       if (it != band.segments.end()) {
         selected = &(*it);
       }

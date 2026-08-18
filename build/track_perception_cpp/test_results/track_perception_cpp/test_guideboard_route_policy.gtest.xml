@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites tests="5" failures="0" disabled="0" errors="0" time="0" timestamp="2026-08-18T02:52:54" name="AllTests">
-  <testsuite name="GuideboardRoutePolicyTest" tests="5" failures="0" disabled="0" errors="0" time="0" timestamp="2026-08-18T02:52:54">
-    <testcase name="FirstStraightMakesSecondRightWithoutRecognition" status="run" result="completed" time="0" timestamp="2026-08-18T02:52:54" classname="track_perception_cpp.GuideboardRoutePolicyTest" />
-    <testcase name="FirstRightMakesSecondStraightWithoutRecognition" status="run" result="completed" time="0" timestamp="2026-08-18T02:52:54" classname="track_perception_cpp.GuideboardRoutePolicyTest" />
-    <testcase name="FirstFailureRequiresSecondRecoveryRecognition" status="run" result="completed" time="0" timestamp="2026-08-18T02:52:54" classname="track_perception_cpp.GuideboardRoutePolicyTest" />
-    <testcase name="SecondRecoveryFailureFallsBackStraightAndFinishes" status="run" result="completed" time="0" timestamp="2026-08-18T02:52:54" classname="track_perception_cpp.GuideboardRoutePolicyTest" />
-    <testcase name="DetectionAloneNeverAdvancesRoutePhase" status="run" result="completed" time="0" timestamp="2026-08-18T02:52:54" classname="track_perception_cpp.GuideboardRoutePolicyTest" />
+<testsuites tests="5" failures="0" disabled="0" errors="0" time="0" timestamp="2026-08-19T04:13:46" name="AllTests">
+  <testsuite name="GuideboardRoutePolicyTest" tests="5" failures="0" disabled="0" errors="0" time="0" timestamp="2026-08-19T04:13:46">
+    <testcase name="FirstStraightMakesSecondRightWithoutRecognition" status="run" result="completed" time="0" timestamp="2026-08-19T04:13:46" classname="track_perception_cpp.GuideboardRoutePolicyTest" />
+    <testcase name="FirstRightMakesSecondStraightWithoutRecognition" status="run" result="completed" time="0" timestamp="2026-08-19T04:13:46" classname="track_perception_cpp.GuideboardRoutePolicyTest" />
+    <testcase name="FirstFailureRequiresSecondRecoveryRecognition" status="run" result="completed" time="0" timestamp="2026-08-19T04:13:46" classname="track_perception_cpp.GuideboardRoutePolicyTest" />
+    <testcase name="SecondRecoveryFailureFallsBackStraightAndFinishes" status="run" result="completed" time="0" timestamp="2026-08-19T04:13:46" classname="track_perception_cpp.GuideboardRoutePolicyTest" />
+    <testcase name="DetectionAloneNeverAdvancesRoutePhase" status="run" result="completed" time="0" timestamp="2026-08-19T04:13:46" classname="track_perception_cpp.GuideboardRoutePolicyTest" />
   </testsuite>
 </testsuites>
