@@ -116,6 +116,7 @@ fused_perception_node:
     branch_confirm_frames: 2
     branch_detect_far_band_ratio: 0.7
     enable_encoder_branch_hold: true
+    branch_extend_while_detected: true
     encoder_count_topic: "/chassis/encoder_count"
     encoder_hold_counts: 9000
     # 右岔路单独保持距离；左岔路继续使用 encoder_hold_counts
@@ -192,6 +193,22 @@ fused_perception_node:
     # 按当前画面标定：左边界 + offset 后，Car 左侧绕行模板点约束在 x=380 附近，形成近似直线。
     car_left_template_offsets: "0.0,77.0,92.0,108.0,127.0,142.0,157.0,170.0,183.0,196.0,210.0,224.0,237.0,251.0,264.0,276.0,290.0,304.0,317.0,329.0,338.0,349.0,358.0,371.0"
     car_encoder_fault_hold_sec: 3.0
+
+    # Coin 影子评估：仅分类和可视化，不修改拟合线或控制输出。
+    enable_coin_shadow_evaluation: true
+    coin_min_confidence: 0.65
+    coin_evaluate_min_y_ratio: 0.50
+    coin_near_committed_y_ratio: 0.86
+    coin_car_half_width_area_scale: 0.55
+    coin_car_half_width_min_px: 8.0
+    coin_car_half_width_max_px: 36.0
+    coin_hit_margin_px: 3.0
+    coin_reachable_extra_area_scale: 1.20
+    coin_reachable_extra_min_px: 20.0
+    coin_reachable_extra_max_px: 96.0
+    coin_obstacle_expand_px: 12.0
+    coin_obstacle_lookahead_ratio: 0.12
+    coin_side_clear_frames: 10
 
     # 终点停车：Stop bbox 底部达到阈值才 FINISH_STOP
     # 联调阶段忽略 Stop 标签，不产生 FINISH_STOP；后续接入专用终点联锁后再开启。

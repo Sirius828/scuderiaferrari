@@ -85,7 +85,7 @@ fused_perception_node:
     guideboard_api_text_similarity: 0.70
     guideboard_api_force_ocr_count_after_stop: 2
     # 牌框高度达到画面高度的12%即停车，留出OCR/API决策时间
-    guideboard_api_stop_height_ratio: 0.12
+    guideboard_api_stop_height_ratio: 0.11
     guideboard_api_retry_on_transport_failure: true
     guideboard_api_max_attempts: 1
     ocr_det_model_path: "model/ppocrv4_det.rknn"
@@ -132,6 +132,7 @@ fused_perception_node:
     branch_confirm_frames: 2
     branch_detect_far_band_ratio: 0.7
     enable_encoder_branch_hold: true
+    branch_extend_while_detected: true
     encoder_count_topic: "/chassis/encoder_count"
     encoder_hold_counts: 9000
     # 右岔路单独保持距离；左岔路继续使用 encoder_hold_counts
@@ -205,7 +206,7 @@ fused_perception_node:
     # Car 通过同高度拟合点相对 bbox 的位置确认侧别，再按编码器锁存安全侧边界模板绕行
     enable_car_obstacle_avoidance: true
     car_side_confirm_frames: 2
-    car_side_fit_downward_extension_px: 20
+    car_side_fit_downward_extension_px: 7
     car_avoidance_min_height_ratio: 0.065
     car_avoidance_min_height_px: 12
     car_encoder_detour_counts: 7500
@@ -219,6 +220,30 @@ fused_perception_node:
     # 按当前画面标定：左边界 + offset 后，Car 左侧绕行模板点约束在 x=380 附近，形成近似直线。
     car_left_template_offsets: "0.0,77.0,92.0,108.0,127.0,142.0,157.0,170.0,183.0,196.0,210.0,224.0,237.0,251.0,264.0,276.0,290.0,304.0,317.0,329.0,338.0,349.0,358.0,371.0"
     car_encoder_fault_hold_sec: 3.0
+
+    # Coin 仅做影子评估，不修改拟合线和控制量。画面分类：
+    # ON_ROUTE=碰撞箱顺路覆盖，REACHABLE=少量横移可达，TOO_FAR=太远，BLOCKED=走廊有障碍。
+    enable_coin_shadow_evaluation: true
+    coin_min_confidence: 0.65
+    # 仅在中间窗口做距离/障碍判断；远端等待，近端视为已经承诺或正在通过。
+    coin_evaluate_min_y_ratio: 0.50
+    coin_near_committed_y_ratio: 0.86
+    # 距离阈值不再绑定 y；sqrt(bbox面积) 与透视下的线性尺寸同量纲。
+    # 赛车碰撞箱投影半宽 = clamp(scale * sqrt面积, min, max)。
+    coin_car_half_width_area_scale: 0.55
+    coin_car_half_width_min_px: 8.0
+    coin_car_half_width_max_px: 36.0
+    coin_hit_margin_px: 3.0
+    # 超出碰撞覆盖后允许的额外法向距离，同样按 sqrt面积缩放并限幅。
+    coin_reachable_extra_area_scale: 2.0
+    coin_reachable_extra_min_px: 20.0
+    coin_reachable_extra_max_px: 96.0
+    coin_obstacle_expand_px: 12.0
+    # 同时检查 coin 后方一小段距离，避免拾取紧贴障碍物前方的 coin。
+    coin_obstacle_lookahead_ratio: 0.12
+    # 左右两侧同时可达时只影子选择一侧；该侧连续丢失若干帧后才允许重选。
+    # 当前不使用编码器，也不将选择结果应用到拟合线。
+    coin_side_clear_frames: 10
 
     # 终点停车：Stop bbox 底部达到阈值才 FINISH_STOP
     # 联调阶段忽略 Stop 标签，不产生 FINISH_STOP；后续接入专用终点联锁后再开启。

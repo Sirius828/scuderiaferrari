@@ -21,6 +21,7 @@ struct LaneState {
   float offset_y07{0.0f};
   float offset_y08{0.0f};
   float offset_y09{0.0f};
+  float global_offset{0.0f};
   float heading_error{0.0f};
   float curvature{0.0f};
   float confidence{0.0f};

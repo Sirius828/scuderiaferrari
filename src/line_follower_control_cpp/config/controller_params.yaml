@@ -17,8 +17,8 @@
 /**:
   ros__parameters:
     # 机械转向连杆消除大死区后的重新标定基线：先低速只调 P，再逐步增加 Kd。
-    Kd: 0.35
-    Kp: 1.02
+    Kd: 0.25
+    Kp: 0.86
     autonomous_enabled_on_start: false
     branch_error_recovery_rate: 0.0
     branch_error_slew_rate: 0.0
@@ -27,6 +27,7 @@
     branch_max_steering: 0.0
     branch_min_speed: 0.0
     branch_outer_bias_release_time: 0.8
+    centerline_bias: 0.05
     cmd_vel_topic: /cmd_vel
     control_frequency: 50.0
     curvature_speed_weight: 0.12
@@ -57,6 +58,9 @@
     far_offset_speed_weight: 0.0
     geometry_stall_recovery_time: 0.5
     geometry_stall_timeout: 0.2
+    global_offset_blend: 0.22
+    global_offset_deadband: 0.02
+    global_offset_topic: /segmentation/global_offset
     heading_error_topic: /segmentation/heading_error
     heading_feedback_gain: 0.12
     high_error_rescue_speed: 0.0
@@ -78,9 +82,9 @@
     near_offset_y09_weight: 0.25
     offset_timeout: 0.25
     offset_y07_topic: /segmentation/offset_y07
-    offset_y07_weight: 1.0
+    offset_y07_weight: 0.8
     offset_y08_topic: /segmentation/offset_y08
-    offset_y08_weight: 0.0
+    offset_y08_weight: 0.2
     offset_y09_topic: /segmentation/offset_y09
     offset_y09_weight: 0.0
     qos_overrides./parameter_events.publisher.depth: 1000

@@ -4,6 +4,8 @@
 /home/orangepi/scuderiaferrari/install/line_follower_control_cpp/share/line_follower_control_cpp/config/stable0.85.yaml
 /home/orangepi/scuderiaferrari/install/line_follower_control_cpp/share/line_follower_control_cpp/config/stable11s.yaml
 /home/orangepi/scuderiaferrari/install/line_follower_control_cpp/share/line_follower_control_cpp/config/unstable_final.yaml
+/home/orangepi/scuderiaferrari/install/line_follower_control_cpp/share/line_follower_control_cpp/config/v1.yaml
+/home/orangepi/scuderiaferrari/install/line_follower_control_cpp/share/line_follower_control_cpp/config/v2.yaml
 /home/orangepi/scuderiaferrari/install/line_follower_control_cpp/share/line_follower_control_cpp/launch/__pycache__/controller.launch.cpython-310.pyc
 /home/orangepi/scuderiaferrari/install/line_follower_control_cpp/share/line_follower_control_cpp/launch/controller.launch.py
 /home/orangepi/scuderiaferrari/install/line_follower_control_cpp/share/line_follower_control_cpp/package.xml

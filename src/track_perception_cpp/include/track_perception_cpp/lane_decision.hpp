@@ -31,6 +31,7 @@ struct LaneDecisionConfig {
   std::string guideboard_unknown_branch{"left"};
   double guideboard_hint_wait_timeout_sec{0.20};
   bool enable_encoder_branch_hold{true};
+  bool branch_extend_while_detected{true};
   int64_t encoder_hold_counts{9000};
   int64_t encoder_hold_right_counts{20000};
   double encoder_feedback_timeout_sec{0.30};
@@ -105,6 +106,23 @@ struct LaneDecisionConfig {
   std::string car_left_template_offsets;
   double car_encoder_fault_hold_sec{3.0};
 
+  // Coin evaluation is shadow-only: it classifies Gold detections against
+  // the final fitted path but never changes the fitted points or geometry.
+  bool enable_coin_shadow_evaluation{true};
+  float coin_min_confidence{0.45f};
+  float coin_evaluate_min_y_ratio{0.50f};
+  float coin_near_committed_y_ratio{0.86f};
+  float coin_car_half_width_area_scale{0.55f};
+  float coin_car_half_width_min_px{8.0f};
+  float coin_car_half_width_max_px{36.0f};
+  float coin_hit_margin_px{3.0f};
+  float coin_reachable_extra_area_scale{1.20f};
+  float coin_reachable_extra_min_px{20.0f};
+  float coin_reachable_extra_max_px{96.0f};
+  float coin_obstacle_expand_px{12.0f};
+  float coin_obstacle_lookahead_ratio{0.12f};
+  int coin_side_clear_frames{10};
+
   bool enable_finish_stop{true};
   float finish_stop_min_confidence{0.45f};
   float finish_stop_arm_y_ratio{0.70f};
@@ -140,12 +158,43 @@ struct LaneHumanDebug {
   bool stop_candidate{false};
 };
 
+struct LaneCoinDebug {
+  cv::Rect2f bbox;
+  cv::Point2f ground_point;
+  cv::Point2f local_path_point;
+  float confidence{0.0f};
+  float sqrt_bbox_area{0.0f};
+  float path_slope{0.0f};
+  float normal_distance{0.0f};
+  float hit_radius{0.0f};
+  float extra_distance{0.0f};
+  float reachable_extra{0.0f};
+  float route_score{0.0f};
+  bool obstacle_blocked{false};
+  bool selected_for_route{false};
+  std::string side{"NONE"};
+  std::string blocked_by;
+  std::string classification{"NO_FIT"};
+};
+
 struct LaneDebugInfo {
   std::vector<LaneBandDebug> bands;
   std::vector<cv::Point3f> raw_points;
   std::vector<cv::Point3f> fit_points;
   std::vector<double> fit_coeffs;
   std::vector<LaneHumanDebug> humans;
+  std::vector<LaneCoinDebug> coins;
+  int coin_on_route_count{0};
+  int coin_reachable_count{0};
+  int coin_too_far_count{0};
+  int coin_blocked_count{0};
+  int coin_no_fit_count{0};
+  int coin_wait_far_count{0};
+  int coin_near_committed_count{0};
+  std::string coin_selected_side{"NONE"};
+  float coin_left_route_score{0.0f};
+  float coin_right_route_score{0.0f};
+  int coin_side_clear_count{0};
   bool human_passable{false};
   bool human_line_intersects{false};
   bool human_stop_candidate{false};
@@ -224,6 +273,7 @@ struct LaneDebugInfo {
   float raw_offset_y07{0.0f};
   float raw_offset_y08{0.0f};
   float raw_offset_y09{0.0f};
+  float global_offset{0.0f};
   int fit_y_min{0};
   int fit_y_max{0};
   int fit_y_span{0};
@@ -328,6 +378,10 @@ class LaneDecision {
   void updateHumanStopState(const std::vector<Detection>& detections, int image_width,
                             int image_height, const std::vector<double>& fit_coeffs,
                             bool fit_valid);
+  void evaluateCoinsShadow(const std::vector<Detection>& detections,
+                           int image_width, int image_height,
+                           const std::vector<double>& fit_coeffs,
+                           bool fit_valid);
   std::string taskState() const;
   void populateDebugInfo(const std::vector<Band>& bands,
                          const std::vector<cv::Point3f>& raw_points,
@@ -421,6 +475,8 @@ class LaneDecision {
   double last_underlying_fit_heading_{0.0};
   double last_underlying_fit_curvature_{0.0};
   double last_underlying_fit_confidence_{0.0};
+  std::string coin_selected_side_{"NONE"};
+  int coin_side_clear_count_{0};
 };
 
 }  // namespace track_perception_cpp

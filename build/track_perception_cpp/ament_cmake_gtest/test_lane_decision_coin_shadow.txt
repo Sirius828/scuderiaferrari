@@ -1,0 +1,33 @@
+-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/track_perception_cpp':
+ - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_decision_coin_shadow --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_coin_shadow.gtest.xml
+
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 8 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 8 tests from LaneDecisionCoinShadowTest
+[ RUN      ] LaneDecisionCoinShadowTest.ClassifiesOnRouteReachableAndTooFar
+[       OK ] LaneDecisionCoinShadowTest.ClassifiesOnRouteReachableAndTooFar (1 ms)
+[ RUN      ] LaneDecisionCoinShadowTest.ObstacleInApproachCorridorVetoesCoin
+[       OK ] LaneDecisionCoinShadowTest.ObstacleInApproachCorridorVetoesCoin (0 ms)
+[ RUN      ] LaneDecisionCoinShadowTest.GoldNeverChangesFittedGeometry
+[       OK ] LaneDecisionCoinShadowTest.GoldNeverChangesFittedGeometry (1 ms)
+[ RUN      ] LaneDecisionCoinShadowTest.ReportsNoFitWithoutChangingInvalidState
+[       OK ] LaneDecisionCoinShadowTest.ReportsNoFitWithoutChangingInvalidState (0 ms)
+[ RUN      ] LaneDecisionCoinShadowTest.FarWaitsAndNearCommitsWithoutDistanceEvaluation
+[       OK ] LaneDecisionCoinShadowTest.FarWaitsAndNearCommitsWithoutDistanceEvaluation (1 ms)
+[ RUN      ] LaneDecisionCoinShadowTest.EqualAreaUsesEqualThresholdAtDifferentHeights
+[       OK ] LaneDecisionCoinShadowTest.EqualAreaUsesEqualThresholdAtDifferentHeights (0 ms)
+[ RUN      ] LaneDecisionCoinShadowTest.LargerCoinGetsLargerThresholdAtSameHeight
+[       OK ] LaneDecisionCoinShadowTest.LargerCoinGetsLargerThresholdAtSameHeight (0 ms)
+[ RUN      ] LaneDecisionCoinShadowTest.SelectsOnlyOneReachableSideAndHoldsItByFrames
+[       OK ] LaneDecisionCoinShadowTest.SelectsOnlyOneReachableSideAndHoldsItByFrames (2 ms)
+[----------] 8 tests from LaneDecisionCoinShadowTest (5 ms total)
+
+[----------] Global test environment tear-down
+[==========] 8 tests from 1 test suite ran. (5 ms total)
+[  PASSED  ] 8 tests.
+
+
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_coin_shadow.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_coin_shadow.gtest.xml'

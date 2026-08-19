@@ -2,26 +2,28 @@
  - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_guideboard_wait --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_guideboard_wait.gtest.xml
 
 Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
-[==========] Running 6 tests from 1 test suite.
+[==========] Running 7 tests from 1 test suite.
 [----------] Global test environment set-up.
-[----------] 6 tests from LaneGuideboardWaitTest
+[----------] 7 tests from LaneGuideboardWaitTest
 [ RUN      ] LaneGuideboardWaitTest.WaitsForHintThenFallsBackStraight
-[       OK ] LaneGuideboardWaitTest.WaitsForHintThenFallsBackStraight (30 ms)
+[       OK ] LaneGuideboardWaitTest.WaitsForHintThenFallsBackStraight (37 ms)
 [ RUN      ] LaneGuideboardWaitTest.StableHintLocksImmediately
 [       OK ] LaneGuideboardWaitTest.StableHintLocksImmediately (0 ms)
 [ RUN      ] LaneGuideboardWaitTest.NoGuideboardLocksStraightWithoutHintWait
 [       OK ] LaneGuideboardWaitTest.NoGuideboardLocksStraightWithoutHintWait (0 ms)
 [ RUN      ] LaneGuideboardWaitTest.UsesLateHintAfterGuideboardLeavesRoi
-[       OK ] LaneGuideboardWaitTest.UsesLateHintAfterGuideboardLeavesRoi (0 ms)
+[       OK ] LaneGuideboardWaitTest.UsesLateHintAfterGuideboardLeavesRoi (1 ms)
 [ RUN      ] LaneGuideboardWaitTest.PropagatesRouteDecisionSource
 [       OK ] LaneGuideboardWaitTest.PropagatesRouteDecisionSource (0 ms)
 [ RUN      ] LaneGuideboardWaitTest.RearmsOnlyAfterHoldEndsAndBranchClears
-[       OK ] LaneGuideboardWaitTest.RearmsOnlyAfterHoldEndsAndBranchClears (0 ms)
-[----------] 6 tests from LaneGuideboardWaitTest (31 ms total)
+[       OK ] LaneGuideboardWaitTest.RearmsOnlyAfterHoldEndsAndBranchClears (3 ms)
+[ RUN      ] LaneGuideboardWaitTest.ExtendsEncoderHoldWhileBranchRemainsDetected
+[       OK ] LaneGuideboardWaitTest.ExtendsEncoderHoldWhileBranchRemainsDetected (0 ms)
+[----------] 7 tests from LaneGuideboardWaitTest (41 ms total)
 
 [----------] Global test environment tear-down
-[==========] 6 tests from 1 test suite ran. (31 ms total)
-[  PASSED  ] 6 tests.
+[==========] 7 tests from 1 test suite ran. (41 ms total)
+[  PASSED  ] 7 tests.
 
 
 -- run_test.py: return code 0

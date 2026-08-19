@@ -349,16 +349,34 @@ TEST(LaneDecisionCarTemplateTest, SideAndTemplateStayLatchedAfterDetectionLoss) 
   EXPECT_NEAR(meanPointX(decision.debugInfo().fit_points), 80.0, 1.0);
 }
 
-TEST(LaneDecisionCarTemplateTest, OppositeFitPointEvidenceDoesNotChangeLatchedSide) {
+TEST(LaneDecisionCarTemplateTest, ConfirmedOppositeSideSwitchesTemplateWithoutEncoderReset) {
+  auto config = makeConfig();
+  config.car_left_template_offsets =
+      "120,120,120,120,120,120,120,120,120,120,120,120";
   LaneDecision decision;
-  decision.configure(makeConfig());
-  (void)confirmAndTrigger(&decision, "RIGHT", roadMask());
+  decision.configure(config);
+  (void)confirmAndTrigger(&decision, "RIGHT", roadMask(), 100);
+  ASSERT_EQ(decision.debugInfo().car_template_side, "RIGHT");
+  ASSERT_EQ(decision.debugInfo().car_encoder_start_count, 100);
+  ASSERT_NEAR(meanPointX(decision.debugInfo().fit_points), 80.0, 1.0);
 
   setEncoder(&decision, 200);
   (void)decision.decide(roadMask(), {carOnSide("LEFT")});
   EXPECT_EQ(decision.debugInfo().car_side_candidate, "LEFT");
+  EXPECT_EQ(decision.debugInfo().car_side_confirm_count, 1);
   EXPECT_EQ(decision.debugInfo().car_template_side, "RIGHT");
+  EXPECT_EQ(decision.debugInfo().car_encoder_start_count, 100);
+  EXPECT_EQ(decision.debugInfo().car_encoder_delta, 100);
   EXPECT_NEAR(meanPointX(decision.debugInfo().fit_points), 80.0, 1.0);
+
+  setEncoder(&decision, 250);
+  (void)decision.decide(roadMask(), {carOnSide("LEFT")});
+  EXPECT_EQ(decision.debugInfo().car_side, "LEFT");
+  EXPECT_EQ(decision.debugInfo().car_side_confirm_count, 2);
+  EXPECT_EQ(decision.debugInfo().car_template_side, "LEFT");
+  EXPECT_EQ(decision.debugInfo().car_encoder_start_count, 100);
+  EXPECT_EQ(decision.debugInfo().car_encoder_delta, 150);
+  EXPECT_NEAR(meanPointX(decision.debugInfo().fit_points), 200.0, 1.0);
 }
 
 TEST(LaneDecisionCarTemplateTest, ShortEncoderFaultHoldsTemplate) {
@@ -393,7 +411,7 @@ TEST(LaneDecisionCarTemplateTest, EncoderRollbackUsesFaultExitInsteadOfAbsoluteD
   EXPECT_EQ(decision.debugInfo().car_template_state, "WAIT_CLEAR");
 }
 
-TEST(LaneDecisionCarTemplateTest, BranchEncoderContinuesWhileCarOverridesOutput) {
+TEST(LaneDecisionCarTemplateTest, BranchEncoderExtendsWhileCarOverridesOutput) {
   auto config = makeConfig();
   config.branch_detect_min_bands = 1;
   config.enable_encoder_branch_hold = true;
@@ -412,7 +430,8 @@ TEST(LaneDecisionCarTemplateTest, BranchEncoderContinuesWhileCarOverridesOutput)
   setEncoder(&decision, 106);
   (void)decision.decide(branchMask(), {});
   EXPECT_EQ(decision.debugInfo().car_template_state, "DETOUR");
-  EXPECT_FALSE(decision.debugInfo().encoder_hold);
+  EXPECT_TRUE(decision.debugInfo().encoder_hold);
+  EXPECT_EQ(decision.debugInfo().encoder_hold_delta, 0);
   EXPECT_TRUE(decision.debugInfo().car_template_active);
 }
 

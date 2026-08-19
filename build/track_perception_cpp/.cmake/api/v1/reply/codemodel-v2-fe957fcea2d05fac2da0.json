@@ -27,7 +27,8 @@
 						6,
 						7,
 						8,
-						9
+						9,
+						10
 					]
 				},
 				{
@@ -69,7 +70,8 @@
 						6,
 						7,
 						8,
-						9
+						9,
+						10
 					]
 				},
 				{
@@ -135,6 +137,13 @@
 					"id" : "test_lane_decision_car_boundary::@6890427a1f51a3e7e1df",
 					"jsonFile" : "target-test_lane_decision_car_boundary-Release-74b4bb0d977aab07ba88.json",
 					"name" : "test_lane_decision_car_boundary",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "test_lane_decision_coin_shadow::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-test_lane_decision_coin_shadow-Release-5644bbf1c7741ad99c62.json",
+					"name" : "test_lane_decision_coin_shadow",
 					"projectIndex" : 0
 				},
 				{

@@ -276,6 +276,19 @@ test_lane_decision_car_boundary/fast:
 .PHONY : test_lane_decision_car_boundary/fast
 
 #=============================================================================
+# Target rules for targets named test_lane_decision_coin_shadow
+
+# Build rule for target.
+test_lane_decision_coin_shadow: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_lane_decision_coin_shadow
+.PHONY : test_lane_decision_coin_shadow
+
+# fast build rule for target.
+test_lane_decision_coin_shadow/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_decision_coin_shadow.dir/build.make CMakeFiles/test_lane_decision_coin_shadow.dir/build
+.PHONY : test_lane_decision_coin_shadow/fast
+
+#=============================================================================
 # Target rules for targets named gtest
 
 # Build rule for target.
@@ -414,6 +427,7 @@ src/lane_decision.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_guideboard_wait.dir/build.make CMakeFiles/test_lane_guideboard_wait.dir/src/lane_decision.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_decision_car_boundary.dir/build.make CMakeFiles/test_lane_decision_car_boundary.dir/src/lane_decision.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_decision_coin_shadow.dir/build.make CMakeFiles/test_lane_decision_coin_shadow.dir/src/lane_decision.cpp.o
 .PHONY : src/lane_decision.cpp.o
 
 src/lane_decision.i: src/lane_decision.cpp.i
@@ -424,6 +438,7 @@ src/lane_decision.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_guideboard_wait.dir/build.make CMakeFiles/test_lane_guideboard_wait.dir/src/lane_decision.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_decision_car_boundary.dir/build.make CMakeFiles/test_lane_decision_car_boundary.dir/src/lane_decision.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_decision_coin_shadow.dir/build.make CMakeFiles/test_lane_decision_coin_shadow.dir/src/lane_decision.cpp.i
 .PHONY : src/lane_decision.cpp.i
 
 src/lane_decision.s: src/lane_decision.cpp.s
@@ -434,6 +449,7 @@ src/lane_decision.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/lane_decision.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_guideboard_wait.dir/build.make CMakeFiles/test_lane_guideboard_wait.dir/src/lane_decision.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_decision_car_boundary.dir/build.make CMakeFiles/test_lane_decision_car_boundary.dir/src/lane_decision.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_decision_coin_shadow.dir/build.make CMakeFiles/test_lane_decision_coin_shadow.dir/src/lane_decision.cpp.s
 .PHONY : src/lane_decision.cpp.s
 
 src/rknn_model.o: src/rknn_model.cpp.o
@@ -627,6 +643,30 @@ test/test_lane_decision_car_boundary.s: test/test_lane_decision_car_boundary.cpp
 test/test_lane_decision_car_boundary.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_decision_car_boundary.dir/build.make CMakeFiles/test_lane_decision_car_boundary.dir/test/test_lane_decision_car_boundary.cpp.s
 .PHONY : test/test_lane_decision_car_boundary.cpp.s
+
+test/test_lane_decision_coin_shadow.o: test/test_lane_decision_coin_shadow.cpp.o
+.PHONY : test/test_lane_decision_coin_shadow.o
+
+# target to build an object file
+test/test_lane_decision_coin_shadow.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_decision_coin_shadow.dir/build.make CMakeFiles/test_lane_decision_coin_shadow.dir/test/test_lane_decision_coin_shadow.cpp.o
+.PHONY : test/test_lane_decision_coin_shadow.cpp.o
+
+test/test_lane_decision_coin_shadow.i: test/test_lane_decision_coin_shadow.cpp.i
+.PHONY : test/test_lane_decision_coin_shadow.i
+
+# target to preprocess a source file
+test/test_lane_decision_coin_shadow.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_decision_coin_shadow.dir/build.make CMakeFiles/test_lane_decision_coin_shadow.dir/test/test_lane_decision_coin_shadow.cpp.i
+.PHONY : test/test_lane_decision_coin_shadow.cpp.i
+
+test/test_lane_decision_coin_shadow.s: test/test_lane_decision_coin_shadow.cpp.s
+.PHONY : test/test_lane_decision_coin_shadow.s
+
+# target to generate assembly for a file
+test/test_lane_decision_coin_shadow.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_lane_decision_coin_shadow.dir/build.make CMakeFiles/test_lane_decision_coin_shadow.dir/test/test_lane_decision_coin_shadow.cpp.s
+.PHONY : test/test_lane_decision_coin_shadow.cpp.s
 
 test/test_lane_guideboard_wait.o: test/test_lane_guideboard_wait.cpp.o
 .PHONY : test/test_lane_guideboard_wait.o
@@ -842,6 +882,7 @@ help:
 	@echo "... test_guideboard_recognizer"
 	@echo "... test_guideboard_route_policy"
 	@echo "... test_lane_decision_car_boundary"
+	@echo "... test_lane_decision_coin_shadow"
 	@echo "... test_lane_guideboard_wait"
 	@echo "... src/fused_perception_node.o"
 	@echo "... src/fused_perception_node.i"
@@ -882,6 +923,9 @@ help:
 	@echo "... test/test_lane_decision_car_boundary.o"
 	@echo "... test/test_lane_decision_car_boundary.i"
 	@echo "... test/test_lane_decision_car_boundary.s"
+	@echo "... test/test_lane_decision_coin_shadow.o"
+	@echo "... test/test_lane_decision_coin_shadow.i"
+	@echo "... test/test_lane_decision_coin_shadow.s"
 	@echo "... test/test_lane_guideboard_wait.o"
 	@echo "... test/test_lane_guideboard_wait.i"
 	@echo "... test/test_lane_guideboard_wait.s"

@@ -6,6 +6,7 @@
 /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles/test_guideboard_route_policy.dir
 /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles/test_lane_guideboard_wait.dir
 /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles/test_lane_decision_car_boundary.dir
+/home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles/test_lane_decision_coin_shadow.dir
 /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles/test.dir
 /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles/edit_cache.dir
 /home/orangepi/scuderiaferrari/build/track_perception_cpp/CMakeFiles/rebuild_cache.dir

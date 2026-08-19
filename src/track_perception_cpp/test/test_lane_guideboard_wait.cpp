@@ -124,7 +124,9 @@ TEST(LaneGuideboardWaitTest, PropagatesRouteDecisionSource) {
 
 TEST(LaneGuideboardWaitTest, RearmsOnlyAfterHoldEndsAndBranchClears) {
   LaneDecision decision;
-  decision.configure(makeConfig());
+  auto config = makeConfig();
+  config.branch_extend_while_detected = false;
+  decision.configure(config);
   decision.setEncoderCount(100, 1.0);
   decision.setGuideboardBranchHint("right", true, "first_api");
 
@@ -146,6 +148,33 @@ TEST(LaneGuideboardWaitTest, RearmsOnlyAfterHoldEndsAndBranchClears) {
   EXPECT_TRUE(decision.debugInfo().branch_event_rearmed);
   EXPECT_TRUE(decision.branchEventArmed());
   EXPECT_EQ(decision.branchEventId(), first_event_id + 1);
+}
+
+TEST(LaneGuideboardWaitTest, ExtendsEncoderHoldWhileBranchRemainsDetected) {
+  LaneDecision decision;
+  auto config = makeConfig();
+  config.guideboard_require_hint = false;
+  decision.configure(config);
+  decision.setEncoderCount(100, 1.0);
+
+  decision.decide(branchMask(), {});
+  ASSERT_TRUE(decision.debugInfo().encoder_hold);
+  ASSERT_FALSE(decision.branchEventArmed());
+  const uint64_t branch_event_id = decision.branchEventId();
+
+  decision.setEncoderCount(9100, 1.1);
+  const auto extended = decision.decide(branchMask(), {});
+  EXPECT_EQ(extended.branch_side, "left");
+  EXPECT_TRUE(decision.debugInfo().encoder_hold);
+  EXPECT_EQ(decision.debugInfo().encoder_hold_delta, 0);
+  EXPECT_EQ(decision.branchEventId(), branch_event_id);
+  EXPECT_FALSE(decision.debugInfo().branch_lock_event);
+  EXPECT_FALSE(decision.branchEventArmed());
+
+  decision.setEncoderCount(18100, 1.2);
+  decision.decide(clearMask(), {});
+  EXPECT_FALSE(decision.debugInfo().encoder_hold);
+  EXPECT_TRUE(decision.debugInfo().encoder_hold_side.empty());
 }
 
 }  // namespace

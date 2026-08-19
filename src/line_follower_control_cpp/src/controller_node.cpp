@@ -15,6 +15,8 @@
 #include <vector>
 
 #include "geometry_msgs/msg/twist.hpp"
+#include "rcl_interfaces/msg/floating_point_range.hpp"
+#include "rcl_interfaces/msg/parameter_descriptor.hpp"
 #include "rcl_interfaces/msg/set_parameters_result.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/bool.hpp"
@@ -85,6 +87,9 @@ struct ControllerParameters
   double offset_y07_weight{0.20};
   double offset_y08_weight{0.30};
   double offset_y09_weight{0.50};
+  double global_offset_blend{0.25};
+  double centerline_bias{0.0};
+  double global_offset_deadband{0.02};
   bool enable_adaptive_offset_weights{false};
   double near_offset_y07_weight{0.35};
   double near_offset_y08_weight{0.35};
@@ -175,6 +180,33 @@ public:
     declare_parameter<double>("offset_y07_weight", params_.offset_y07_weight);
     declare_parameter<double>("offset_y08_weight", params_.offset_y08_weight);
     declare_parameter<double>("offset_y09_weight", params_.offset_y09_weight);
+    const auto numeric_descriptor = [](
+      const std::string & description, double minimum, double maximum)
+      {
+        rcl_interfaces::msg::ParameterDescriptor descriptor;
+        descriptor.description = description;
+        rcl_interfaces::msg::FloatingPointRange range;
+        range.from_value = minimum;
+        range.to_value = maximum;
+        range.step = 0.0;
+        descriptor.floating_point_range.push_back(range);
+        return descriptor;
+      };
+    declare_parameter<double>(
+      "global_offset_blend", params_.global_offset_blend,
+      numeric_descriptor(
+        "Blend ratio between the existing weighted offset and the whole fitted-line offset",
+        0.0, 1.0));
+    declare_parameter<double>(
+      "centerline_bias", params_.centerline_bias,
+      numeric_descriptor(
+        "Constant normalized center correction used to compensate a persistent side bias",
+        -1.0, 1.0));
+    declare_parameter<double>(
+      "global_offset_deadband", params_.global_offset_deadband,
+      numeric_descriptor(
+        "Deadband for the difference between whole-line and weighted offsets",
+        0.0, 1.0));
     declare_parameter<bool>(
       "enable_adaptive_offset_weights", params_.enable_adaptive_offset_weights);
     declare_parameter<double>("near_offset_y07_weight", params_.near_offset_y07_weight);
@@ -210,6 +242,7 @@ public:
     declare_parameter<std::string>("offset_y07_topic", "/segmentation/offset_y07");
     declare_parameter<std::string>("offset_y08_topic", "/segmentation/offset_y08");
     declare_parameter<std::string>("offset_y09_topic", "/segmentation/offset_y09");
+    declare_parameter<std::string>("global_offset_topic", "/segmentation/global_offset");
     declare_parameter<std::string>("heading_error_topic", "/segmentation/heading_error");
     declare_parameter<std::string>("curvature_topic", "/segmentation/curvature");
     declare_parameter<std::string>("lane_state_topic", "/perception/lane_state");
@@ -230,6 +263,9 @@ public:
     offset_y09_subscription_ = create_subscription<std_msgs::msg::Float32>(
       offset_y09_topic_, sensor_qos,
       std::bind(&LineFollowerControllerCpp::offset_y09_callback, this, std::placeholders::_1));
+    global_offset_subscription_ = create_subscription<std_msgs::msg::Float32>(
+      global_offset_topic_, sensor_qos,
+      std::bind(&LineFollowerControllerCpp::global_offset_callback, this, std::placeholders::_1));
     heading_error_subscription_ = create_subscription<std_msgs::msg::Float32>(
       heading_error_topic_, sensor_qos,
       std::bind(&LineFollowerControllerCpp::heading_error_callback, this, std::placeholders::_1));
@@ -367,6 +403,9 @@ private:
     params_.offset_y07_weight = get_parameter("offset_y07_weight").as_double();
     params_.offset_y08_weight = get_parameter("offset_y08_weight").as_double();
     params_.offset_y09_weight = get_parameter("offset_y09_weight").as_double();
+    params_.global_offset_blend = get_parameter("global_offset_blend").as_double();
+    params_.centerline_bias = get_parameter("centerline_bias").as_double();
+    params_.global_offset_deadband = get_parameter("global_offset_deadband").as_double();
     params_.enable_adaptive_offset_weights =
       get_parameter("enable_adaptive_offset_weights").as_bool();
     params_.near_offset_y07_weight = get_parameter("near_offset_y07_weight").as_double();
@@ -402,6 +441,7 @@ private:
     offset_y07_topic_ = get_parameter("offset_y07_topic").as_string();
     offset_y08_topic_ = get_parameter("offset_y08_topic").as_string();
     offset_y09_topic_ = get_parameter("offset_y09_topic").as_string();
+    global_offset_topic_ = get_parameter("global_offset_topic").as_string();
     heading_error_topic_ = get_parameter("heading_error_topic").as_string();
     curvature_topic_ = get_parameter("curvature_topic").as_string();
     lane_state_topic_ = get_parameter("lane_state_topic").as_string();
@@ -659,6 +699,21 @@ private:
     {
       return fail("near offset weights must have a positive sum");
     }
+    if (!std::isfinite(parameters.global_offset_blend) ||
+      parameters.global_offset_blend < 0.0 || parameters.global_offset_blend > 1.0)
+    {
+      return fail("global_offset_blend must be in [0, 1]");
+    }
+    if (!std::isfinite(parameters.centerline_bias) ||
+      parameters.centerline_bias < -1.0 || parameters.centerline_bias > 1.0)
+    {
+      return fail("centerline_bias must be in [-1, 1]");
+    }
+    if (!std::isfinite(parameters.global_offset_deadband) ||
+      parameters.global_offset_deadband < 0.0 || parameters.global_offset_deadband > 1.0)
+    {
+      return fail("global_offset_deadband must be in [0, 1]");
+    }
     if (!std::isfinite(parameters.near_offset_advantage_start) ||
       !std::isfinite(parameters.near_offset_advantage_full) ||
       parameters.near_offset_advantage_start < 0.0 ||
@@ -750,7 +805,7 @@ private:
       throw std::runtime_error("control_frequency must be finite and > 0");
     }
     if (offset_y07_topic_.empty() || offset_y08_topic_.empty() || offset_y09_topic_.empty() ||
-      heading_error_topic_.empty() || curvature_topic_.empty()) {
+      heading_error_topic_.empty() || curvature_topic_.empty() || global_offset_topic_.empty()) {
       throw std::runtime_error("geometry feedback topics must not be empty");
     }
     if (cmd_vel_topic_.empty()) {
@@ -768,6 +823,7 @@ private:
       const auto & name = parameter.get_name();
       if (name == "control_frequency" || name == "offset_y07_topic" ||
         name == "offset_y08_topic" || name == "offset_y09_topic" ||
+        name == "global_offset_topic" ||
         name == "heading_error_topic" ||
         name == "curvature_topic" || name == "lane_state_topic" || name == "cmd_vel_topic" ||
         name == "autonomous_enabled_on_start")
@@ -867,6 +923,12 @@ private:
         pending.offset_y08_weight = parameter.as_double();
       } else if (name == "offset_y09_weight") {
         pending.offset_y09_weight = parameter.as_double();
+      } else if (name == "global_offset_blend") {
+        pending.global_offset_blend = parameter.as_double();
+      } else if (name == "centerline_bias") {
+        pending.centerline_bias = parameter.as_double();
+      } else if (name == "global_offset_deadband") {
+        pending.global_offset_deadband = parameter.as_double();
       } else if (name == "enable_adaptive_offset_weights") {
         pending.enable_adaptive_offset_weights = parameter.as_bool();
       } else if (name == "near_offset_y07_weight") {
@@ -971,6 +1033,12 @@ private:
   {
     update_offset_value(
       msg->data, &current_offset_y09_, &has_offset_y09_, &last_offset_y09_time_);
+  }
+
+  void global_offset_callback(const std_msgs::msg::Float32::SharedPtr msg)
+  {
+    update_offset_value(
+      msg->data, &current_global_offset_, &has_global_offset_, &last_global_offset_time_);
   }
 
   void update_offset_value(
@@ -1217,8 +1285,12 @@ private:
     stop_reason_ = "running";
     invalid_since_.reset();
     last_frame_signature_change_time_ = now;
-    current_speed_mps_ = 0.0;
-    current_steering_ = 0.0;
+    const bool restore_obstacle_command =
+      obstacle_resume && obstacle_resume_command_valid_;
+    current_speed_mps_ = restore_obstacle_command ?
+      std::clamp(obstacle_resume_speed_mps_, 0.0, params_.linear_speed_mps) : 0.0;
+    current_steering_ = restore_obstacle_command ?
+      std::clamp(obstacle_resume_steering_, -params_.max_steering, params_.max_steering) : 0.0;
     limited_control_error_ = compute_control_error();
     previous_control_error_ = limited_control_error_;
     branch_error_limiter_engaged_ = false;
@@ -1228,9 +1300,75 @@ private:
       std::abs(current_heading_error_) < 0.20;
     filtered_derivative_ = 0.0;
     previous_control_time_ = now;
-    publish_motion_command(0.0, 0.0);
+    publish_motion_command(current_speed_mps_, current_steering_);
     publish_chassis_enable(true);
     RCLCPP_INFO(get_logger(), "Line following started");
+    return true;
+  }
+
+  bool try_resume_line_loss_command_hold(std::string * reason)
+  {
+    if (!params_.enable_line_loss_command_hold ||
+      !obstacle_resume_armed_ || !obstacle_resume_command_valid_)
+    {
+      if (reason) {
+        *reason = "no resumable line-loss command is available";
+      }
+      return false;
+    }
+    if (emergency_stop_active_) {
+      if (reason) {
+        *reason = "emergency stop is active";
+      }
+      return false;
+    }
+    if (safety_locked_) {
+      if (reason) {
+        *reason = "controller safety lock is active";
+      }
+      return false;
+    }
+
+    const auto now = std::chrono::steady_clock::now();
+    const bool held_geometry_stalled =
+      params_.geometry_stall_timeout > 0.0 &&
+      obstacle_resume_speed_mps_ >= 0.30 &&
+      has_frame_signature_ &&
+      std::chrono::duration<double>(
+        now - last_frame_signature_change_time_).count() > params_.geometry_stall_timeout;
+    if (held_geometry_stalled) {
+      if (reason) {
+        *reason = "camera geometry content is stalled";
+      }
+      return false;
+    }
+
+    // This is the interrupted continuation of an already running
+    // line-loss hold, not a new autonomous start.  Restore the exact command
+    // saved before Human pause even if lane validity is still LOW_CONFIDENCE.
+    auto_enabled_ = true;
+    safety_locked_ = false;
+    auto_start_pending_ = false;
+    cancel_geometry_stall_resume();
+    stop_reason_ = "running";
+    invalid_since_ = now;
+    current_speed_mps_ = std::clamp(
+      obstacle_resume_speed_mps_, 0.0, params_.linear_speed_mps);
+    current_steering_ = std::clamp(
+      obstacle_resume_steering_, -params_.max_steering, params_.max_steering);
+    limited_control_error_ = compute_control_error();
+    previous_control_error_ = limited_control_error_;
+    branch_error_limiter_engaged_ = false;
+    curve_entry_window_until_.reset();
+    curve_entry_window_armed_ = false;
+    filtered_derivative_ = 0.0;
+    previous_control_time_ = now;
+    publish_motion_command(current_speed_mps_, current_steering_);
+    publish_chassis_enable(true);
+    RCLCPP_WARN(
+      get_logger(),
+      "Obstacle cleared during line loss; restored held command speed=%.3f steering=%.3f",
+      current_speed_mps_, current_steering_);
     return true;
   }
 
@@ -1259,6 +1397,7 @@ private:
     // resume.  Keep obstacle_hold_active_ unchanged so a Human that is still
     // present continues to block manual /start calls.
     obstacle_resume_armed_ = false;
+    obstacle_resume_command_valid_ = false;
     if (reason != "geometry_stall") {
       cancel_geometry_stall_resume();
     }
@@ -1285,6 +1424,7 @@ private:
   {
     // An explicit operator stop must cancel any pending automatic resume.
     obstacle_resume_armed_ = false;
+    obstacle_resume_command_valid_ = false;
     cancel_geometry_stall_resume();
     disable_control("service_stop", false);
     response->success = true;
@@ -1311,12 +1451,16 @@ private:
     obstacle_hold_active_ = true;
     obstacle_resume_armed_ = was_running;
     if (was_running) {
+      obstacle_resume_speed_mps_ = current_speed_mps_;
+      obstacle_resume_steering_ = current_steering_;
+      obstacle_resume_command_valid_ = true;
       disable_control("obstacle_pause", false);
       response->message = "obstacle pause applied; resume armed";
     } else {
       // Preserve an existing safety lock and its reason.  In particular, an
       // obstacle detected while waiting to start must never convert that state
       // into an automatically resumable pause.
+      obstacle_resume_command_valid_ = false;
       publish_stop_state();
       response->message = "obstacle pause applied; controller was not running";
     }
@@ -1339,6 +1483,7 @@ private:
 
     if (!obstacle_resume_armed_) {
       obstacle_hold_active_ = false;
+      obstacle_resume_command_valid_ = false;
       publish_stop_state();
       response->success = true;
       response->message = "obstacle cleared; controller was not running before pause";
@@ -1347,19 +1492,28 @@ private:
     }
 
     std::string reason;
+    bool resumed_from_line_loss_hold = false;
     if (!try_start(&reason, true)) {
-      // Keep the hold and arm latched while perception is stale or another
-      // safety condition is active.  The perception client may safely retry.
-      obstacle_hold_active_ = true;
-      response->success = false;
-      response->message = "obstacle resume rejected: " + reason;
-      return;
+      std::string held_command_reason;
+      if (!try_resume_line_loss_command_hold(&held_command_reason)) {
+        // Keep the hold and arm latched while a non-line-loss safety
+        // condition is active.  The perception client may safely retry.
+        obstacle_hold_active_ = true;
+        response->success = false;
+        response->message = "obstacle resume rejected: " + reason +
+          "; held-command resume rejected: " + held_command_reason;
+        return;
+      }
+      resumed_from_line_loss_hold = true;
     }
 
     obstacle_hold_active_ = false;
     obstacle_resume_armed_ = false;
+    obstacle_resume_command_valid_ = false;
     response->success = true;
-    response->message = "obstacle cleared; line following resumed";
+    response->message = resumed_from_line_loss_hold ?
+      "obstacle cleared; held line-loss command restored" :
+      "obstacle cleared; line following resumed";
     RCLCPP_INFO(get_logger(), "Obstacle cleared; line following resumed");
   }
 
@@ -1376,6 +1530,7 @@ private:
     }
 
     obstacle_resume_armed_ = false;
+    obstacle_resume_command_valid_ = false;
     cancel_geometry_stall_resume();
     disable_control("service_stop", false);
     response->success = true;
@@ -1938,9 +2093,29 @@ private:
       -1.0, 1.0);
   }
 
+  double compute_global_position_error() const
+  {
+    double position_error = compute_weighted_offset();
+    if (has_global_offset_ &&
+      offset_age_seconds(
+        last_global_offset_time_, has_global_offset_, std::chrono::steady_clock::now()) <=
+      params_.offset_timeout)
+    {
+      double correction = current_global_offset_ - position_error;
+      if (std::abs(correction) <= params_.global_offset_deadband) {
+        correction = 0.0;
+      } else {
+        correction = std::copysign(
+          std::abs(correction) - params_.global_offset_deadband, correction);
+      }
+      position_error += params_.global_offset_blend * correction;
+    }
+    return std::clamp(position_error + params_.centerline_bias, -1.0, 1.0);
+  }
+
   double compute_control_error() const
   {
-    const double weighted_offset = compute_weighted_offset();
+    const double position_error = compute_global_position_error();
     const double lookahead_transition = params_.lookahead_transition_gain *
       (1.0 - compute_near_offset_blend()) *
       (current_offset_y07_ - current_offset_y09_);
@@ -1948,7 +2123,7 @@ private:
     // has a negative dx/dy heading, so subtract heading to make both feedback
     // terms request the same steering direction through a bend.
     return std::clamp(
-      weighted_offset -
+      position_error -
       params_.heading_feedback_gain * current_heading_error_ -
       compute_curve_outer_bias() + lookahead_transition, -1.0, 1.0);
   }
@@ -2147,6 +2322,7 @@ private:
     const double offset_relief = compute_offset_relief();
     const double allowed_offset = compute_allowed_offset();
     const double weighted_offset = compute_weighted_offset();
+    const double global_position_error = compute_global_position_error();
     const double near_offset_blend = compute_near_offset_blend();
     const double offset_excess = std::max(0.0, std::abs(weighted_offset) - allowed_offset);
     const bool branch_guard = branch_guard_active(now);
@@ -2167,6 +2343,10 @@ private:
          << " locked=" << (safety_locked_ ? "True" : "False")
          << " obstacle_hold=" << (obstacle_hold_active_ ? "True" : "False")
          << " obstacle_resume_armed=" << (obstacle_resume_armed_ ? "True" : "False")
+         << " obstacle_command_saved=" <<
+      (obstacle_resume_command_valid_ ? "True" : "False")
+         << " obstacle_saved_speed=" << obstacle_resume_speed_mps_
+         << " obstacle_saved_steering=" << obstacle_resume_steering_
          << " valid=" << (is_valid_ ? "True" : "False")
          << " lane_valid=" << (lane_state_valid_ ? "True" : "False")
          << " confidence=" << lane_confidence_
@@ -2197,6 +2377,10 @@ private:
          << " offset_y08=" << current_offset_y08_
          << " offset_y09=" << current_offset_y09_
          << " weighted_offset=" << weighted_offset
+         << " global_offset=" << current_global_offset_
+         << " global_offset_age=" << offset_age_seconds(
+      last_global_offset_time_, has_global_offset_, now)
+         << " global_position_error=" << global_position_error
          << " near_offset_blend=" << near_offset_blend
          << " heading_error=" << current_heading_error_
          << " curvature=" << current_curvature_
@@ -2253,6 +2437,7 @@ private:
   std::string offset_y07_topic_{"/segmentation/offset_y07"};
   std::string offset_y08_topic_{"/segmentation/offset_y08"};
   std::string offset_y09_topic_{"/segmentation/offset_y09"};
+  std::string global_offset_topic_{"/segmentation/global_offset"};
   std::string heading_error_topic_{"/segmentation/heading_error"};
   std::string curvature_topic_{"/segmentation/curvature"};
   std::string lane_state_topic_{"/perception/lane_state"};
@@ -2262,11 +2447,15 @@ private:
   bool safety_locked_{false};
   bool obstacle_hold_active_{false};
   bool obstacle_resume_armed_{false};
+  bool obstacle_resume_command_valid_{false};
+  double obstacle_resume_speed_mps_{0.0};
+  double obstacle_resume_steering_{0.0};
   bool geometry_stall_resume_armed_{false};
   bool has_frame_signature_{false};
   bool has_offset_y07_{false};
   bool has_offset_y08_{false};
   bool has_offset_y09_{false};
+  bool has_global_offset_{false};
   bool has_valid_message_{false};
   bool has_heading_error_{false};
   bool has_curvature_{false};
@@ -2277,6 +2466,7 @@ private:
   double current_offset_y07_{0.0};
   double current_offset_y08_{0.0};
   double current_offset_y09_{0.0};
+  double current_global_offset_{0.0};
   double current_heading_error_{0.0};
   double current_curvature_{0.0};
   double current_error_rate_speed_risk_{0.0};
@@ -2294,6 +2484,7 @@ private:
   std::chrono::steady_clock::time_point last_offset_y07_time_;
   std::chrono::steady_clock::time_point last_offset_y08_time_;
   std::chrono::steady_clock::time_point last_offset_y09_time_;
+  std::chrono::steady_clock::time_point last_global_offset_time_;
   std::chrono::steady_clock::time_point last_heading_error_time_;
   std::chrono::steady_clock::time_point last_curvature_time_;
   std::chrono::steady_clock::time_point last_lane_state_time_;
@@ -2316,6 +2507,7 @@ private:
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr offset_y07_subscription_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr offset_y08_subscription_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr offset_y09_subscription_;
+  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr global_offset_subscription_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr heading_error_subscription_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr curvature_subscription_;
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr valid_subscription_;
