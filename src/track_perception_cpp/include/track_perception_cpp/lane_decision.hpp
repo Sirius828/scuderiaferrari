@@ -94,6 +94,12 @@ struct LaneDecisionConfig {
   bool enable_car_obstacle_avoidance{true};
   int car_side_confirm_frames{2};
   int car_side_fit_downward_extension_px{200};
+  int car_side_connectivity_x_margin_px{50};
+  int car_side_connectivity_strip_width_px{15};
+  int car_side_connectivity_gap_px{3};
+  float car_side_connectivity_y_start_ratio{0.35f};
+  float car_side_connectivity_bottom_extend_height_ratio{0.60f};
+  int car_side_connectivity_min_seed_pixels{8};
   float car_avoidance_min_height_ratio{0.08f};
   int car_avoidance_min_height_px{12};
   int64_t car_encoder_detour_counts{9000};
@@ -106,8 +112,9 @@ struct LaneDecisionConfig {
   std::string car_left_template_offsets;
   double car_encoder_fault_hold_sec{3.0};
 
-  // Coin evaluation is shadow-only: it classifies Gold detections against
-  // the final fitted path but never changes the fitted points or geometry.
+  // Coin evaluation classifies Gold detections against the final fitted path.
+  // A separate dynamic route can be previewed before it is allowed to replace
+  // the controller geometry.
   bool enable_coin_shadow_evaluation{true};
   float coin_min_confidence{0.45f};
   float coin_evaluate_min_y_ratio{0.50f};
@@ -122,6 +129,20 @@ struct LaneDecisionConfig {
   float coin_obstacle_expand_px{12.0f};
   float coin_obstacle_lookahead_ratio{0.12f};
   int coin_side_clear_frames{10};
+  bool enable_coin_route_preview{true};
+  bool enable_coin_route_control{false};
+  int coin_route_max_targets{3};
+  int coin_route_sample_count{31};
+  float coin_route_approach_span_ratio{0.18f};
+  float coin_route_return_span_ratio{0.14f};
+  float coin_route_overlap_margin_px{4.0f};
+  float coin_route_base_weight{1.0f};
+  float coin_route_target_weight{64.0f};
+  float coin_route_endpoint_weight{16.0f};
+  float coin_route_max_offset_px{120.0f};
+  float coin_route_max_abs_heading{0.85f};
+  float coin_route_max_abs_curvature{0.85f};
+  float coin_route_obstacle_clearance_px{18.0f};
 
   bool enable_finish_stop{true};
   float finish_stop_min_confidence{0.45f};
@@ -161,7 +182,10 @@ struct LaneHumanDebug {
 struct LaneCoinDebug {
   cv::Rect2f bbox;
   cv::Point2f ground_point;
+  // Despite the legacy name, this is now the true closest point on the
+  // bounded fitted polynomial rather than a local tangent-line projection.
   cv::Point2f local_path_point;
+  cv::Point2f route_target_point;
   float confidence{0.0f};
   float sqrt_bbox_area{0.0f};
   float path_slope{0.0f};
@@ -172,6 +196,7 @@ struct LaneCoinDebug {
   float route_score{0.0f};
   bool obstacle_blocked{false};
   bool selected_for_route{false};
+  bool route_targeted{false};
   std::string side{"NONE"};
   std::string blocked_by;
   std::string classification{"NO_FIT"};
@@ -195,6 +220,16 @@ struct LaneDebugInfo {
   float coin_left_route_score{0.0f};
   float coin_right_route_score{0.0f};
   int coin_side_clear_count{0};
+  std::vector<cv::Point3f> coin_route_points;
+  std::vector<double> coin_route_coeffs;
+  std::vector<double> coin_route_base_coeffs;
+  bool coin_route_candidate_valid{false};
+  bool coin_route_control_active{false};
+  int coin_route_target_count{0};
+  float coin_route_heading{0.0f};
+  float coin_route_curvature{0.0f};
+  float coin_route_max_offset_px{0.0f};
+  std::string coin_route_reject_reason{"DISABLED"};
   bool human_passable{false};
   bool human_line_intersects{false};
   bool human_stop_candidate{false};
@@ -214,6 +249,14 @@ struct LaneDebugInfo {
   float car_side_fit_x{-1.0f};
   float car_side_fit_y{-1.0f};
   std::string car_side_fit_relation{"UNKNOWN"};
+  std::string car_mask_connectivity{"UNKNOWN"};
+  std::string car_side_source{"NONE"};
+  int car_left_seed_pixels{0};
+  int car_right_seed_pixels{0};
+  int car_common_component_pixels{0};
+  cv::Rect2f car_connectivity_roi;
+  cv::Rect2f car_left_seed_roi;
+  cv::Rect2f car_right_seed_roi;
   int car_side_confirm_count{0};
   std::string car_template_state{"IDLE"};
   bool car_template_active{false};
@@ -363,6 +406,7 @@ class LaneDecision {
   void resetCarAvoidanceState();
   void updateCarAvoidanceState(const std::vector<Detection>& detections,
                                const std::vector<cv::Point3f>& fit_points,
+                               const cv::Mat& seg_map,
                                int image_width, int image_height);
   std::vector<cv::Point3f> collectCarBoundaryTemplatePoints(
       std::vector<Band>& bands, int image_width,
@@ -380,8 +424,14 @@ class LaneDecision {
                             bool fit_valid);
   void evaluateCoinsShadow(const std::vector<Detection>& detections,
                            int image_width, int image_height,
+                           const std::vector<cv::Point3f>& fit_points,
                            const std::vector<double>& fit_coeffs,
                            bool fit_valid);
+  void buildCoinRoutePreview(const std::vector<Detection>& detections,
+                             int image_width, int image_height,
+                             const std::vector<cv::Point3f>& base_fit_points,
+                             const std::vector<double>& base_fit_coeffs,
+                             bool fit_valid);
   std::string taskState() const;
   void populateDebugInfo(const std::vector<Band>& bands,
                          const std::vector<cv::Point3f>& raw_points,
@@ -452,6 +502,14 @@ class LaneDecision {
   double car_side_fit_x_{-1.0};
   double car_side_fit_y_{-1.0};
   std::string car_side_fit_relation_{"UNKNOWN"};
+  std::string car_mask_connectivity_{"UNKNOWN"};
+  std::string car_side_source_{"NONE"};
+  int car_left_seed_pixels_{0};
+  int car_right_seed_pixels_{0};
+  int car_common_component_pixels_{0};
+  cv::Rect car_connectivity_roi_;
+  cv::Rect car_left_seed_roi_;
+  cv::Rect car_right_seed_roi_;
   CarTemplateState car_template_state_{CarTemplateState::Idle};
   std::string car_template_side_{"UNKNOWN"};
   int car_template_point_count_{0};

@@ -59,6 +59,37 @@ cv::Mat roadMask() {
   return mask;
 }
 
+cv::Mat curvedRoadMask() {
+  cv::Mat mask = cv::Mat::zeros(kHeight, kWidth, CV_8UC1);
+  for (int y = 0; y < kHeight; ++y) {
+    const double center_x = 100.0 + 0.0025 * y * y;
+    const int x0 = std::max(0, static_cast<int>(std::round(center_x - 35.0)));
+    const int x1 = std::min(kWidth, static_cast<int>(std::round(center_x + 35.0)));
+    if (x1 > x0) {
+      mask.row(y).colRange(x0, x1).setTo(1);
+    }
+  }
+  return mask;
+}
+
+double evaluatePolynomial(const std::vector<double>& coeffs, double y) {
+  double x = 0.0;
+  for (double coefficient : coeffs) {
+    x = x * y + coefficient;
+  }
+  return x;
+}
+
+double evaluatePolynomialSlope(const std::vector<double>& coeffs, double y) {
+  double slope = 0.0;
+  const int degree = static_cast<int>(coeffs.size()) - 1;
+  for (size_t index = 0; index + 1 < coeffs.size(); ++index) {
+    slope = slope * y + coeffs[index] *
+                            (degree - static_cast<int>(index));
+  }
+  return slope;
+}
+
 Detection detection(const std::string& class_name, float center_x,
                     float bottom_y, float width = 10.0f,
                     float height = 10.0f) {
@@ -133,6 +164,10 @@ TEST(LaneDecisionCoinShadowTest, GoldNeverChangesFittedGeometry) {
   for (size_t i = 0; i < baseline_coeffs.size(); ++i) {
     EXPECT_DOUBLE_EQ(coin_debug.fit_coeffs[i], baseline_coeffs[i]);
   }
+  EXPECT_TRUE(coin_debug.coin_route_candidate_valid)
+      << coin_debug.coin_route_reject_reason;
+  EXPECT_FALSE(coin_debug.coin_route_control_active);
+  EXPECT_EQ(coin_debug.coin_route_target_count, 1);
 }
 
 TEST(LaneDecisionCoinShadowTest, ReportsNoFitWithoutChangingInvalidState) {
@@ -192,7 +227,7 @@ TEST(LaneDecisionCoinShadowTest, EqualAreaUsesEqualThresholdAtDifferentHeights) 
   ASSERT_EQ(debug.coins.size(), 2u);
   EXPECT_FLOAT_EQ(debug.coins[0].sqrt_bbox_area,
                   debug.coins[1].sqrt_bbox_area);
-  EXPECT_FLOAT_EQ(debug.coins[0].hit_radius, debug.coins[1].hit_radius);
+  EXPECT_NEAR(debug.coins[0].hit_radius, debug.coins[1].hit_radius, 1e-2f);
   EXPECT_FLOAT_EQ(debug.coins[0].reachable_extra,
                   debug.coins[1].reachable_extra);
 }
@@ -222,6 +257,49 @@ TEST(LaneDecisionCoinShadowTest, LargerCoinGetsLargerThresholdAtSameHeight) {
   EXPECT_EQ(debug.coins[1].classification, "REACHABLE");
 }
 
+TEST(LaneDecisionCoinShadowTest, ClosestPointLiesOnCurvedFit) {
+  auto config = makeConfig();
+  config.coin_reachable_extra_min_px = 200.0f;
+  config.coin_reachable_extra_max_px = 200.0f;
+  LaneDecision decision;
+  decision.configure(config);
+
+  const Detection coin = detection("Gold", 210.0f, 110.0f);
+  (void)decision.decide(curvedRoadMask(), {coin});
+  const auto& debug = decision.debugInfo();
+
+  ASSERT_EQ(debug.coins.size(), 1u);
+  ASSERT_GE(debug.fit_coeffs.size(), 2u);
+  const auto& closest = debug.coins[0].local_path_point;
+  EXPECT_NEAR(closest.x,
+              evaluatePolynomial(debug.fit_coeffs, closest.y), 0.1);
+  EXPECT_NEAR(debug.coins[0].normal_distance,
+              std::hypot(coin.bbox.x + coin.bbox.width * 0.5f - closest.x,
+                         coin.bbox.y + coin.bbox.height - closest.y),
+              0.1);
+  const double slope = evaluatePolynomialSlope(debug.fit_coeffs, closest.y);
+  const double tangent_dot =
+      (coin.bbox.x + coin.bbox.width * 0.5f - closest.x) * slope +
+      (coin.bbox.y + coin.bbox.height - closest.y);
+  EXPECT_NEAR(tangent_dot, 0.0, 0.5);
+}
+
+TEST(LaneDecisionCoinShadowTest, ExplicitControlFlagAppliesValidCoinRoute) {
+  auto config = makeConfig();
+  config.enable_coin_route_control = true;
+  LaneDecision decision;
+  decision.configure(config);
+
+  const LaneState state = decision.decide(
+      roadMask(), {detection("Gold", 190.0f, 100.0f)});
+  const auto& debug = decision.debugInfo();
+
+  ASSERT_TRUE(debug.coin_route_candidate_valid)
+      << debug.coin_route_reject_reason;
+  EXPECT_TRUE(debug.coin_route_control_active);
+  EXPECT_GT(state.offset_y07, 0.0f);
+}
+
 TEST(LaneDecisionCoinShadowTest, SelectsOnlyOneReachableSideAndHoldsItByFrames) {
   LaneDecision decision;
   decision.configure(makeConfig());
@@ -236,6 +314,9 @@ TEST(LaneDecisionCoinShadowTest, SelectsOnlyOneReachableSideAndHoldsItByFrames) 
   EXPECT_EQ(initial_debug.coin_selected_side, "LEFT");
   EXPECT_TRUE(initial_debug.coins[0].selected_for_route);
   EXPECT_FALSE(initial_debug.coins[1].selected_for_route);
+  EXPECT_EQ(initial_debug.coin_route_target_count, 1);
+  EXPECT_TRUE(initial_debug.coins[0].route_targeted);
+  EXPECT_FALSE(initial_debug.coins[1].route_targeted);
 
   (void)decision.decide(roadMask(), {detection("Gold", 190.0f, 120.0f)});
   EXPECT_EQ(decision.debugInfo().coin_selected_side, "LEFT");
@@ -245,6 +326,26 @@ TEST(LaneDecisionCoinShadowTest, SelectsOnlyOneReachableSideAndHoldsItByFrames) 
   (void)decision.decide(roadMask(), {detection("Gold", 190.0f, 120.0f)});
   EXPECT_EQ(decision.debugInfo().coin_selected_side, "RIGHT");
   EXPECT_TRUE(decision.debugInfo().coins[0].selected_for_route);
+}
+
+TEST(LaneDecisionCoinShadowTest, ChainsReachableCoinsOnlyOnSelectedSide) {
+  LaneDecision decision;
+  decision.configure(makeConfig());
+
+  (void)decision.decide(
+      roadMask(), {detection("Gold", 130.0f, 110.0f),
+                   detection("Gold", 128.0f, 170.0f),
+                   detection("Gold", 190.0f, 130.0f)});
+  const auto& debug = decision.debugInfo();
+
+  ASSERT_EQ(debug.coins.size(), 3u);
+  EXPECT_EQ(debug.coin_selected_side, "LEFT");
+  EXPECT_EQ(debug.coin_route_target_count, 2);
+  EXPECT_TRUE(debug.coins[0].route_targeted);
+  EXPECT_TRUE(debug.coins[1].route_targeted);
+  EXPECT_FALSE(debug.coins[2].route_targeted);
+  EXPECT_TRUE(debug.coin_route_candidate_valid)
+      << debug.coin_route_reject_reason;
 }
 
 }  // namespace

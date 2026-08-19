@@ -13,7 +13,7 @@ fused_perception_node:
     model_input_format: "RGB"
 
     # 性能日志：只看 FPS、RKNN 推理耗时、后处理耗时、发布耗时
-    enable_perf_stats: false
+    enable_perf_stats: true
     perf_interval: 2.0
 
     # 画面显示：只影响 OpenCV 预览窗口，不影响终端日志
@@ -26,10 +26,10 @@ fused_perception_node:
     debug_screenshot_dir: "/tmp/fused_perception_screenshots"
 
     # 结果日志：只打印稳定识别、回退、轨迹和最终分支事件
-    enable_result_log: true
+    enable_result_log: false
     # 终端只输出 GuideBoard OCR/API 日志；详细 JSON 仍发布到 ROS 话题
-    enable_data_log: true
-    guideboard_log_only: true
+    enable_data_log: false
+    guideboard_log_only: false
     # Human 使用带运行状态记忆的专用服务：只有避障前已发车才允许清障后恢复。
     line_follower_start_service: "/line_follower/obstacle_resume"
     line_follower_stop_service: "/line_follower/obstacle_pause"
@@ -84,8 +84,8 @@ fused_perception_node:
     guideboard_api_text_history_size: 3
     guideboard_api_text_similarity: 0.70
     guideboard_api_force_ocr_count_after_stop: 2
-    # 牌框高度达到画面高度的12%即停车，留出OCR/API决策时间
-    guideboard_api_stop_height_ratio: 0.11
+    # 牌框高度达到画面高度的14%即停车，留出OCR/API决策时间
+    guideboard_api_stop_height_ratio: 0.14
     guideboard_api_retry_on_transport_failure: true
     guideboard_api_max_attempts: 1
     ocr_det_model_path: "model/ppocrv4_det.rknn"
@@ -203,10 +203,17 @@ fused_perception_node:
     human_stop_raw_area_ratio: 0.003
     human_stop_confirm_frames: 2
     human_clear_confirm_frames: 2
-    # Car 通过同高度拟合点相对 bbox 的位置确认侧别，再按编码器锁存安全侧边界模板绕行
+    # Car 首先根据 bbox 两侧赛道 mask 是否连通确认侧别；证据不足时仅在 IDLE
+    # 使用同高度拟合点作初始备用判断。DETOUR/RETURN 中只有 mask 证据能切换模板。
     enable_car_obstacle_avoidance: true
     car_side_confirm_frames: 2
     car_side_fit_downward_extension_px: 7
+    car_side_connectivity_x_margin_px: 50
+    car_side_connectivity_strip_width_px: 15
+    car_side_connectivity_gap_px: 3
+    car_side_connectivity_y_start_ratio: 0.35
+    car_side_connectivity_bottom_extend_height_ratio: 0.60
+    car_side_connectivity_min_seed_pixels: 8
     car_avoidance_min_height_ratio: 0.065
     car_avoidance_min_height_px: 12
     car_encoder_detour_counts: 7500
@@ -221,13 +228,13 @@ fused_perception_node:
     car_left_template_offsets: "0.0,77.0,92.0,108.0,127.0,142.0,157.0,170.0,183.0,196.0,210.0,224.0,237.0,251.0,264.0,276.0,290.0,304.0,317.0,329.0,338.0,349.0,358.0,371.0"
     car_encoder_fault_hold_sec: 3.0
 
-    # Coin 仅做影子评估，不修改拟合线和控制量。画面分类：
+    # Coin 先做分类，再生成独立的动态路线候选。默认只预览，不修改控制量。画面分类：
     # ON_ROUTE=碰撞箱顺路覆盖，REACHABLE=少量横移可达，TOO_FAR=太远，BLOCKED=走廊有障碍。
     enable_coin_shadow_evaluation: true
     coin_min_confidence: 0.65
     # 仅在中间窗口做距离/障碍判断；远端等待，近端视为已经承诺或正在通过。
-    coin_evaluate_min_y_ratio: 0.50
-    coin_near_committed_y_ratio: 0.86
+    coin_evaluate_min_y_ratio: 0.45
+    coin_near_committed_y_ratio: 0.90
     # 距离阈值不再绑定 y；sqrt(bbox面积) 与透视下的线性尺寸同量纲。
     # 赛车碰撞箱投影半宽 = clamp(scale * sqrt面积, min, max)。
     coin_car_half_width_area_scale: 0.55
@@ -241,9 +248,28 @@ fused_perception_node:
     coin_obstacle_expand_px: 12.0
     # 同时检查 coin 后方一小段距离，避免拾取紧贴障碍物前方的 coin。
     coin_obstacle_lookahead_ratio: 0.12
-    # 左右两侧同时可达时只影子选择一侧；该侧连续丢失若干帧后才允许重选。
-    # 当前不使用编码器，也不将选择结果应用到拟合线。
+    # 左右两侧同时可达时只选择一侧；该侧连续丢失若干帧后才允许重选。
+    # 当前不使用编码器。
     coin_side_clear_frames: 10
+    # Coin 动态路线：绿色=安全预览，橙色=校验失败，紫色=已接管控制。
+    # control 默认关闭；确认预览线的进入、拾取、回归都稳定后再开启。
+    enable_coin_route_preview: true
+    enable_coin_route_control: true
+    coin_route_max_targets: 3
+    coin_route_sample_count: 31
+    # 行驶方向为画面下到上：approach 控制 coin 前的入弯长度，return 控制通过后的回线长度。
+    coin_route_approach_span_ratio: 0.18
+    coin_route_return_span_ratio: 0.14
+    # 不瞄准 coin 中心，只让碰撞范围多重叠这几个像素。
+    coin_route_overlap_margin_px: 4.0
+    coin_route_base_weight: 1.0
+    coin_route_target_weight: 64.0
+    coin_route_endpoint_weight: 16.0
+    # 候选路线的安全限制与障碍走廊膨胀。
+    coin_route_max_offset_px: 120.0
+    coin_route_max_abs_heading: 0.85
+    coin_route_max_abs_curvature: 0.85
+    coin_route_obstacle_clearance_px: 18.0
 
     # 终点停车：Stop bbox 底部达到阈值才 FINISH_STOP
     # 联调阶段忽略 Stop 标签，不产生 FINISH_STOP；后续接入专用终点联锁后再开启。

@@ -41,6 +41,130 @@ std::vector<double> polyDeriv(const std::vector<double>& coeffs, int order = 1) 
   return out;
 }
 
+struct PolynomialClosestPoint {
+  bool valid{false};
+  double x{0.0};
+  double y{0.0};
+  double distance{0.0};
+  double signed_distance{0.0};
+  double slope{0.0};
+};
+
+std::pair<double, double> fitYBounds(
+    const std::vector<cv::Point3f>& fit_points, int image_height) {
+  double y_min = 0.0;
+  double y_max = std::max(0, image_height - 1);
+  if (!fit_points.empty()) {
+    const auto bounds = std::minmax_element(
+        fit_points.begin(), fit_points.end(),
+        [](const cv::Point3f& lhs, const cv::Point3f& rhs) {
+          return lhs.y < rhs.y;
+        });
+    y_min = clampValue(static_cast<double>(bounds.first->y), 0.0, y_max);
+    y_max = clampValue(static_cast<double>(bounds.second->y), y_min, y_max);
+  }
+  return {y_min, y_max};
+}
+
+PolynomialClosestPoint closestPointOnPolynomial(
+    const std::vector<double>& coeffs, double point_x, double point_y,
+    double y_min, double y_max) {
+  PolynomialClosestPoint result;
+  if (coeffs.size() < 2 || !std::isfinite(point_x) ||
+      !std::isfinite(point_y) || !std::isfinite(y_min) ||
+      !std::isfinite(y_max) || y_max < y_min) {
+    return result;
+  }
+
+  const auto distance_squared = [&](double y) {
+    const double x = evalPoly(coeffs, y);
+    if (!std::isfinite(x)) {
+      return std::numeric_limits<double>::infinity();
+    }
+    const double dx = x - point_x;
+    const double dy = y - point_y;
+    return dx * dx + dy * dy;
+  };
+
+  constexpr int kCoarseSegments = 32;
+  double best_y = y_min;
+  double best_distance_squared = distance_squared(best_y);
+  for (int i = 1; i <= kCoarseSegments; ++i) {
+    const double ratio = static_cast<double>(i) / kCoarseSegments;
+    const double y = y_min + (y_max - y_min) * ratio;
+    const double candidate_distance_squared = distance_squared(y);
+    if (candidate_distance_squared < best_distance_squared) {
+      best_y = y;
+      best_distance_squared = candidate_distance_squared;
+    }
+  }
+
+  const double segment_span = (y_max - y_min) / kCoarseSegments;
+  double search_left = std::max(y_min, best_y - segment_span);
+  double search_right = std::min(y_max, best_y + segment_span);
+  constexpr double kGoldenRatio = 0.6180339887498948482;
+  double left_probe = search_right -
+                      (search_right - search_left) * kGoldenRatio;
+  double right_probe = search_left +
+                       (search_right - search_left) * kGoldenRatio;
+  double left_distance_squared = distance_squared(left_probe);
+  double right_distance_squared = distance_squared(right_probe);
+  constexpr int kRefineIterations = 14;
+  for (int iteration = 0; iteration < kRefineIterations; ++iteration) {
+    if (left_distance_squared <= right_distance_squared) {
+      search_right = right_probe;
+      right_probe = left_probe;
+      right_distance_squared = left_distance_squared;
+      left_probe = search_right -
+                   (search_right - search_left) * kGoldenRatio;
+      left_distance_squared = distance_squared(left_probe);
+    } else {
+      search_left = left_probe;
+      left_probe = right_probe;
+      left_distance_squared = right_distance_squared;
+      right_probe = search_left +
+                    (search_right - search_left) * kGoldenRatio;
+      right_distance_squared = distance_squared(right_probe);
+    }
+  }
+  const double refined_y = 0.5 * (search_left + search_right);
+  const double refined_distance_squared = distance_squared(refined_y);
+  if (refined_distance_squared < best_distance_squared) {
+    best_y = refined_y;
+    best_distance_squared = refined_distance_squared;
+  }
+  if (!std::isfinite(best_distance_squared)) {
+    return result;
+  }
+
+  const double best_x = evalPoly(coeffs, best_y);
+  const auto derivative = polyDeriv(coeffs);
+  const double slope = evalPoly(derivative, best_y);
+  if (!std::isfinite(best_x) || !std::isfinite(slope)) {
+    return result;
+  }
+  const double normal_scale = std::sqrt(1.0 + slope * slope);
+  const double normal_projection =
+      ((point_x - best_x) - slope * (point_y - best_y)) / normal_scale;
+  const double distance = std::sqrt(std::max(0.0, best_distance_squared));
+  const double side_value = std::abs(normal_projection) > 1e-6
+                                ? normal_projection
+                                : point_x - best_x;
+
+  result.valid = true;
+  result.x = best_x;
+  result.y = best_y;
+  result.distance = distance;
+  result.signed_distance = std::copysign(distance, side_value);
+  result.slope = slope;
+  return result;
+}
+
+double smoothStep(double value) {
+  const double t = clampValue(value, 0.0, 1.0);
+  return t * t * (3.0 - 2.0 * t);
+}
+
 bool solveLinearSystem(std::vector<std::vector<double>> a, std::vector<double> b,
                        std::vector<double>* x) {
   int n = static_cast<int>(b.size());
@@ -168,6 +292,20 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.car_side_confirm_frames = std::max(1, cfg_.car_side_confirm_frames);
   cfg_.car_side_fit_downward_extension_px = std::max(
       0, cfg_.car_side_fit_downward_extension_px);
+  cfg_.car_side_connectivity_strip_width_px = std::max(
+      1, cfg_.car_side_connectivity_strip_width_px);
+  cfg_.car_side_connectivity_gap_px = std::max(
+      0, cfg_.car_side_connectivity_gap_px);
+  cfg_.car_side_connectivity_x_margin_px = std::max(
+      cfg_.car_side_connectivity_strip_width_px +
+          cfg_.car_side_connectivity_gap_px,
+      cfg_.car_side_connectivity_x_margin_px);
+  cfg_.car_side_connectivity_y_start_ratio = clampValue(
+      cfg_.car_side_connectivity_y_start_ratio, 0.0f, 1.0f);
+  cfg_.car_side_connectivity_bottom_extend_height_ratio = std::max(
+      0.0f, cfg_.car_side_connectivity_bottom_extend_height_ratio);
+  cfg_.car_side_connectivity_min_seed_pixels = std::max(
+      1, cfg_.car_side_connectivity_min_seed_pixels);
   cfg_.car_avoidance_min_height_ratio =
       clampValue(cfg_.car_avoidance_min_height_ratio, 0.0f, 1.0f);
   cfg_.car_avoidance_min_height_px =
@@ -213,6 +351,27 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.coin_obstacle_lookahead_ratio =
       clampValue(cfg_.coin_obstacle_lookahead_ratio, 0.0f, 1.0f);
   cfg_.coin_side_clear_frames = std::max(1, cfg_.coin_side_clear_frames);
+  cfg_.coin_route_max_targets = std::max(1, cfg_.coin_route_max_targets);
+  cfg_.coin_route_sample_count = std::max(
+      std::max(5, cfg_.fit_min_points), cfg_.coin_route_sample_count);
+  cfg_.coin_route_approach_span_ratio = clampValue(
+      cfg_.coin_route_approach_span_ratio, 0.02f, 1.0f);
+  cfg_.coin_route_return_span_ratio = clampValue(
+      cfg_.coin_route_return_span_ratio, 0.02f, 1.0f);
+  cfg_.coin_route_overlap_margin_px =
+      std::max(0.0f, cfg_.coin_route_overlap_margin_px);
+  cfg_.coin_route_base_weight = std::max(0.01f, cfg_.coin_route_base_weight);
+  cfg_.coin_route_target_weight = std::max(
+      cfg_.coin_route_base_weight, cfg_.coin_route_target_weight);
+  cfg_.coin_route_endpoint_weight = std::max(
+      cfg_.coin_route_base_weight, cfg_.coin_route_endpoint_weight);
+  cfg_.coin_route_max_offset_px = std::max(1.0f, cfg_.coin_route_max_offset_px);
+  cfg_.coin_route_max_abs_heading = clampValue(
+      cfg_.coin_route_max_abs_heading, 0.0f, 1.0f);
+  cfg_.coin_route_max_abs_curvature = clampValue(
+      cfg_.coin_route_max_abs_curvature, 0.0f, 1.0f);
+  cfg_.coin_route_obstacle_clearance_px =
+      std::max(0.0f, cfg_.coin_route_obstacle_clearance_px);
   if (cfg_.guideboard_unknown_branch != "left" && cfg_.guideboard_unknown_branch != "right") {
     cfg_.guideboard_unknown_branch = cfg_.outer_side;
   }
@@ -514,7 +673,7 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
     // Car side detection uses the current frame's selected centerline points
     // (the yellow band points in the debug image), before any Car template
     // replaces the output line.
-    updateCarAvoidanceState(detections, raw_points, w, h);
+    updateCarAvoidanceState(detections, raw_points, seg_map, w, h);
     const std::vector<cv::Point3f> underlying_points = fit_points;
     std::vector<double> underlying_coeffs;
     double underlying_heading = 0.0;
@@ -743,6 +902,20 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
         use_car_template();
       }
     }
+    // Coin classification and route generation always use the final road/car
+    // fit as their immutable base.  The optional controller takeover happens
+    // only after the candidate has passed all route checks.
+    evaluateCoinsShadow(detections, w, h, fit_points, fit_coeffs, fit_success);
+    buildCoinRoutePreview(detections, w, h, fit_points, fit_coeffs, fit_success);
+    if (cfg_.enable_coin_route_control &&
+        debug_info_.coin_route_candidate_valid) {
+      fit_points = debug_info_.coin_route_points;
+      fit_coeffs = debug_info_.coin_route_coeffs;
+      heading_error = debug_info_.coin_route_heading;
+      curvature = debug_info_.coin_route_curvature;
+      debug_info_.coin_route_control_active = true;
+    }
+
     if (fit_success) {
       const std::array<float, 3> ratios{{
           cfg_.offset_y07_ratio, cfg_.offset_y08_ratio, cfg_.offset_y09_ratio}};
@@ -796,7 +969,6 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
       debug_info_.global_offset = static_cast<float>(global_offset);
       debug_info_.image_width = w;
     }
-    evaluateCoinsShadow(detections, w, h, fit_coeffs, is_valid);
     populateDebugInfo(bands, raw_points, fit_points, w, h, fit_coeffs);
   } else {
     cv::Mat bottom_seg = seg_map(cv::Range(h / 2, h), cv::Range::all());
@@ -1453,6 +1625,14 @@ void LaneDecision::resetCarAvoidanceState() {
   car_side_fit_x_ = -1.0;
   car_side_fit_y_ = -1.0;
   car_side_fit_relation_ = "UNKNOWN";
+  car_mask_connectivity_ = "UNKNOWN";
+  car_side_source_ = "NONE";
+  car_left_seed_pixels_ = 0;
+  car_right_seed_pixels_ = 0;
+  car_common_component_pixels_ = 0;
+  car_connectivity_roi_ = cv::Rect();
+  car_left_seed_roi_ = cv::Rect();
+  car_right_seed_roi_ = cv::Rect();
   car_template_state_ = CarTemplateState::Idle;
   car_template_side_ = "UNKNOWN";
   car_template_point_count_ = 0;
@@ -1476,6 +1656,7 @@ void LaneDecision::resetCarAvoidanceState() {
 void LaneDecision::updateCarAvoidanceState(
     const std::vector<Detection>& detections,
     const std::vector<cv::Point3f>& fit_points,
+    const cv::Mat& seg_map,
     int image_width, int image_height) {
   if (!cfg_.enable_car_obstacle_avoidance || image_width <= 0 ||
       image_height <= 0) {
@@ -1521,6 +1702,14 @@ void LaneDecision::updateCarAvoidanceState(
     car_side_fit_x_ = -1.0;
     car_side_fit_y_ = -1.0;
     car_side_fit_relation_ = "UNKNOWN";
+    car_mask_connectivity_ = "UNKNOWN";
+    car_side_source_ = "NONE";
+    car_left_seed_pixels_ = 0;
+    car_right_seed_pixels_ = 0;
+    car_common_component_pixels_ = 0;
+    car_connectivity_roi_ = cv::Rect();
+    car_left_seed_roi_ = cv::Rect();
+    car_right_seed_roi_ = cv::Rect();
     car_left_x_ = -1.0;
     car_right_x_ = 0.0;
     car_top_y_ = 0.0;
@@ -1558,6 +1747,157 @@ void LaneDecision::updateCarAvoidanceState(
   car_side_fit_x_ = -1.0;
   car_side_fit_y_ = -1.0;
   car_side_fit_relation_ = "UNKNOWN";
+  car_mask_connectivity_ = "UNKNOWN";
+  car_side_source_ = "NONE";
+  car_left_seed_pixels_ = 0;
+  car_right_seed_pixels_ = 0;
+  car_common_component_pixels_ = 0;
+  car_connectivity_roi_ = cv::Rect();
+  car_left_seed_roi_ = cv::Rect();
+  car_right_seed_roi_ = cv::Rect();
+
+  // On the fixed clockwise right-turn track, a Car on the left leaves the
+  // nearby road mask connected around its bbox.  A Car on the right occludes
+  // the right-bending road and splits the road visible at its two vertical
+  // sides.  Test this topology in a small ROI instead of comparing mask area.
+  std::string mask_candidate = "UNKNOWN";
+  if (!seg_map.empty() && seg_map.channels() == 1 &&
+      seg_map.rows == image_height && seg_map.cols == image_width) {
+    const int bbox_left_px = std::clamp(
+        static_cast<int>(std::floor(selected_car->bbox.x)), 0,
+        image_width - 1);
+    const int bbox_right_px = std::clamp(
+        static_cast<int>(std::ceil(
+            selected_car->bbox.x + selected_car->bbox.width)),
+        bbox_left_px + 1, image_width);
+    const int bbox_top_px = std::clamp(
+        static_cast<int>(std::floor(selected_car->bbox.y)), 0,
+        image_height - 1);
+    const int bbox_bottom_px = std::clamp(
+        static_cast<int>(std::ceil(
+            selected_car->bbox.y + selected_car->bbox.height)),
+        bbox_top_px + 1, image_height);
+    const int gap = cfg_.car_side_connectivity_gap_px;
+    const int strip_width = cfg_.car_side_connectivity_strip_width_px;
+    const int left_seed_x1 = bbox_left_px - gap;
+    const int left_seed_x0 = left_seed_x1 - strip_width;
+    const int right_seed_x0 = bbox_right_px + gap;
+    const int right_seed_x1 = right_seed_x0 + strip_width;
+    const int seed_y0 = std::clamp(
+        static_cast<int>(std::floor(
+            selected_car->bbox.y + selected_car->bbox.height *
+                cfg_.car_side_connectivity_y_start_ratio)),
+        0, image_height - 1);
+    const int seed_y1 = bbox_bottom_px;
+    const bool seed_geometry_valid =
+        left_seed_x0 >= 0 && right_seed_x1 <= image_width &&
+        seed_y1 > seed_y0;
+
+    const int roi_x0 = std::max(
+        0, bbox_left_px - cfg_.car_side_connectivity_x_margin_px);
+    const int roi_x1 = std::min(
+        image_width,
+        bbox_right_px + cfg_.car_side_connectivity_x_margin_px);
+    const int roi_y0 = seed_y0;
+    const int roi_y1 = std::clamp(
+        static_cast<int>(std::ceil(
+            selected_car->bbox.y + selected_car->bbox.height *
+                (1.0 + cfg_.car_side_connectivity_bottom_extend_height_ratio))),
+        seed_y1, image_height);
+    if (roi_x1 > roi_x0 && roi_y1 > roi_y0) {
+      car_connectivity_roi_ = cv::Rect(
+          roi_x0, roi_y0, roi_x1 - roi_x0, roi_y1 - roi_y0);
+    }
+
+    if (seed_geometry_valid && car_connectivity_roi_.area() > 0) {
+      car_left_seed_roi_ = cv::Rect(
+          left_seed_x0, seed_y0, strip_width, seed_y1 - seed_y0);
+      car_right_seed_roi_ = cv::Rect(
+          right_seed_x0, seed_y0, strip_width, seed_y1 - seed_y0);
+
+      cv::Mat road_binary;
+      cv::compare(seg_map(car_connectivity_roi_), 0, road_binary,
+                  cv::CMP_GT);
+      cv::morphologyEx(
+          road_binary, road_binary, cv::MORPH_CLOSE,
+          cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3)));
+
+      // Never allow a segmentation leak through the detected Car to make the
+      // two sides appear connected.
+      const int clear_x0 = std::max(bbox_left_px, roi_x0) - roi_x0;
+      const int clear_x1 = std::min(bbox_right_px, roi_x1) - roi_x0;
+      const int clear_y0 = std::max(bbox_top_px, roi_y0) - roi_y0;
+      const int clear_y1 = std::min(bbox_bottom_px, roi_y1) - roi_y0;
+      if (clear_x1 > clear_x0 && clear_y1 > clear_y0) {
+        road_binary(cv::Rect(clear_x0, clear_y0,
+                             clear_x1 - clear_x0,
+                             clear_y1 - clear_y0)).setTo(0);
+      }
+
+      cv::Mat labels;
+      cv::Mat stats;
+      cv::Mat centroids;
+      const int component_count = cv::connectedComponentsWithStats(
+          road_binary, labels, stats, centroids, 8, CV_32S);
+      std::vector<uint8_t> left_labels(
+          static_cast<size_t>(component_count), 0);
+      std::vector<uint8_t> right_labels(
+          static_cast<size_t>(component_count), 0);
+
+      const auto collect_seed = [&](const cv::Rect& absolute_seed,
+                                    std::vector<uint8_t>* touched_labels) {
+        const cv::Rect local_seed(
+            absolute_seed.x - roi_x0, absolute_seed.y - roi_y0,
+            absolute_seed.width, absolute_seed.height);
+        int pixels = 0;
+        for (int y = local_seed.y; y < local_seed.y + local_seed.height; ++y) {
+          const int* label_row = labels.ptr<int>(y);
+          for (int x = local_seed.x; x < local_seed.x + local_seed.width; ++x) {
+            const int label = label_row[x];
+            if (label > 0) {
+              ++pixels;
+              (*touched_labels)[static_cast<size_t>(label)] = 1;
+            }
+          }
+        }
+        return pixels;
+      };
+      car_left_seed_pixels_ = collect_seed(
+          car_left_seed_roi_, &left_labels);
+      car_right_seed_pixels_ = collect_seed(
+          car_right_seed_roi_, &right_labels);
+
+      int common_label = 0;
+      for (int label = 1; label < component_count; ++label) {
+        if (left_labels[static_cast<size_t>(label)] == 0 ||
+            right_labels[static_cast<size_t>(label)] == 0) {
+          continue;
+        }
+        if (common_label == 0 ||
+            stats.at<int>(label, cv::CC_STAT_AREA) >
+                stats.at<int>(common_label, cv::CC_STAT_AREA)) {
+          common_label = label;
+        }
+      }
+      if (common_label > 0) {
+        car_common_component_pixels_ =
+            stats.at<int>(common_label, cv::CC_STAT_AREA);
+      }
+
+      const int min_seed_pixels =
+          cfg_.car_side_connectivity_min_seed_pixels;
+      if (car_left_seed_pixels_ >= min_seed_pixels &&
+          car_right_seed_pixels_ >= min_seed_pixels) {
+        if (common_label > 0) {
+          car_mask_connectivity_ = "CONNECTED";
+          mask_candidate = "LEFT";
+        } else {
+          car_mask_connectivity_ = "SPLIT";
+          mask_candidate = "RIGHT";
+        }
+      }
+    }
+  }
 
   // Use centerline points at the Car's vertical height.  The point does not
   // need to be inside the bbox: a point on the Car's left means the Car
@@ -1576,7 +1916,7 @@ void LaneDecision::updateCarAvoidanceState(
     }
   }
 
-  std::string candidate = "UNKNOWN";
+  std::string fit_candidate = "UNKNOWN";
   if (!side_points.empty()) {
     // Prefer the point with the largest y in the Car's vertical span: it is
     // the fitting point at the height closest to the Car's lower edge.
@@ -1606,12 +1946,24 @@ void LaneDecision::updateCarAvoidanceState(
       car_side_fit_y_ = selected_point.y;
       if (has_left_point) {
         car_side_fit_relation_ = "LEFT_OF_CAR";
-        candidate = "RIGHT";
+        fit_candidate = "RIGHT";
       } else {
         car_side_fit_relation_ = "RIGHT_OF_CAR";
-        candidate = "LEFT";
+        fit_candidate = "LEFT";
       }
     }
+  }
+
+  std::string candidate = mask_candidate;
+  if (candidate == "LEFT" || candidate == "RIGHT") {
+    car_side_source_ = "MASK_CONNECTIVITY";
+  } else if (car_template_state_ == CarTemplateState::Idle &&
+             (fit_candidate == "LEFT" || fit_candidate == "RIGHT")) {
+    // The old fit-point relation is retained only to acquire an initial side
+    // when mask topology has insufficient evidence.  It cannot switch an
+    // active DETOUR/RETURN template.
+    candidate = fit_candidate;
+    car_side_source_ = "FIT_FALLBACK";
   }
 
   if (car_template_state_ == CarTemplateState::WaitClear) {
@@ -2150,7 +2502,8 @@ std::string LaneDecision::taskState() const {
 
 void LaneDecision::evaluateCoinsShadow(
     const std::vector<Detection>& detections, int image_width,
-    int image_height, const std::vector<double>& fit_coeffs,
+    int image_height, const std::vector<cv::Point3f>& fit_points,
+    const std::vector<double>& fit_coeffs,
     bool fit_valid) {
   debug_info_.coins.clear();
   debug_info_.coin_on_route_count = 0;
@@ -2165,6 +2518,7 @@ void LaneDecision::evaluateCoinsShadow(
       image_height <= 1) {
     return;
   }
+  const auto [fit_y_min, fit_y_max] = fitYBounds(fit_points, image_height);
 
   for (const auto& coin : detections) {
     if (coin.class_name != "Gold" || coin.confidence < cfg_.coin_min_confidence ||
@@ -2211,31 +2565,33 @@ void LaneDecision::evaluateCoinsShadow(
       continue;
     }
 
-    const double path_x = evalPoly(fit_coeffs, coin_y);
-    const auto derivative = polyDeriv(fit_coeffs);
-    const double slope = evalPoly(derivative, coin_y);
-    if (!std::isfinite(path_x) || !std::isfinite(slope)) {
+    const PolynomialClosestPoint closest = closestPointOnPolynomial(
+        fit_coeffs, coin_x, coin_y, fit_y_min, fit_y_max);
+    if (!closest.valid) {
       coin_debug.classification = "NO_FIT";
       ++debug_info_.coin_no_fit_count;
       debug_info_.coins.push_back(std::move(coin_debug));
       continue;
     }
 
-    // Project the coin-to-path displacement onto the local path normal. This
-    // is the constant-time local approximation to the shortest curve distance.
-    const double normal_scale = std::sqrt(1.0 + slope * slope);
-    const double dx = coin_x - path_x;
-    const double normal_distance = std::abs(dx) / normal_scale;
-    const double signed_normal_distance = dx / normal_scale;
-    const double tangent_parameter = dx * slope / (1.0 + slope * slope);
-    const double local_path_x = path_x + tangent_parameter * slope;
-    const double local_path_y = coin_y + tangent_parameter;
+    // Use the true shortest Euclidean distance to the bounded fitted curve.
+    // The coarse scan avoids the wrong local minimum; a short golden-section
+    // refinement keeps the endpoint on the polynomial even in a sharp bend.
+    const double normal_distance = closest.distance;
+    const double signed_normal_distance = closest.signed_distance;
     const double car_half_width = clampValue(
         static_cast<double>(cfg_.coin_car_half_width_area_scale) * sqrt_bbox_area,
         static_cast<double>(cfg_.coin_car_half_width_min_px),
         static_cast<double>(cfg_.coin_car_half_width_max_px));
-    const double coin_half_width_normal =
-        static_cast<double>(coin.bbox.width) * 0.5 / normal_scale;
+    double direction_x = 1.0;
+    double direction_y = 0.0;
+    if (normal_distance > 1e-6) {
+      direction_x = (coin_x - closest.x) / normal_distance;
+      direction_y = (coin_y - closest.y) / normal_distance;
+    }
+    const double coin_half_width_normal = 0.5 * (
+        std::abs(direction_x) * coin.bbox.width +
+        std::abs(direction_y) * coin.bbox.height);
     const double hit_radius = car_half_width + coin_half_width_normal +
                               cfg_.coin_hit_margin_px;
     const double extra_distance = std::max(0.0, normal_distance - hit_radius);
@@ -2245,8 +2601,8 @@ void LaneDecision::evaluateCoinsShadow(
         static_cast<double>(cfg_.coin_reachable_extra_max_px));
 
     coin_debug.local_path_point = cv::Point2f(
-        static_cast<float>(local_path_x), static_cast<float>(local_path_y));
-    coin_debug.path_slope = static_cast<float>(slope);
+        static_cast<float>(closest.x), static_cast<float>(closest.y));
+    coin_debug.path_slope = static_cast<float>(closest.slope);
     coin_debug.normal_distance = static_cast<float>(normal_distance);
     coin_debug.hit_radius = static_cast<float>(hit_radius);
     coin_debug.extra_distance = static_cast<float>(extra_distance);
@@ -2387,6 +2743,253 @@ void LaneDecision::evaluateCoinsShadow(
   debug_info_.coin_side_clear_count = coin_side_clear_count_;
 }
 
+void LaneDecision::buildCoinRoutePreview(
+    const std::vector<Detection>& detections, int image_width,
+    int image_height, const std::vector<cv::Point3f>& base_fit_points,
+    const std::vector<double>& base_fit_coeffs, bool fit_valid) {
+  debug_info_.coin_route_points.clear();
+  debug_info_.coin_route_coeffs.clear();
+  debug_info_.coin_route_base_coeffs = base_fit_coeffs;
+  debug_info_.coin_route_candidate_valid = false;
+  debug_info_.coin_route_control_active = false;
+  debug_info_.coin_route_target_count = 0;
+  debug_info_.coin_route_heading = 0.0f;
+  debug_info_.coin_route_curvature = 0.0f;
+  debug_info_.coin_route_max_offset_px = 0.0f;
+  debug_info_.coin_route_reject_reason = "DISABLED";
+  for (auto& coin : debug_info_.coins) {
+    coin.route_targeted = false;
+    coin.route_target_point = cv::Point2f();
+  }
+
+  if ((!cfg_.enable_coin_route_preview && !cfg_.enable_coin_route_control) ||
+      image_width <= 1 || image_height <= 1) {
+    return;
+  }
+  if (!fit_valid || base_fit_coeffs.size() < 2) {
+    debug_info_.coin_route_reject_reason = "NO_FIT";
+    return;
+  }
+  if (car_avoidance_active_) {
+    debug_info_.coin_route_reject_reason = "CAR_AVOIDANCE_ACTIVE";
+    return;
+  }
+  if (finish_stop_active_ || human_stop_active_) {
+    debug_info_.coin_route_reject_reason = "TASK_STOP_ACTIVE";
+    return;
+  }
+
+  std::vector<LaneCoinDebug*> selected_coins;
+  for (auto& coin : debug_info_.coins) {
+    if (coin.selected_for_route && coin.classification == "REACHABLE") {
+      selected_coins.push_back(&coin);
+    }
+  }
+  if (selected_coins.empty()) {
+    debug_info_.coin_route_reject_reason = "NO_SELECTED_TARGET";
+    return;
+  }
+  std::sort(selected_coins.begin(), selected_coins.end(),
+            [](const LaneCoinDebug* lhs, const LaneCoinDebug* rhs) {
+              if (std::abs(lhs->ground_point.y - rhs->ground_point.y) > 1e-3f) {
+                return lhs->ground_point.y > rhs->ground_point.y;
+              }
+              return lhs->route_score > rhs->route_score;
+            });
+  if (static_cast<int>(selected_coins.size()) > cfg_.coin_route_max_targets) {
+    selected_coins.resize(cfg_.coin_route_max_targets);
+  }
+
+  const auto [fit_y_min, fit_y_max] = fitYBounds(
+      base_fit_points, image_height);
+  if (fit_y_max - fit_y_min < 2.0) {
+    debug_info_.coin_route_reject_reason = "SHORT_FIT_RANGE";
+    return;
+  }
+
+  struct RouteTarget {
+    LaneCoinDebug* coin{nullptr};
+    double anchor_x{0.0};
+    double anchor_y{0.0};
+    double delta_x{0.0};
+    double support_low_y{0.0};
+    double support_high_y{0.0};
+  };
+  std::vector<RouteTarget> targets;
+  targets.reserve(selected_coins.size());
+  const double approach_span = std::max(
+      2.0, static_cast<double>(cfg_.coin_route_approach_span_ratio) *
+               image_height);
+  const double return_span = std::max(
+      2.0, static_cast<double>(cfg_.coin_route_return_span_ratio) *
+               image_height);
+
+  for (LaneCoinDebug* coin : selected_coins) {
+    const double path_x = coin->local_path_point.x;
+    const double path_y = coin->local_path_point.y;
+    const double coin_x = coin->ground_point.x;
+    const double coin_y = coin->ground_point.y;
+    const double distance = std::hypot(coin_x - path_x, coin_y - path_y);
+    if (!std::isfinite(distance) || distance <= 1e-6) {
+      continue;
+    }
+    const double desired_distance = std::max(
+        0.0, static_cast<double>(coin->hit_radius) -
+                 cfg_.coin_route_overlap_margin_px);
+    const double shift = std::max(0.0, distance - desired_distance);
+    const double anchor_x = path_x + (coin_x - path_x) * shift / distance;
+    const double anchor_y = clampValue(
+        path_y + (coin_y - path_y) * shift / distance,
+        fit_y_min, fit_y_max);
+    const double base_x_at_anchor = evalPoly(base_fit_coeffs, anchor_y);
+    if (!std::isfinite(anchor_x) || !std::isfinite(anchor_y) ||
+        !std::isfinite(base_x_at_anchor)) {
+      continue;
+    }
+
+    RouteTarget target;
+    target.coin = coin;
+    target.anchor_x = anchor_x;
+    target.anchor_y = anchor_y;
+    target.delta_x = anchor_x - base_x_at_anchor;
+    target.support_low_y = std::max(fit_y_min, anchor_y - return_span);
+    target.support_high_y = std::min(fit_y_max, anchor_y + approach_span);
+    targets.push_back(target);
+    coin->route_targeted = true;
+    coin->route_target_point = cv::Point2f(
+        static_cast<float>(anchor_x), static_cast<float>(anchor_y));
+  }
+  if (targets.empty()) {
+    debug_info_.coin_route_reject_reason = "NO_VALID_ANCHOR";
+    return;
+  }
+  debug_info_.coin_route_target_count = static_cast<int>(targets.size());
+
+  auto routeOffsetAtY = [&](double y) {
+    double selected_offset = 0.0;
+    for (const auto& target : targets) {
+      double blend = 0.0;
+      if (y >= target.support_low_y && y <= target.anchor_y) {
+        const double span = std::max(1e-6,
+                                     target.anchor_y - target.support_low_y);
+        blend = smoothStep((y - target.support_low_y) / span);
+      } else if (y > target.anchor_y && y <= target.support_high_y) {
+        const double span = std::max(1e-6,
+                                     target.support_high_y - target.anchor_y);
+        blend = smoothStep((target.support_high_y - y) / span);
+      }
+      const double candidate = target.delta_x * blend;
+      if (std::abs(candidate) > std::abs(selected_offset)) {
+        selected_offset = candidate;
+      }
+    }
+    return selected_offset;
+  };
+
+  std::vector<cv::Point3f> route_points;
+  route_points.reserve(cfg_.coin_route_sample_count + targets.size() + 2);
+  for (int index = 0; index < cfg_.coin_route_sample_count; ++index) {
+    const double ratio = static_cast<double>(index) /
+                         static_cast<double>(cfg_.coin_route_sample_count - 1);
+    const double y = fit_y_min + (fit_y_max - fit_y_min) * ratio;
+    const double x = evalPoly(base_fit_coeffs, y) + routeOffsetAtY(y);
+    const float weight = (index == 0 ||
+                          index == cfg_.coin_route_sample_count - 1)
+                             ? cfg_.coin_route_endpoint_weight
+                             : cfg_.coin_route_base_weight;
+    route_points.emplace_back(static_cast<float>(x), static_cast<float>(y),
+                              weight);
+  }
+  for (const auto& target : targets) {
+    route_points.emplace_back(
+        static_cast<float>(target.anchor_x),
+        static_cast<float>(target.anchor_y), cfg_.coin_route_target_weight);
+  }
+
+  std::vector<double> route_coeffs;
+  double route_heading = 0.0;
+  double route_curvature = 0.0;
+  if (!fitCenterlineAndComputeGeometry(
+          route_points, image_height, 2, &route_coeffs,
+          &route_heading, &route_curvature)) {
+    debug_info_.coin_route_reject_reason = "ROUTE_FIT_FAILED";
+    return;
+  }
+  debug_info_.coin_route_points = route_points;
+  debug_info_.coin_route_coeffs = route_coeffs;
+  debug_info_.coin_route_heading = static_cast<float>(route_heading);
+  debug_info_.coin_route_curvature = static_cast<float>(route_curvature);
+
+  double maximum_offset = 0.0;
+  constexpr int kValidationSamples = 48;
+  for (int index = 0; index <= kValidationSamples; ++index) {
+    const double ratio = static_cast<double>(index) / kValidationSamples;
+    const double y = fit_y_min + (fit_y_max - fit_y_min) * ratio;
+    maximum_offset = std::max(
+        maximum_offset,
+        std::abs(evalPoly(route_coeffs, y) -
+                 evalPoly(base_fit_coeffs, y)));
+  }
+  debug_info_.coin_route_max_offset_px = static_cast<float>(maximum_offset);
+  if (maximum_offset > cfg_.coin_route_max_offset_px) {
+    debug_info_.coin_route_reject_reason = "OFFSET_LIMIT";
+    return;
+  }
+  if (std::abs(route_heading) > cfg_.coin_route_max_abs_heading) {
+    debug_info_.coin_route_reject_reason = "HEADING_LIMIT";
+    return;
+  }
+  if (std::abs(route_curvature) > cfg_.coin_route_max_abs_curvature) {
+    debug_info_.coin_route_reject_reason = "CURVATURE_LIMIT";
+    return;
+  }
+
+  for (const auto& target : targets) {
+    const PolynomialClosestPoint route_closest = closestPointOnPolynomial(
+        route_coeffs, target.coin->ground_point.x,
+        target.coin->ground_point.y, fit_y_min, fit_y_max);
+    if (!route_closest.valid ||
+        route_closest.distance > target.coin->hit_radius + 1e-3) {
+      debug_info_.coin_route_reject_reason = "MISSES_TARGET";
+      return;
+    }
+  }
+
+  double route_check_min_y = fit_y_max;
+  for (const auto& target : targets) {
+    route_check_min_y = std::min(route_check_min_y, target.support_low_y);
+  }
+  for (const auto& obstacle : detections) {
+    if ((obstacle.class_name != "Car" && obstacle.class_name != "Human") ||
+        obstacle.confidence < cfg_.obstacle_min_confidence ||
+        obstacle.bbox.width <= 0.0f || obstacle.bbox.height <= 0.0f) {
+      continue;
+    }
+    const double clearance = cfg_.coin_route_obstacle_clearance_px;
+    const double obstacle_left = obstacle.bbox.x - clearance;
+    const double obstacle_right = obstacle.bbox.x + obstacle.bbox.width + clearance;
+    const double obstacle_top = obstacle.bbox.y - clearance;
+    const double obstacle_bottom = obstacle.bbox.y + obstacle.bbox.height + clearance;
+    for (int index = 0; index <= kValidationSamples; ++index) {
+      const double ratio = static_cast<double>(index) / kValidationSamples;
+      const double y = route_check_min_y +
+                       (fit_y_max - route_check_min_y) * ratio;
+      if (y < obstacle_top || y > obstacle_bottom) {
+        continue;
+      }
+      const double x = evalPoly(route_coeffs, y);
+      if (x >= obstacle_left && x <= obstacle_right) {
+        debug_info_.coin_route_reject_reason = "ROUTE_BLOCKED_" +
+                                               obstacle.class_name;
+        return;
+      }
+    }
+  }
+
+  debug_info_.coin_route_candidate_valid = true;
+  debug_info_.coin_route_reject_reason = "VALID";
+}
+
 void LaneDecision::populateDebugInfo(const std::vector<Band>& bands,
                                      const std::vector<cv::Point3f>& raw_points,
                                      const std::vector<cv::Point3f>& fit_points,
@@ -2403,6 +3006,14 @@ void LaneDecision::populateDebugInfo(const std::vector<Band>& bands,
   debug_info_.car_side_fit_x = static_cast<float>(car_side_fit_x_);
   debug_info_.car_side_fit_y = static_cast<float>(car_side_fit_y_);
   debug_info_.car_side_fit_relation = car_side_fit_relation_;
+  debug_info_.car_mask_connectivity = car_mask_connectivity_;
+  debug_info_.car_side_source = car_side_source_;
+  debug_info_.car_left_seed_pixels = car_left_seed_pixels_;
+  debug_info_.car_right_seed_pixels = car_right_seed_pixels_;
+  debug_info_.car_common_component_pixels = car_common_component_pixels_;
+  debug_info_.car_connectivity_roi = car_connectivity_roi_;
+  debug_info_.car_left_seed_roi = car_left_seed_roi_;
+  debug_info_.car_right_seed_roi = car_right_seed_roi_;
   debug_info_.car_side_confirm_count = car_side_confirm_count_;
   debug_info_.car_template_state = carTemplateStateName();
   debug_info_.car_template_active = car_avoidance_active_;

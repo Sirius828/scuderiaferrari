@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites tests="8" failures="0" disabled="0" errors="0" time="0.005" timestamp="2026-08-20T02:28:25" name="AllTests">
-  <testsuite name="LaneDecisionCoinShadowTest" tests="8" failures="0" disabled="0" errors="0" time="0.005" timestamp="2026-08-20T02:28:25">
-    <testcase name="ClassifiesOnRouteReachableAndTooFar" status="run" result="completed" time="0.001" timestamp="2026-08-20T02:28:25" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
-    <testcase name="ObstacleInApproachCorridorVetoesCoin" status="run" result="completed" time="0" timestamp="2026-08-20T02:28:25" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
-    <testcase name="GoldNeverChangesFittedGeometry" status="run" result="completed" time="0.001" timestamp="2026-08-20T02:28:25" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
-    <testcase name="ReportsNoFitWithoutChangingInvalidState" status="run" result="completed" time="0" timestamp="2026-08-20T02:28:25" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
-    <testcase name="FarWaitsAndNearCommitsWithoutDistanceEvaluation" status="run" result="completed" time="0.001" timestamp="2026-08-20T02:28:25" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
-    <testcase name="EqualAreaUsesEqualThresholdAtDifferentHeights" status="run" result="completed" time="0" timestamp="2026-08-20T02:28:25" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
-    <testcase name="LargerCoinGetsLargerThresholdAtSameHeight" status="run" result="completed" time="0" timestamp="2026-08-20T02:28:25" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
-    <testcase name="SelectsOnlyOneReachableSideAndHoldsItByFrames" status="run" result="completed" time="0.002" timestamp="2026-08-20T02:28:25" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
+<testsuites tests="11" failures="0" disabled="0" errors="0" time="0.007" timestamp="2026-08-20T04:50:26" name="AllTests">
+  <testsuite name="LaneDecisionCoinShadowTest" tests="11" failures="0" disabled="0" errors="0" time="0.007" timestamp="2026-08-20T04:50:26">
+    <testcase name="ClassifiesOnRouteReachableAndTooFar" status="run" result="completed" time="0.002" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
+    <testcase name="ObstacleInApproachCorridorVetoesCoin" status="run" result="completed" time="0" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
+    <testcase name="GoldNeverChangesFittedGeometry" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
+    <testcase name="ReportsNoFitWithoutChangingInvalidState" status="run" result="completed" time="0" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
+    <testcase name="FarWaitsAndNearCommitsWithoutDistanceEvaluation" status="run" result="completed" time="0" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
+    <testcase name="EqualAreaUsesEqualThresholdAtDifferentHeights" status="run" result="completed" time="0" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
+    <testcase name="LargerCoinGetsLargerThresholdAtSameHeight" status="run" result="completed" time="0" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
+    <testcase name="ClosestPointLiesOnCurvedFit" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
+    <testcase name="ExplicitControlFlagAppliesValidCoinRoute" status="run" result="completed" time="0" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
+    <testcase name="SelectsOnlyOneReachableSideAndHoldsItByFrames" status="run" result="completed" time="0" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
+    <testcase name="ChainsReachableCoinsOnlyOnSelectedSide" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCoinShadowTest" />
   </testsuite>
 </testsuites>

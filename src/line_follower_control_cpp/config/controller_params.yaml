@@ -58,7 +58,7 @@
     far_offset_speed_weight: 0.0
     geometry_stall_recovery_time: 0.5
     geometry_stall_timeout: 0.2
-    global_offset_blend: 0.22
+    global_offset_blend: 0.25
     global_offset_deadband: 0.02
     global_offset_topic: /segmentation/global_offset
     heading_error_topic: /segmentation/heading_error

@@ -43,6 +43,12 @@ LaneDecisionConfig makeConfig() {
   config.car_avoidance_min_height_px = 12;
   config.car_side_confirm_frames = 2;
   config.car_side_fit_downward_extension_px = 0;
+  config.car_side_connectivity_x_margin_px = 50;
+  config.car_side_connectivity_strip_width_px = 15;
+  config.car_side_connectivity_gap_px = 3;
+  config.car_side_connectivity_y_start_ratio = 0.35f;
+  config.car_side_connectivity_bottom_extend_height_ratio = 0.60f;
+  config.car_side_connectivity_min_seed_pixels = 8;
   config.car_encoder_detour_counts = 9000;
   config.car_encoder_return_counts = 1000;
   config.car_rearm_clear_frames = 3;
@@ -87,6 +93,33 @@ Detection carOnSide(const std::string& side) {
   det.center = cv::Point2f(det.bbox.x + det.bbox.width * 0.5f,
                           det.bbox.y + det.bbox.height * 0.5f);
   return det;
+}
+
+Detection centeredCar(float x = 135.0f) {
+  Detection det;
+  det.class_name = "Car";
+  det.confidence = 0.95f;
+  det.bbox = cv::Rect2f(x, 80.0f, 50.0f, 80.0f);
+  det.center = cv::Point2f(det.bbox.x + det.bbox.width * 0.5f,
+                          det.bbox.y + det.bbox.height * 0.5f);
+  return det;
+}
+
+cv::Mat splitRoadMaskBelowCar() {
+  cv::Mat mask = roadMask();
+  // The bbox itself blocks y=80..160.  Continue that separation below the
+  // Car so the left/right side strips cannot reconnect inside the ROI.
+  mask(cv::Rect(158, 160, 5, kHeight - 160)).setTo(0);
+  return mask;
+}
+
+LaneState confirmCenteredCar(LaneDecision* decision, const cv::Mat& mask,
+                             int64_t encoder = 100,
+                             const Detection& car = centeredCar()) {
+  decision->setEncoderCount(encoder, wallNow());
+  (void)decision->decide(mask, {car});
+  decision->setEncoderCount(encoder, wallNow());
+  return decision->decide(mask, {car});
 }
 
 void setEncoder(LaneDecision* decision, int64_t count,
@@ -160,8 +193,10 @@ TEST(LaneDecisionCarTemplateTest, FarCarUsesHeightRatioEvenWhenBottomIsNearHoriz
 }
 
 TEST(LaneDecisionCarTemplateTest, SameHeightFitPointRightOfCarMeansCarIsLeft) {
+  auto config = makeConfig();
+  config.car_side_connectivity_min_seed_pixels = 100000;
   LaneDecision decision;
-  decision.configure(makeConfig());
+  decision.configure(config);
 
   const LaneState state = confirmAndTrigger(
       &decision, "LEFT", fullRoadMask());
@@ -172,14 +207,62 @@ TEST(LaneDecisionCarTemplateTest, SameHeightFitPointRightOfCarMeansCarIsLeft) {
 }
 
 TEST(LaneDecisionCarTemplateTest, SameHeightFitPointLeftOfCarMeansCarIsRight) {
+  auto config = makeConfig();
+  config.car_side_connectivity_min_seed_pixels = 100000;
   LaneDecision decision;
-  decision.configure(makeConfig());
+  decision.configure(config);
 
   const LaneState state = confirmAndTrigger(
       &decision, "RIGHT", fullRoadMask());
   EXPECT_TRUE(state.is_valid);
   EXPECT_EQ(decision.debugInfo().car_template_side, "RIGHT");
   EXPECT_EQ(decision.debugInfo().car_side_fit_relation, "LEFT_OF_CAR");
+}
+
+TEST(LaneDecisionCarTemplateTest, ConnectedRoadMaskMeansCarIsOnLeft) {
+  LaneDecision decision;
+  decision.configure(makeConfig());
+
+  const LaneState state = confirmCenteredCar(&decision, roadMask());
+  const auto& debug = decision.debugInfo();
+  EXPECT_TRUE(state.is_valid);
+  EXPECT_EQ(debug.car_mask_connectivity, "CONNECTED");
+  EXPECT_EQ(debug.car_side_source, "MASK_CONNECTIVITY");
+  EXPECT_GT(debug.car_left_seed_pixels, 0);
+  EXPECT_GT(debug.car_right_seed_pixels, 0);
+  EXPECT_GT(debug.car_common_component_pixels, 0);
+  EXPECT_EQ(debug.car_template_side, "LEFT");
+}
+
+TEST(LaneDecisionCarTemplateTest, SplitRoadMaskMeansCarIsOnRight) {
+  LaneDecision decision;
+  decision.configure(makeConfig());
+
+  const LaneState state = confirmCenteredCar(
+      &decision, splitRoadMaskBelowCar());
+  const auto& debug = decision.debugInfo();
+  EXPECT_TRUE(state.is_valid);
+  EXPECT_EQ(debug.car_mask_connectivity, "SPLIT");
+  EXPECT_EQ(debug.car_side_source, "MASK_CONNECTIVITY");
+  EXPECT_GT(debug.car_left_seed_pixels, 0);
+  EXPECT_GT(debug.car_right_seed_pixels, 0);
+  EXPECT_EQ(debug.car_common_component_pixels, 0);
+  EXPECT_EQ(debug.car_template_side, "RIGHT");
+}
+
+TEST(LaneDecisionCarTemplateTest, ConnectivityOverridesContradictoryFitPoint) {
+  LaneDecision decision;
+  decision.configure(makeConfig());
+  const Detection car = centeredCar(170.0f);
+
+  const LaneState state = confirmCenteredCar(
+      &decision, roadMask(), 100, car);
+  const auto& debug = decision.debugInfo();
+  EXPECT_TRUE(state.is_valid);
+  ASSERT_EQ(debug.car_side_fit_relation, "LEFT_OF_CAR");
+  EXPECT_EQ(debug.car_mask_connectivity, "CONNECTED");
+  EXPECT_EQ(debug.car_side_source, "MASK_CONNECTIVITY");
+  EXPECT_EQ(debug.car_template_side, "LEFT");
 }
 
 TEST(LaneDecisionCarTemplateTest, CarSideUsesLowestFitPointInDownwardExtension) {
@@ -355,14 +438,16 @@ TEST(LaneDecisionCarTemplateTest, ConfirmedOppositeSideSwitchesTemplateWithoutEn
       "120,120,120,120,120,120,120,120,120,120,120,120";
   LaneDecision decision;
   decision.configure(config);
-  (void)confirmAndTrigger(&decision, "RIGHT", roadMask(), 100);
+  const Detection car = centeredCar();
+  (void)confirmCenteredCar(&decision, splitRoadMaskBelowCar(), 100, car);
   ASSERT_EQ(decision.debugInfo().car_template_side, "RIGHT");
   ASSERT_EQ(decision.debugInfo().car_encoder_start_count, 100);
   ASSERT_NEAR(meanPointX(decision.debugInfo().fit_points), 80.0, 1.0);
 
   setEncoder(&decision, 200);
-  (void)decision.decide(roadMask(), {carOnSide("LEFT")});
+  (void)decision.decide(roadMask(), {car});
   EXPECT_EQ(decision.debugInfo().car_side_candidate, "LEFT");
+  EXPECT_EQ(decision.debugInfo().car_side_source, "MASK_CONNECTIVITY");
   EXPECT_EQ(decision.debugInfo().car_side_confirm_count, 1);
   EXPECT_EQ(decision.debugInfo().car_template_side, "RIGHT");
   EXPECT_EQ(decision.debugInfo().car_encoder_start_count, 100);
@@ -370,13 +455,37 @@ TEST(LaneDecisionCarTemplateTest, ConfirmedOppositeSideSwitchesTemplateWithoutEn
   EXPECT_NEAR(meanPointX(decision.debugInfo().fit_points), 80.0, 1.0);
 
   setEncoder(&decision, 250);
-  (void)decision.decide(roadMask(), {carOnSide("LEFT")});
+  (void)decision.decide(roadMask(), {car});
   EXPECT_EQ(decision.debugInfo().car_side, "LEFT");
   EXPECT_EQ(decision.debugInfo().car_side_confirm_count, 2);
   EXPECT_EQ(decision.debugInfo().car_template_side, "LEFT");
   EXPECT_EQ(decision.debugInfo().car_encoder_start_count, 100);
   EXPECT_EQ(decision.debugInfo().car_encoder_delta, 150);
   EXPECT_NEAR(meanPointX(decision.debugInfo().fit_points), 200.0, 1.0);
+}
+
+TEST(LaneDecisionCarTemplateTest, ActiveTemplateDoesNotSwitchFromFitFallback) {
+  auto config = makeConfig();
+  config.car_left_template_offsets =
+      "120,120,120,120,120,120,120,120,120,120,120,120";
+  LaneDecision decision;
+  decision.configure(config);
+  const Detection car = centeredCar();
+  (void)confirmCenteredCar(&decision, splitRoadMaskBelowCar(), 100, car);
+  ASSERT_EQ(decision.debugInfo().car_template_side, "RIGHT");
+
+  // Only the road to the right of the Car remains.  The fit-point fallback
+  // therefore says LEFT, but one mask seed has no evidence.  During DETOUR
+  // this must not replace the active template.
+  const cv::Mat right_only_mask = roadMask(200, 240);
+  setEncoder(&decision, 200);
+  (void)decision.decide(right_only_mask, {car});
+  EXPECT_EQ(decision.debugInfo().car_mask_connectivity, "UNKNOWN");
+  EXPECT_EQ(decision.debugInfo().car_side_fit_relation, "RIGHT_OF_CAR");
+  EXPECT_EQ(decision.debugInfo().car_side_source, "NONE");
+  EXPECT_EQ(decision.debugInfo().car_template_side, "RIGHT");
+  EXPECT_EQ(decision.debugInfo().car_encoder_start_count, 100);
+  EXPECT_EQ(decision.debugInfo().car_encoder_delta, 100);
 }
 
 TEST(LaneDecisionCarTemplateTest, ShortEncoderFaultHoldsTemplate) {

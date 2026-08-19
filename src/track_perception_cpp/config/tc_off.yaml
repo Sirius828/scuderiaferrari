@@ -176,10 +176,16 @@ fused_perception_node:
     human_stop_raw_area_ratio: 0.004
     human_stop_confirm_frames: 2
     human_clear_confirm_frames: 2
-    # Car 通过同高度拟合点相对 bbox 的位置确认侧别，再按编码器锁存安全侧边界模板绕行
+    # Car 首先根据 bbox 两侧赛道 mask 是否连通确认侧别；拟合点只作 IDLE 初始备用。
     enable_car_obstacle_avoidance: true
     car_side_confirm_frames: 2
     car_side_fit_downward_extension_px: 200
+    car_side_connectivity_x_margin_px: 50
+    car_side_connectivity_strip_width_px: 15
+    car_side_connectivity_gap_px: 3
+    car_side_connectivity_y_start_ratio: 0.35
+    car_side_connectivity_bottom_extend_height_ratio: 0.60
+    car_side_connectivity_min_seed_pixels: 8
     car_avoidance_min_height_ratio: 0.08
     car_avoidance_min_height_px: 12
     car_encoder_detour_counts: 9000
@@ -194,7 +200,7 @@ fused_perception_node:
     car_left_template_offsets: "0.0,77.0,92.0,108.0,127.0,142.0,157.0,170.0,183.0,196.0,210.0,224.0,237.0,251.0,264.0,276.0,290.0,304.0,317.0,329.0,338.0,349.0,358.0,371.0"
     car_encoder_fault_hold_sec: 3.0
 
-    # Coin 影子评估：仅分类和可视化，不修改拟合线或控制输出。
+    # Coin 分类及动态路线预览；默认不修改拟合线控制输出。
     enable_coin_shadow_evaluation: true
     coin_min_confidence: 0.65
     coin_evaluate_min_y_ratio: 0.50
@@ -209,6 +215,20 @@ fused_perception_node:
     coin_obstacle_expand_px: 12.0
     coin_obstacle_lookahead_ratio: 0.12
     coin_side_clear_frames: 10
+    enable_coin_route_preview: true
+    enable_coin_route_control: false
+    coin_route_max_targets: 3
+    coin_route_sample_count: 31
+    coin_route_approach_span_ratio: 0.18
+    coin_route_return_span_ratio: 0.14
+    coin_route_overlap_margin_px: 4.0
+    coin_route_base_weight: 1.0
+    coin_route_target_weight: 64.0
+    coin_route_endpoint_weight: 16.0
+    coin_route_max_offset_px: 120.0
+    coin_route_max_abs_heading: 0.85
+    coin_route_max_abs_curvature: 0.85
+    coin_route_obstacle_clearance_px: 18.0
 
     # 终点停车：Stop bbox 底部达到阈值才 FINISH_STOP
     # 联调阶段忽略 Stop 标签，不产生 FINISH_STOP；后续接入专用终点联锁后再开启。

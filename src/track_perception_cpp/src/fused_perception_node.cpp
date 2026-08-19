@@ -205,6 +205,25 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"car_side_fit_x\":" << debug_info.car_side_fit_x << ","
      << "\"car_side_fit_y\":" << debug_info.car_side_fit_y << ","
      << "\"car_side_fit_relation\":\"" << jsonEscape(debug_info.car_side_fit_relation) << "\","
+     << "\"car_mask_connectivity\":\""
+     << jsonEscape(debug_info.car_mask_connectivity) << "\","
+     << "\"car_side_source\":\"" << jsonEscape(debug_info.car_side_source) << "\","
+     << "\"car_left_seed_pixels\":" << debug_info.car_left_seed_pixels << ","
+     << "\"car_right_seed_pixels\":" << debug_info.car_right_seed_pixels << ","
+     << "\"car_common_component_pixels\":"
+     << debug_info.car_common_component_pixels << ","
+     << "\"car_connectivity_roi\":[" << debug_info.car_connectivity_roi.x << ","
+     << debug_info.car_connectivity_roi.y << ","
+     << debug_info.car_connectivity_roi.width << ","
+     << debug_info.car_connectivity_roi.height << "],"
+     << "\"car_left_seed_roi\":[" << debug_info.car_left_seed_roi.x << ","
+     << debug_info.car_left_seed_roi.y << ","
+     << debug_info.car_left_seed_roi.width << ","
+     << debug_info.car_left_seed_roi.height << "],"
+     << "\"car_right_seed_roi\":[" << debug_info.car_right_seed_roi.x << ","
+     << debug_info.car_right_seed_roi.y << ","
+     << debug_info.car_right_seed_roi.width << ","
+     << debug_info.car_right_seed_roi.height << "],"
      << "\"car_side_confirm_count\":" << debug_info.car_side_confirm_count << ","
      << "\"car_template_state\":\"" << jsonEscape(debug_info.car_template_state) << "\","
      << "\"car_template_active\":"
@@ -336,7 +355,40 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
     }
     ss << debug_info.fit_coeffs[i];
   }
-  ss << "],\"humans\":[";
+  ss << "],\"coin_route_points\":[";
+  for (size_t i = 0; i < debug_info.coin_route_points.size(); ++i) {
+    if (i > 0) {
+      ss << ",";
+    }
+    const auto& point = debug_info.coin_route_points[i];
+    ss << "[" << point.x << "," << point.y << "," << point.z << "]";
+  }
+  ss << "],\"coin_route_coeffs\":[";
+  for (size_t i = 0; i < debug_info.coin_route_coeffs.size(); ++i) {
+    if (i > 0) {
+      ss << ",";
+    }
+    ss << debug_info.coin_route_coeffs[i];
+  }
+  ss << "],\"coin_route_base_coeffs\":[";
+  for (size_t i = 0; i < debug_info.coin_route_base_coeffs.size(); ++i) {
+    if (i > 0) {
+      ss << ",";
+    }
+    ss << debug_info.coin_route_base_coeffs[i];
+  }
+  ss << "],"
+     << "\"coin_route_candidate_valid\":"
+     << (debug_info.coin_route_candidate_valid ? "true" : "false") << ","
+     << "\"coin_route_control_active\":"
+     << (debug_info.coin_route_control_active ? "true" : "false") << ","
+     << "\"coin_route_target_count\":" << debug_info.coin_route_target_count << ","
+     << "\"coin_route_heading\":" << debug_info.coin_route_heading << ","
+     << "\"coin_route_curvature\":" << debug_info.coin_route_curvature << ","
+     << "\"coin_route_max_offset_px\":" << debug_info.coin_route_max_offset_px << ","
+     << "\"coin_route_reject_reason\":\""
+     << jsonEscape(debug_info.coin_route_reject_reason) << "\","
+     << "\"humans\":[";
   for (size_t i = 0; i < debug_info.humans.size(); ++i) {
     if (i > 0) {
       ss << ",";
@@ -379,6 +431,8 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
        << coin.ground_point.y << "],"
        << "\"local_path_point\":[" << coin.local_path_point.x << ","
        << coin.local_path_point.y << "],"
+       << "\"route_target_point\":[" << coin.route_target_point.x << ","
+       << coin.route_target_point.y << "],"
        << "\"confidence\":" << coin.confidence << ","
        << "\"sqrt_bbox_area\":" << coin.sqrt_bbox_area << ","
        << "\"path_slope\":" << coin.path_slope << ","
@@ -391,6 +445,8 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
        << (coin.obstacle_blocked ? "true" : "false") << ","
        << "\"selected_for_route\":"
        << (coin.selected_for_route ? "true" : "false") << ","
+       << "\"route_targeted\":"
+       << (coin.route_targeted ? "true" : "false") << ","
        << "\"side\":\"" << jsonEscape(coin.side) << "\","
        << "\"blocked_by\":\"" << jsonEscape(coin.blocked_by) << "\","
        << "\"classification\":\"" << jsonEscape(coin.classification) << "\"}";
@@ -572,6 +628,13 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<bool>("enable_car_obstacle_avoidance", true);
     declare_parameter<int>("car_side_confirm_frames", 2);
     declare_parameter<int>("car_side_fit_downward_extension_px", 200);
+    declare_parameter<int>("car_side_connectivity_x_margin_px", 50);
+    declare_parameter<int>("car_side_connectivity_strip_width_px", 15);
+    declare_parameter<int>("car_side_connectivity_gap_px", 3);
+    declare_parameter<double>("car_side_connectivity_y_start_ratio", 0.35);
+    declare_parameter<double>(
+        "car_side_connectivity_bottom_extend_height_ratio", 0.60);
+    declare_parameter<int>("car_side_connectivity_min_seed_pixels", 8);
     declare_parameter<double>("car_avoidance_min_height_ratio", 0.08);
     declare_parameter<int>("car_avoidance_min_height_px", 12);
     declare_parameter<int64_t>("car_encoder_detour_counts", 9000);
@@ -603,6 +666,20 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("coin_obstacle_expand_px", 12.0);
     declare_parameter<double>("coin_obstacle_lookahead_ratio", 0.12);
     declare_parameter<int>("coin_side_clear_frames", 10);
+    declare_parameter<bool>("enable_coin_route_preview", true);
+    declare_parameter<bool>("enable_coin_route_control", false);
+    declare_parameter<int>("coin_route_max_targets", 3);
+    declare_parameter<int>("coin_route_sample_count", 31);
+    declare_parameter<double>("coin_route_approach_span_ratio", 0.18);
+    declare_parameter<double>("coin_route_return_span_ratio", 0.14);
+    declare_parameter<double>("coin_route_overlap_margin_px", 4.0);
+    declare_parameter<double>("coin_route_base_weight", 1.0);
+    declare_parameter<double>("coin_route_target_weight", 64.0);
+    declare_parameter<double>("coin_route_endpoint_weight", 16.0);
+    declare_parameter<double>("coin_route_max_offset_px", 120.0);
+    declare_parameter<double>("coin_route_max_abs_heading", 0.85);
+    declare_parameter<double>("coin_route_max_abs_curvature", 0.85);
+    declare_parameter<double>("coin_route_obstacle_clearance_px", 18.0);
     declare_parameter<bool>("enable_finish_stop", true);
     declare_parameter<double>("finish_stop_min_confidence", 0.45);
     declare_parameter<double>("finish_stop_arm_y_ratio", 0.70);
@@ -859,6 +936,19 @@ class FusedPerceptionNode : public rclcpp::Node {
         static_cast<int>(get_parameter("car_side_confirm_frames").as_int());
     lane_cfg.car_side_fit_downward_extension_px = static_cast<int>(
         get_parameter("car_side_fit_downward_extension_px").as_int());
+    lane_cfg.car_side_connectivity_x_margin_px = static_cast<int>(
+        get_parameter("car_side_connectivity_x_margin_px").as_int());
+    lane_cfg.car_side_connectivity_strip_width_px = static_cast<int>(
+        get_parameter("car_side_connectivity_strip_width_px").as_int());
+    lane_cfg.car_side_connectivity_gap_px = static_cast<int>(
+        get_parameter("car_side_connectivity_gap_px").as_int());
+    lane_cfg.car_side_connectivity_y_start_ratio = static_cast<float>(
+        get_parameter("car_side_connectivity_y_start_ratio").as_double());
+    lane_cfg.car_side_connectivity_bottom_extend_height_ratio =
+        static_cast<float>(get_parameter(
+            "car_side_connectivity_bottom_extend_height_ratio").as_double());
+    lane_cfg.car_side_connectivity_min_seed_pixels = static_cast<int>(
+        get_parameter("car_side_connectivity_min_seed_pixels").as_int());
     lane_cfg.car_avoidance_min_height_ratio = static_cast<float>(
         get_parameter("car_avoidance_min_height_ratio").as_double());
     lane_cfg.car_avoidance_min_height_px = static_cast<int>(
@@ -909,6 +999,34 @@ class FusedPerceptionNode : public rclcpp::Node {
         get_parameter("coin_obstacle_lookahead_ratio").as_double());
     lane_cfg.coin_side_clear_frames = static_cast<int>(
         get_parameter("coin_side_clear_frames").as_int());
+    lane_cfg.enable_coin_route_preview =
+        get_parameter("enable_coin_route_preview").as_bool();
+    lane_cfg.enable_coin_route_control =
+        get_parameter("enable_coin_route_control").as_bool();
+    lane_cfg.coin_route_max_targets = static_cast<int>(
+        get_parameter("coin_route_max_targets").as_int());
+    lane_cfg.coin_route_sample_count = static_cast<int>(
+        get_parameter("coin_route_sample_count").as_int());
+    lane_cfg.coin_route_approach_span_ratio = static_cast<float>(
+        get_parameter("coin_route_approach_span_ratio").as_double());
+    lane_cfg.coin_route_return_span_ratio = static_cast<float>(
+        get_parameter("coin_route_return_span_ratio").as_double());
+    lane_cfg.coin_route_overlap_margin_px = static_cast<float>(
+        get_parameter("coin_route_overlap_margin_px").as_double());
+    lane_cfg.coin_route_base_weight = static_cast<float>(
+        get_parameter("coin_route_base_weight").as_double());
+    lane_cfg.coin_route_target_weight = static_cast<float>(
+        get_parameter("coin_route_target_weight").as_double());
+    lane_cfg.coin_route_endpoint_weight = static_cast<float>(
+        get_parameter("coin_route_endpoint_weight").as_double());
+    lane_cfg.coin_route_max_offset_px = static_cast<float>(
+        get_parameter("coin_route_max_offset_px").as_double());
+    lane_cfg.coin_route_max_abs_heading = static_cast<float>(
+        get_parameter("coin_route_max_abs_heading").as_double());
+    lane_cfg.coin_route_max_abs_curvature = static_cast<float>(
+        get_parameter("coin_route_max_abs_curvature").as_double());
+    lane_cfg.coin_route_obstacle_clearance_px = static_cast<float>(
+        get_parameter("coin_route_obstacle_clearance_px").as_double());
     lane_cfg.enable_finish_stop = get_parameter("enable_finish_stop").as_bool();
     lane_cfg.finish_stop_min_confidence = static_cast<float>(get_parameter("finish_stop_min_confidence").as_double());
     lane_cfg.finish_stop_arm_y_ratio = static_cast<float>(get_parameter("finish_stop_arm_y_ratio").as_double());
@@ -2448,6 +2566,11 @@ class FusedPerceptionNode : public rclcpp::Node {
                << " x=" << debug_info.car_side_fit_x
                << " y=" << debug_info.car_side_fit_y
                << " rel=" << debug_info.car_side_fit_relation
+               << " mask=" << debug_info.car_mask_connectivity
+               << " src=" << debug_info.car_side_source
+               << " seed=" << debug_info.car_left_seed_pixels << "/"
+               << debug_info.car_right_seed_pixels
+               << " common=" << debug_info.car_common_component_pixels
                << " confirm=" << debug_info.car_side_confirm_count
                << " points=" << debug_info.car_template_point_count
                << " cache=" << (debug_info.car_template_cache_active ? 1 : 0)
@@ -2540,6 +2663,44 @@ class FusedPerceptionNode : public rclcpp::Node {
   void drawLaneDebug(cv::Mat& vis, const LaneDebugInfo& debug_info) const {
     bool template_active = debug_info.left_boundary_template_active ||
                            debug_info.car_template_active;
+    if (debug_info.car_connectivity_roi.width > 0.0f &&
+        debug_info.car_connectivity_roi.height > 0.0f) {
+      cv::rectangle(vis, debug_info.car_connectivity_roi,
+                    cv::Scalar(255, 128, 0), 1, cv::LINE_AA);
+    }
+    if (debug_info.car_left_seed_roi.width > 0.0f &&
+        debug_info.car_left_seed_roi.height > 0.0f) {
+      cv::rectangle(vis, debug_info.car_left_seed_roi,
+                    cv::Scalar(255, 255, 0), 2, cv::LINE_AA);
+    }
+    if (debug_info.car_right_seed_roi.width > 0.0f &&
+        debug_info.car_right_seed_roi.height > 0.0f) {
+      cv::rectangle(vis, debug_info.car_right_seed_roi,
+                    cv::Scalar(255, 0, 255), 2, cv::LINE_AA);
+    }
+    if (debug_info.car_left_seed_roi.area() > 0.0f &&
+        debug_info.car_right_seed_roi.area() > 0.0f &&
+        debug_info.car_mask_connectivity != "UNKNOWN") {
+      const cv::Point left_center(
+          static_cast<int>(std::round(
+              debug_info.car_left_seed_roi.x +
+              debug_info.car_left_seed_roi.width * 0.5f)),
+          static_cast<int>(std::round(
+              debug_info.car_left_seed_roi.y +
+              debug_info.car_left_seed_roi.height * 0.5f)));
+      const cv::Point right_center(
+          static_cast<int>(std::round(
+              debug_info.car_right_seed_roi.x +
+              debug_info.car_right_seed_roi.width * 0.5f)),
+          static_cast<int>(std::round(
+              debug_info.car_right_seed_roi.y +
+              debug_info.car_right_seed_roi.height * 0.5f)));
+      const cv::Scalar link_color =
+          debug_info.car_mask_connectivity == "CONNECTED"
+              ? cv::Scalar(0, 255, 0)
+              : cv::Scalar(0, 0, 255);
+      cv::line(vis, left_center, right_center, link_color, 2, cv::LINE_AA);
+    }
     if (debug_info.car_bbox.width > 0.0f && debug_info.car_bbox.height > 0.0f) {
       cv::rectangle(vis, debug_info.car_bbox, cv::Scalar(0, 0, 255), 2,
                     cv::LINE_AA);
@@ -2623,7 +2784,12 @@ class FusedPerceptionNode : public rclcpp::Node {
                  template_active ? 3 : 1, cv::Scalar(0, 255, 0), -1);
     }
 
-    if (!debug_info.fit_coeffs.empty()) {
+    const auto& road_fit_coeffs =
+        debug_info.coin_route_control_active &&
+                !debug_info.coin_route_base_coeffs.empty()
+            ? debug_info.coin_route_base_coeffs
+            : debug_info.fit_coeffs;
+    if (!road_fit_coeffs.empty()) {
       int y0 = debug_info.bands.empty() ? 0 : debug_info.bands.front().y0;
       int y1 = debug_info.bands.empty() ? vis.rows - 1 : debug_info.bands.back().y1;
       if (!points.empty()) {
@@ -2639,7 +2805,7 @@ class FusedPerceptionNode : public rclcpp::Node {
         double t = i / 99.0;
         double y = y0 + (y1 - y0) * t;
         double x = 0.0;
-        for (double c : debug_info.fit_coeffs) {
+        for (double c : road_fit_coeffs) {
           x = x * y + c;
         }
         cv::Point cur(static_cast<int>(std::round(x)), static_cast<int>(std::round(y)));
@@ -2661,6 +2827,74 @@ class FusedPerceptionNode : public rclcpp::Node {
           cv::line(vis, p0, p1, cv::Scalar(160, 160, 160), 2, cv::LINE_AA);
         }
       }
+    }
+
+    if (!debug_info.coin_route_coeffs.empty()) {
+      int route_y0 = 0;
+      int route_y1 = std::max(1, vis.rows - 1);
+      if (!debug_info.coin_route_points.empty()) {
+        const auto route_bounds = std::minmax_element(
+            debug_info.coin_route_points.begin(),
+            debug_info.coin_route_points.end(),
+            [](const cv::Point3f& lhs, const cv::Point3f& rhs) {
+              return lhs.y < rhs.y;
+            });
+        route_y0 = std::clamp(
+            static_cast<int>(std::round(route_bounds.first->y)),
+            0, std::max(0, vis.rows - 2));
+        route_y1 = std::clamp(
+            static_cast<int>(std::round(route_bounds.second->y)),
+            route_y0 + 1, std::max(route_y0 + 1, vis.rows - 1));
+      }
+      const cv::Scalar route_color = debug_info.coin_route_control_active
+                                         ? cv::Scalar(255, 0, 255)
+                                     : debug_info.coin_route_candidate_valid
+                                         ? cv::Scalar(0, 255, 0)
+                                         : cv::Scalar(0, 165, 255);
+      cv::Point previous;
+      bool has_previous = false;
+      for (int index = 0; index < 100; ++index) {
+        const double ratio = index / 99.0;
+        const double y = route_y0 + (route_y1 - route_y0) * ratio;
+        double x = 0.0;
+        for (double coefficient : debug_info.coin_route_coeffs) {
+          x = x * y + coefficient;
+        }
+        const cv::Point current(static_cast<int>(std::round(x)),
+                                static_cast<int>(std::round(y)));
+        if (has_previous && previous.x >= 0 && previous.x < vis.cols &&
+            previous.y >= 0 && previous.y < vis.rows && current.x >= 0 &&
+            current.x < vis.cols && current.y >= 0 && current.y < vis.rows) {
+          cv::line(vis, previous, current, route_color,
+                   debug_info.coin_route_control_active ? 4 : 3,
+                   cv::LINE_AA);
+        }
+        previous = current;
+        has_previous = true;
+      }
+    }
+
+    if (debug_info.coin_route_reject_reason != "DISABLED") {
+      std::ostringstream coin_route_status;
+      coin_route_status << "COIN route="
+                        << (debug_info.coin_route_control_active
+                                ? "ACTIVE"
+                            : debug_info.coin_route_candidate_valid
+                                ? "PREVIEW"
+                                : "REJECTED")
+                        << " reason=" << debug_info.coin_route_reject_reason
+                        << " targets=" << debug_info.coin_route_target_count
+                        << " max_dx="
+                        << static_cast<int>(std::round(
+                               debug_info.coin_route_max_offset_px));
+      const cv::Scalar status_color = debug_info.coin_route_control_active
+                                          ? cv::Scalar(255, 0, 255)
+                                      : debug_info.coin_route_candidate_valid
+                                          ? cv::Scalar(0, 255, 0)
+                                          : cv::Scalar(0, 165, 255);
+      cv::putText(vis, coin_route_status.str(), cv::Point(12, 100),
+                  cv::FONT_HERSHEY_SIMPLEX, 0.50, status_color, 2,
+                  cv::LINE_AA);
     }
 
     for (const auto& coin : debug_info.coins) {
@@ -2701,6 +2935,17 @@ class FusedPerceptionNode : public rclcpp::Node {
         cv::line(vis, ground, path_point, color, 2, cv::LINE_AA);
         cv::drawMarker(vis, path_point, color, cv::MARKER_CROSS, 9, 2,
                        cv::LINE_AA);
+      }
+      if (coin.route_targeted) {
+        const cv::Point target_point(
+            std::clamp(static_cast<int>(std::round(coin.route_target_point.x)),
+                       0, std::max(0, vis.cols - 1)),
+            std::clamp(static_cast<int>(std::round(coin.route_target_point.y)),
+                       0, std::max(0, vis.rows - 1)));
+        cv::drawMarker(vis, target_point, cv::Scalar(255, 255, 0),
+                       cv::MARKER_DIAMOND, 13, 2, cv::LINE_AA);
+        cv::line(vis, target_point, ground, cv::Scalar(255, 255, 0), 1,
+                 cv::LINE_AA);
       }
       std::ostringstream coin_label;
       coin_label << coin.classification;

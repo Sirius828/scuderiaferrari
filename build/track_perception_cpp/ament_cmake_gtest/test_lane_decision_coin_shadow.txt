@@ -2,11 +2,11 @@
  - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_decision_coin_shadow --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_coin_shadow.gtest.xml
 
 Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
-[==========] Running 8 tests from 1 test suite.
+[==========] Running 11 tests from 1 test suite.
 [----------] Global test environment set-up.
-[----------] 8 tests from LaneDecisionCoinShadowTest
+[----------] 11 tests from LaneDecisionCoinShadowTest
 [ RUN      ] LaneDecisionCoinShadowTest.ClassifiesOnRouteReachableAndTooFar
-[       OK ] LaneDecisionCoinShadowTest.ClassifiesOnRouteReachableAndTooFar (1 ms)
+[       OK ] LaneDecisionCoinShadowTest.ClassifiesOnRouteReachableAndTooFar (2 ms)
 [ RUN      ] LaneDecisionCoinShadowTest.ObstacleInApproachCorridorVetoesCoin
 [       OK ] LaneDecisionCoinShadowTest.ObstacleInApproachCorridorVetoesCoin (0 ms)
 [ RUN      ] LaneDecisionCoinShadowTest.GoldNeverChangesFittedGeometry
@@ -14,18 +14,24 @@ Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
 [ RUN      ] LaneDecisionCoinShadowTest.ReportsNoFitWithoutChangingInvalidState
 [       OK ] LaneDecisionCoinShadowTest.ReportsNoFitWithoutChangingInvalidState (0 ms)
 [ RUN      ] LaneDecisionCoinShadowTest.FarWaitsAndNearCommitsWithoutDistanceEvaluation
-[       OK ] LaneDecisionCoinShadowTest.FarWaitsAndNearCommitsWithoutDistanceEvaluation (1 ms)
+[       OK ] LaneDecisionCoinShadowTest.FarWaitsAndNearCommitsWithoutDistanceEvaluation (0 ms)
 [ RUN      ] LaneDecisionCoinShadowTest.EqualAreaUsesEqualThresholdAtDifferentHeights
 [       OK ] LaneDecisionCoinShadowTest.EqualAreaUsesEqualThresholdAtDifferentHeights (0 ms)
 [ RUN      ] LaneDecisionCoinShadowTest.LargerCoinGetsLargerThresholdAtSameHeight
 [       OK ] LaneDecisionCoinShadowTest.LargerCoinGetsLargerThresholdAtSameHeight (0 ms)
+[ RUN      ] LaneDecisionCoinShadowTest.ClosestPointLiesOnCurvedFit
+[       OK ] LaneDecisionCoinShadowTest.ClosestPointLiesOnCurvedFit (1 ms)
+[ RUN      ] LaneDecisionCoinShadowTest.ExplicitControlFlagAppliesValidCoinRoute
+[       OK ] LaneDecisionCoinShadowTest.ExplicitControlFlagAppliesValidCoinRoute (0 ms)
 [ RUN      ] LaneDecisionCoinShadowTest.SelectsOnlyOneReachableSideAndHoldsItByFrames
-[       OK ] LaneDecisionCoinShadowTest.SelectsOnlyOneReachableSideAndHoldsItByFrames (2 ms)
-[----------] 8 tests from LaneDecisionCoinShadowTest (5 ms total)
+[       OK ] LaneDecisionCoinShadowTest.SelectsOnlyOneReachableSideAndHoldsItByFrames (0 ms)
+[ RUN      ] LaneDecisionCoinShadowTest.ChainsReachableCoinsOnlyOnSelectedSide
+[       OK ] LaneDecisionCoinShadowTest.ChainsReachableCoinsOnlyOnSelectedSide (1 ms)
+[----------] 11 tests from LaneDecisionCoinShadowTest (7 ms total)
 
 [----------] Global test environment tear-down
-[==========] 8 tests from 1 test suite ran. (5 ms total)
-[  PASSED  ] 8 tests.
+[==========] 11 tests from 1 test suite ran. (7 ms total)
+[  PASSED  ] 11 tests.
 
 
 -- run_test.py: return code 0
