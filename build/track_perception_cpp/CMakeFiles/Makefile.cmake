@@ -690,6 +690,7 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/test_lane_guideboard_wait.dir/DependInfo.cmake"
   "CMakeFiles/test_lane_decision_car_boundary.dir/DependInfo.cmake"
   "CMakeFiles/test_lane_decision_coin_shadow.dir/DependInfo.cmake"
+  "CMakeFiles/test_lane_decision_finish_stop.dir/DependInfo.cmake"
   "gtest/CMakeFiles/gtest.dir/DependInfo.cmake"
   "gtest/CMakeFiles/gtest_main.dir/DependInfo.cmake"
   )

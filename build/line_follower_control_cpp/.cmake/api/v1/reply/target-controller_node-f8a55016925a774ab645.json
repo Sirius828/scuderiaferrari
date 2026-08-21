@@ -34,7 +34,7 @@
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 18,
+				"line" : 20,
 				"parent" : 0
 			},
 			{
@@ -42,6 +42,12 @@
 				"file" : 1,
 				"line" : 145,
 				"parent" : 2
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 18,
+				"parent" : 0
 			},
 			{
 				"command" : 3,
@@ -79,26 +85,30 @@
 			[
 				{
 					"backtrace" : 4,
+					"path" : "/home/orangepi/scuderiaferrari/src/line_follower_control_cpp/include"
+				},
+				{
+					"backtrace" : 5,
 					"isSystem" : true,
 					"path" : "/opt/ros/humble/include/rclcpp"
 				},
 				{
-					"backtrace" : 4,
+					"backtrace" : 5,
 					"isSystem" : true,
 					"path" : "/opt/ros/humble/include/rcl_interfaces"
 				},
 				{
-					"backtrace" : 4,
+					"backtrace" : 5,
 					"isSystem" : true,
 					"path" : "/opt/ros/humble/include/std_msgs"
 				},
 				{
-					"backtrace" : 4,
+					"backtrace" : 5,
 					"isSystem" : true,
 					"path" : "/opt/ros/humble/include/geometry_msgs"
 				},
 				{
-					"backtrace" : 4,
+					"backtrace" : 5,
 					"isSystem" : true,
 					"path" : "/opt/ros/humble/include/std_srvs"
 				},

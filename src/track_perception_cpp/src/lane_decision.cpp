@@ -323,11 +323,26 @@ void LaneDecision::configure(const LaneDecisionConfig& config) {
   cfg_.human_horizontal_expand_px = std::max(0.0f, cfg_.human_horizontal_expand_px);
   cfg_.human_horizontal_expand_width_ratio =
       std::max(0.0f, cfg_.human_horizontal_expand_width_ratio);
+  cfg_.human_min_center_y_ratio = clampValue(
+      cfg_.human_min_center_y_ratio, 0.0f, 1.0f);
   cfg_.human_line_sample_count = std::max(2, cfg_.human_line_sample_count);
   cfg_.human_stop_raw_area_ratio =
       clampValue(cfg_.human_stop_raw_area_ratio, 0.0f, 1.0f);
   cfg_.human_stop_confirm_frames = std::max(1, cfg_.human_stop_confirm_frames);
   cfg_.human_clear_confirm_frames = std::max(1, cfg_.human_clear_confirm_frames);
+  cfg_.human_curve_guard_heading_start = clampValue(
+      cfg_.human_curve_guard_heading_start, 0.0f, 1.0f);
+  cfg_.human_curve_guard_shift_gain_px = std::max(
+      0.0f, cfg_.human_curve_guard_shift_gain_px);
+  cfg_.human_curve_guard_max_shift_px = std::max(
+      0.0f, cfg_.human_curve_guard_max_shift_px);
+  cfg_.finish_stop_min_confidence = clampValue(
+      cfg_.finish_stop_min_confidence, 0.0f, 1.0f);
+  cfg_.finish_stop_arm_y_ratio = clampValue(
+      cfg_.finish_stop_arm_y_ratio, 0.0f, 1.0f);
+  cfg_.finish_stop_lost_frames = std::max(1, cfg_.finish_stop_lost_frames);
+  cfg_.finish_stop_required_occurrences = std::max(
+      1, cfg_.finish_stop_required_occurrences);
   cfg_.coin_min_confidence = clampValue(cfg_.coin_min_confidence, 0.0f, 1.0f);
   cfg_.coin_evaluate_min_y_ratio =
       clampValue(cfg_.coin_evaluate_min_y_ratio, 0.0f, 1.0f);
@@ -990,7 +1005,8 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
   }
 
   updateFinishStopState(detections, h);
-  updateHumanStopState(detections, w, h, fit_coeffs, is_valid);
+  updateHumanStopState(
+      detections, w, h, fit_coeffs, is_valid, heading_error);
 
   state.offset_y07 = static_cast<float>(offsets[0]);
   state.offset_y08 = static_cast<float>(offsets[1]);
@@ -2208,13 +2224,23 @@ bool LaneDecision::checkGuideboardInFarRoi(const std::vector<Detection>& detecti
 }
 
 void LaneDecision::updateFinishStopState(const std::vector<Detection>& detections, int image_height) {
+  const auto update_debug = [this]() {
+    debug_info_.finish_stop_active = finish_stop_active_;
+    debug_info_.finish_stop_state = finish_stop_state_;
+    debug_info_.finish_stop_occurrence_count = finish_stop_occurrence_count_;
+    debug_info_.finish_stop_required_occurrences = cfg_.finish_stop_required_occurrences;
+    debug_info_.finish_stop_lost_count = finish_stop_lost_count_;
+  };
   if (!cfg_.enable_finish_stop) {
     finish_stop_active_ = false;
     finish_stop_state_ = "CLEAR";
     finish_stop_lost_count_ = 0;
+    finish_stop_occurrence_count_ = 0;
+    update_debug();
     return;
   }
   if (finish_stop_active_) {
+    update_debug();
     return;
   }
   bool stop_seen = false;
@@ -2246,18 +2272,28 @@ void LaneDecision::updateFinishStopState(const std::vector<Detection>& detection
       finish_stop_lost_count_ = 0;
     } else {
       ++finish_stop_lost_count_;
-      if (finish_stop_lost_count_ >= std::max(1, cfg_.finish_stop_lost_frames)) {
-        finish_stop_state_ = "FINISH_STOP";
-        finish_stop_active_ = true;
+      if (finish_stop_lost_count_ >= cfg_.finish_stop_lost_frames) {
+        ++finish_stop_occurrence_count_;
+        finish_stop_lost_count_ = 0;
+        if (finish_stop_occurrence_count_ >= cfg_.finish_stop_required_occurrences) {
+          finish_stop_state_ = "FINISH_STOP";
+          finish_stop_active_ = true;
+        } else {
+          // A completed pass counts once.  Re-enter CLEAR so only a new
+          // Stop seen/armed/lost sequence can contribute another occurrence.
+          finish_stop_state_ = "CLEAR";
+        }
       }
     }
   }
+  update_debug();
 }
 
 void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections,
                                          int image_width, int image_height,
                                          const std::vector<double>& fit_coeffs,
-                                         bool fit_valid) {
+                                         bool fit_valid,
+                                         double heading_error) {
   debug_info_.humans.clear();
   debug_info_.human_passable = false;
   debug_info_.human_line_intersects = false;
@@ -2271,6 +2307,12 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
   debug_info_.human_count_at_stop = human_count_at_stop_;
   debug_info_.human_valid_count = 0;
   debug_info_.human_candidate_count = 0;
+  debug_info_.human_horizon_rejected_count = 0;
+  debug_info_.human_curve_guard_active = false;
+  debug_info_.human_curve_guard_intersects = false;
+  debug_info_.human_curve_guard_heading =
+      std::isfinite(heading_error) ? static_cast<float>(heading_error) : 0.0f;
+  debug_info_.human_curve_guard_shift_px = 0.0f;
 
   if (!cfg_.enable_human_obstacle_stop || image_width <= 0 || image_height <= 0) {
     human_stop_active_ = false;
@@ -2288,6 +2330,24 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
   }
 
   const bool fit_available = fit_valid && fit_coeffs.size() >= 2;
+  const double safe_heading = std::isfinite(heading_error)
+                                  ? clampValue(heading_error, -1.0, 1.0)
+                                  : 0.0;
+  const double right_turn_strength = std::max(
+      0.0, -safe_heading -
+               static_cast<double>(cfg_.human_curve_guard_heading_start));
+  const double curve_guard_shift_px =
+      cfg_.enable_human_clockwise_curve_guard && fit_available
+          ? std::min(
+                static_cast<double>(cfg_.human_curve_guard_max_shift_px),
+                right_turn_strength *
+                    static_cast<double>(cfg_.human_curve_guard_shift_gain_px))
+          : 0.0;
+  const bool curve_guard_active = curve_guard_shift_px > 1e-6;
+  debug_info_.human_curve_guard_active = curve_guard_active;
+  debug_info_.human_curve_guard_heading = static_cast<float>(safe_heading);
+  debug_info_.human_curve_guard_shift_px =
+      static_cast<float>(curve_guard_shift_px);
   const double area_threshold = clampValue(
       static_cast<double>(cfg_.human_stop_raw_area_ratio), 0.0, 1.0);
   const double image_area = static_cast<double>(image_width) * image_height;
@@ -2295,6 +2355,7 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
   bool has_valid_human = false;
   bool all_current_humans_passable = true;
   bool any_line_intersects = false;
+  bool any_curve_guard_intersects = false;
   bool any_stop_candidate = false;
   bool any_no_fit_human = false;
   int valid_human_count = 0;
@@ -2315,6 +2376,16 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
     if (det.class_name != "Human" ||
         det.confidence < cfg_.obstacle_min_confidence ||
         det.bbox.width <= 0.0f || det.bbox.height <= 0.0f) {
+      continue;
+    }
+
+    const double bbox_center_y =
+        static_cast<double>(det.bbox.y) + det.bbox.height * 0.5;
+    const double minimum_center_y =
+        static_cast<double>(image_height) * cfg_.human_min_center_y_ratio;
+    constexpr double kCenterBoundaryTolerancePx = 1e-4;
+    if (bbox_center_y + kCenterBoundaryTolerancePx < minimum_center_y) {
+      ++debug_info_.human_horizon_rejected_count;
       continue;
     }
 
@@ -2383,8 +2454,12 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
 
       bool line_samples_valid = fit_available;
       bool line_intersects = false;
+      bool original_line_intersects = false;
+      bool curve_guard_intersects = false;
       if (line_samples_valid) {
         human_debug.fit_sample_points.reserve(
+            static_cast<size_t>(cfg_.human_line_sample_count));
+        human_debug.guard_sample_points.reserve(
             static_cast<size_t>(cfg_.human_line_sample_count));
         const double sample_denominator =
             static_cast<double>(cfg_.human_line_sample_count - 1);
@@ -2396,17 +2471,41 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
           if (!std::isfinite(sample_x)) {
             line_samples_valid = false;
             human_debug.fit_sample_points.clear();
+            human_debug.guard_sample_points.clear();
             break;
           }
+          const double guard_x = sample_x - curve_guard_shift_px;
           human_debug.fit_sample_points.emplace_back(static_cast<float>(sample_x),
                                                       static_cast<float>(sample_y));
-          if (sample_x >= candidate.expanded_left &&
-              sample_x <= candidate.expanded_right) {
+          human_debug.guard_sample_points.emplace_back(
+              static_cast<float>(guard_x), static_cast<float>(sample_y));
+          const bool original_intersects =
+              sample_x >= candidate.expanded_left &&
+              sample_x <= candidate.expanded_right;
+          // Treat the complete swept interval between the early guard and the
+          // real fitted path as occupied.  A Human moving left-to-right cannot
+          // clear the stop merely by passing the shifted guard while still in
+          // front of the actual path.
+          const double corridor_left = std::min(guard_x, sample_x);
+          const double corridor_right = std::max(guard_x, sample_x);
+          const bool corridor_intersects =
+              candidate.expanded_right >= corridor_left &&
+              candidate.expanded_left <= corridor_right;
+          original_line_intersects =
+              original_line_intersects || original_intersects;
+          curve_guard_intersects =
+              curve_guard_intersects ||
+              (curve_guard_active && corridor_intersects);
+          if (corridor_intersects) {
             line_intersects = true;
           }
         }
       }
       human_debug.fit_available = line_samples_valid;
+      human_debug.original_line_intersects =
+          line_samples_valid && original_line_intersects;
+      human_debug.curve_guard_intersects =
+          line_samples_valid && curve_guard_intersects;
       human_debug.line_intersects = line_samples_valid && line_intersects;
 
       const bool passable = line_samples_valid && !line_intersects;
@@ -2419,6 +2518,7 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
         maximum_raw_area_ratio = candidate.raw_area_ratio;
         all_current_humans_passable = passable;
         any_line_intersects = human_debug.line_intersects;
+        any_curve_guard_intersects = human_debug.curve_guard_intersects;
         any_stop_candidate = stop_candidate;
         any_no_fit_human = !line_samples_valid;
       }
@@ -2478,6 +2578,7 @@ void LaneDecision::updateHumanStopState(const std::vector<Detection>& detections
   debug_info_.human_passable = has_valid_human && all_current_humans_passable &&
                                !human_stop_active_;
   debug_info_.human_line_intersects = any_line_intersects;
+  debug_info_.human_curve_guard_intersects = any_curve_guard_intersects;
   debug_info_.human_stop_candidate = any_stop_candidate;
   debug_info_.human_stop_active = human_stop_active_;
   debug_info_.human_clear_confirming = human_stop_active_ &&

@@ -136,6 +136,13 @@ if(BUILD_TESTING)
   )
   target_include_directories(test_lane_decision_coin_shadow PRIVATE include)
   target_link_libraries(test_lane_decision_coin_shadow ${OpenCV_LIBS})
+
+  ament_add_gtest(test_lane_decision_finish_stop
+    test/test_lane_decision_finish_stop.cpp
+    src/lane_decision.cpp
+  )
+  target_include_directories(test_lane_decision_finish_stop PRIVATE include)
+  target_link_libraries(test_lane_decision_finish_stop ${OpenCV_LIBS})
 endif()
 
 ament_package()

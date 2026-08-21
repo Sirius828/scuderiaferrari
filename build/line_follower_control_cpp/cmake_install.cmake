@@ -46,6 +46,11 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
   include("/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/ament_cmake_symlink_install/ament_cmake_symlink_install.cmake")
 endif()
 
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
+  include("/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/gtest/cmake_install.cmake")
+endif()
+
 if(CMAKE_INSTALL_COMPONENT)
   set(CMAKE_INSTALL_MANIFEST "install_manifest_${CMAKE_INSTALL_COMPONENT}.txt")
 else()

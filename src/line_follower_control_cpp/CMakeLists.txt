@@ -15,6 +15,8 @@ add_executable(controller_node
   src/controller_node.cpp
 )
 
+target_include_directories(controller_node PRIVATE include)
+
 ament_target_dependencies(controller_node
   rclcpp
   rcl_interfaces
@@ -35,8 +37,27 @@ install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
 
+install(DIRECTORY include/
+  DESTINATION include
+)
+
 install(FILES package.xml
   DESTINATION share/${PROJECT_NAME}
 )
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+
+  ament_add_gtest(test_control_core
+    test/test_control_core.cpp
+    src/control_core.cpp
+  )
+  target_include_directories(test_control_core PRIVATE include)
+
+  ament_add_gtest(test_finish_turn_state
+    test/test_finish_turn_state.cpp
+  )
+  target_include_directories(test_finish_turn_state PRIVATE include)
+endif()
 
 ament_package()

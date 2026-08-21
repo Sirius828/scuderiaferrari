@@ -165,7 +165,8 @@ int inferDebugImageWidth(const LaneDebugInfo& debug_info, int fallback_width) {
   return max_x > 1 ? max_x : fallback_width;
 }
 
-std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width) {
+std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width,
+                            const std::string& finish_turn_service_state) {
   const int image_width = inferDebugImageWidth(debug_info, fallback_width);
   const int top_x = selectedCenterAtRatio(debug_info, 0.0);
   const int mid_x = selectedCenterAtRatio(debug_info, 0.5);
@@ -255,6 +256,28 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
      << "\"human_count_at_stop\":" << debug_info.human_count_at_stop << ","
      << "\"human_valid_count\":" << debug_info.human_valid_count << ","
      << "\"human_candidate_count\":" << debug_info.human_candidate_count << ","
+     << "\"human_horizon_rejected_count\":"
+     << debug_info.human_horizon_rejected_count << ","
+     << "\"human_curve_guard_active\":"
+     << (debug_info.human_curve_guard_active ? "true" : "false") << ","
+     << "\"human_curve_guard_intersects\":"
+     << (debug_info.human_curve_guard_intersects ? "true" : "false") << ","
+     << "\"human_curve_guard_heading\":"
+     << debug_info.human_curve_guard_heading << ","
+     << "\"human_curve_guard_shift_px\":"
+     << debug_info.human_curve_guard_shift_px << ","
+     << "\"finish_stop_active\":"
+     << (debug_info.finish_stop_active ? "true" : "false") << ","
+     << "\"finish_stop_state\":\""
+     << jsonEscape(debug_info.finish_stop_state) << "\","
+     << "\"finish_stop_occurrence_count\":"
+     << debug_info.finish_stop_occurrence_count << ","
+     << "\"finish_stop_required_occurrences\":"
+     << debug_info.finish_stop_required_occurrences << ","
+     << "\"finish_stop_lost_count\":"
+     << debug_info.finish_stop_lost_count << ","
+     << "\"finish_turn_service_state\":\""
+     << jsonEscape(finish_turn_service_state) << "\","
      << "\"coin_on_route_count\":" << debug_info.coin_on_route_count << ","
      << "\"coin_reachable_count\":" << debug_info.coin_reachable_count << ","
      << "\"coin_too_far_count\":" << debug_info.coin_too_far_count << ","
@@ -409,10 +432,23 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width)
       const auto& sample = human.fit_sample_points[sample_index];
       ss << "[" << sample.x << "," << sample.y << "]";
     }
+    ss << "],\"guard_sample_points\":[";
+    for (size_t sample_index = 0;
+         sample_index < human.guard_sample_points.size(); ++sample_index) {
+      if (sample_index > 0) {
+        ss << ",";
+      }
+      const auto& sample = human.guard_sample_points[sample_index];
+      ss << "[" << sample.x << "," << sample.y << "]";
+    }
     ss << "],"
        << "\"raw_area_ratio\":" << human.raw_area_ratio << ","
        << "\"active\":" << (human.active ? "true" : "false") << ","
        << "\"fit_available\":" << (human.fit_available ? "true" : "false") << ","
+       << "\"original_line_intersects\":"
+       << (human.original_line_intersects ? "true" : "false") << ","
+       << "\"curve_guard_intersects\":"
+       << (human.curve_guard_intersects ? "true" : "false") << ","
        << "\"line_intersects\":" << (human.line_intersects ? "true" : "false") << ","
        << "\"passable\":" << (human.passable ? "true" : "false") << ","
        << "\"stop_candidate\":" << (human.stop_candidate ? "true" : "false")
@@ -621,10 +657,15 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<bool>("enable_human_obstacle_stop", true);
     declare_parameter<double>("human_horizontal_expand_px", 25.0);
     declare_parameter<double>("human_horizontal_expand_width_ratio", 0.50);
+    declare_parameter<double>("human_min_center_y_ratio", 0.40);
     declare_parameter<int>("human_line_sample_count", 5);
     declare_parameter<double>("human_stop_raw_area_ratio", 0.004);
     declare_parameter<int>("human_stop_confirm_frames", 2);
     declare_parameter<int>("human_clear_confirm_frames", 2);
+    declare_parameter<bool>("enable_human_clockwise_curve_guard", true);
+    declare_parameter<double>("human_curve_guard_heading_start", 0.08);
+    declare_parameter<double>("human_curve_guard_shift_gain_px", 120.0);
+    declare_parameter<double>("human_curve_guard_max_shift_px", 60.0);
     declare_parameter<bool>("enable_car_obstacle_avoidance", true);
     declare_parameter<int>("car_side_confirm_frames", 2);
     declare_parameter<int>("car_side_fit_downward_extension_px", 200);
@@ -684,6 +725,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("finish_stop_min_confidence", 0.45);
     declare_parameter<double>("finish_stop_arm_y_ratio", 0.70);
     declare_parameter<int>("finish_stop_lost_frames", 3);
+    declare_parameter<int>("finish_stop_required_occurrences", 2);
     declare_parameter<double>("finish_stop_max_age", 0.5);
     declare_parameter<double>("offset_y07_ratio", 0.70);
     declare_parameter<double>("offset_y08_ratio", 0.80);
@@ -724,6 +766,9 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<std::string>("line_follower_start_service", "/line_follower/start");
     declare_parameter<std::string>("line_follower_stop_service", "/line_follower/stop");
     declare_parameter<double>("human_service_retry_interval_sec", 0.20);
+    declare_parameter<std::string>(
+        "line_follower_finish_turn_service", "/line_follower/finish_turn");
+    declare_parameter<double>("finish_turn_service_retry_interval_sec", 0.20);
   }
 
   void loadParameters() {
@@ -749,6 +794,10 @@ class FusedPerceptionNode : public rclcpp::Node {
     line_follower_stop_service_ = get_parameter("line_follower_stop_service").as_string();
     human_service_retry_interval_sec_ = std::max(
         0.05, get_parameter("human_service_retry_interval_sec").as_double());
+    line_follower_finish_turn_service_ =
+        get_parameter("line_follower_finish_turn_service").as_string();
+    finish_turn_service_retry_interval_sec_ = std::max(
+        0.05, get_parameter("finish_turn_service_retry_interval_sec").as_double());
     enable_guideboard_ocr_ = get_parameter("enable_guideboard_ocr").as_bool();
     ocr_det_model_path_ = resolveOwnPackagePath(get_parameter("ocr_det_model_path").as_string());
     ocr_rec_model_path_ = resolveOwnPackagePath(get_parameter("ocr_rec_model_path").as_string());
@@ -923,6 +972,8 @@ class FusedPerceptionNode : public rclcpp::Node {
         static_cast<float>(get_parameter("human_horizontal_expand_px").as_double());
     lane_cfg.human_horizontal_expand_width_ratio =
         static_cast<float>(get_parameter("human_horizontal_expand_width_ratio").as_double());
+    lane_cfg.human_min_center_y_ratio = static_cast<float>(
+        get_parameter("human_min_center_y_ratio").as_double());
     lane_cfg.human_line_sample_count =
         static_cast<int>(get_parameter("human_line_sample_count").as_int());
     lane_cfg.human_stop_raw_area_ratio =
@@ -930,6 +981,14 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.human_stop_confirm_frames = static_cast<int>(get_parameter("human_stop_confirm_frames").as_int());
     lane_cfg.human_clear_confirm_frames =
         static_cast<int>(get_parameter("human_clear_confirm_frames").as_int());
+    lane_cfg.enable_human_clockwise_curve_guard =
+        get_parameter("enable_human_clockwise_curve_guard").as_bool();
+    lane_cfg.human_curve_guard_heading_start = static_cast<float>(
+        get_parameter("human_curve_guard_heading_start").as_double());
+    lane_cfg.human_curve_guard_shift_gain_px = static_cast<float>(
+        get_parameter("human_curve_guard_shift_gain_px").as_double());
+    lane_cfg.human_curve_guard_max_shift_px = static_cast<float>(
+        get_parameter("human_curve_guard_max_shift_px").as_double());
     lane_cfg.enable_car_obstacle_avoidance =
         get_parameter("enable_car_obstacle_avoidance").as_bool();
     lane_cfg.car_side_confirm_frames =
@@ -1031,6 +1090,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     lane_cfg.finish_stop_min_confidence = static_cast<float>(get_parameter("finish_stop_min_confidence").as_double());
     lane_cfg.finish_stop_arm_y_ratio = static_cast<float>(get_parameter("finish_stop_arm_y_ratio").as_double());
     lane_cfg.finish_stop_lost_frames = static_cast<int>(get_parameter("finish_stop_lost_frames").as_int());
+    lane_cfg.finish_stop_required_occurrences = static_cast<int>(
+        get_parameter("finish_stop_required_occurrences").as_int());
     human_stop_confirm_frames_ = std::max(1, lane_cfg.human_stop_confirm_frames);
     human_clear_confirm_frames_ = std::max(1, lane_cfg.human_clear_confirm_frames);
     lane_decision_.configure(lane_cfg);
@@ -2135,6 +2196,8 @@ class FusedPerceptionNode : public rclcpp::Node {
         create_publisher<std_msgs::msg::String>("/perception/guideboard_recognition", 10);
     line_follower_start_client_ = create_client<std_srvs::srv::Trigger>(line_follower_start_service_);
     line_follower_stop_client_ = create_client<std_srvs::srv::Trigger>(line_follower_stop_service_);
+    finish_turn_client_ = create_client<std_srvs::srv::Trigger>(
+        line_follower_finish_turn_service_);
     // Guideboard OCR pauses use the controller's normal start/stop pair.  The
     // configurable pair above remains dedicated to the Human obstacle state.
     guideboard_start_client_ = create_client<std_srvs::srv::Trigger>(guideboard_start_service_);
@@ -2269,6 +2332,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     handleGuideboardBranchEvent(lane_state, lane_debug);
     logDecisionStatus(lane_state, lane_debug);
     updateHumanExecution(lane_debug);
+    updateFinishTurnExecution(lane_state);
 
     refreshDebugParameters();
     if (show_window_ || enable_debug_screenshots_) {
@@ -2416,6 +2480,59 @@ class FusedPerceptionNode : public rclcpp::Node {
         });
   }
 
+  void updateFinishTurnExecution(const LaneState& lane_state) {
+    if (lane_state.task_state != "FINISH_STOP" ||
+        finish_turn_service_accepted_ || finish_turn_call_pending_) {
+      return;
+    }
+
+    const double now = nowSeconds();
+    if (now - finish_turn_service_last_call_sec_ <
+        finish_turn_service_retry_interval_sec_) {
+      return;
+    }
+    finish_turn_service_last_call_sec_ = now;
+
+    if (!finish_turn_client_->service_is_ready()) {
+      finish_turn_service_action_ = "wait_service";
+      RCLCPP_WARN_THROTTLE(
+          get_logger(), *get_clock(), 2000,
+          "FINISH_STOP active, waiting for %s",
+          line_follower_finish_turn_service_.c_str());
+      return;
+    }
+
+    finish_turn_call_pending_ = true;
+    finish_turn_service_action_ = "pending";
+    auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
+    finish_turn_client_->async_send_request(
+        request,
+        [this](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
+          finish_turn_call_pending_ = false;
+          try {
+            const auto response = future.get();
+            if (response->success) {
+              finish_turn_service_accepted_ = true;
+              finish_turn_service_action_ = "accepted";
+              RCLCPP_WARN(
+                  get_logger(), "Finish turn accepted by controller: %s",
+                  response->message.c_str());
+            } else {
+              finish_turn_service_action_ = "rejected";
+              RCLCPP_WARN_THROTTLE(
+                  get_logger(), *get_clock(), 2000,
+                  "Finish turn rejected by controller; retrying: %s",
+                  response->message.c_str());
+            }
+          } catch (const std::exception& e) {
+            finish_turn_service_action_ = "failed";
+            RCLCPP_WARN_THROTTLE(
+                get_logger(), *get_clock(), 2000,
+                "Finish turn service call failed; retrying: %s", e.what());
+          }
+        });
+  }
+
   void publishAll(const std::vector<Detection>& detections, const LaneState& lane_state,
                   const LaneDebugInfo& lane_debug, uint64_t frame_signature) {
     std_msgs::msg::Float32MultiArray det_msg;
@@ -2478,7 +2595,8 @@ class FusedPerceptionNode : public rclcpp::Node {
     }
 
     std_msgs::msg::String lane_debug_msg;
-    lane_debug_msg.data = laneDebugToJson(lane_debug, seg_input_width_);
+    lane_debug_msg.data = laneDebugToJson(
+        lane_debug, seg_input_width_, finish_turn_service_action_);
     lane_debug_pub_->publish(lane_debug_msg);
 
     std_msgs::msg::UInt64 signature_msg;
@@ -2593,8 +2711,14 @@ class FusedPerceptionNode : public rclcpp::Node {
                  << human_clear_confirm_frames_
                  << " target=" << debug_info.human_valid_count << "/"
                  << debug_info.human_candidate_count
+                 << " top_reject=" << debug_info.human_horizon_rejected_count
                  << " stop_count=" << debug_info.human_valid_count << "/"
                  << debug_info.human_count_at_stop
+                 << " guard=" << (debug_info.human_curve_guard_active ? 1 : 0)
+                 << " heading=" << debug_info.human_curve_guard_heading
+                 << " shift=" << debug_info.human_curve_guard_shift_px
+                 << " guard_hit="
+                 << (debug_info.human_curve_guard_intersects ? 1 : 0)
                  << " ctrl=" << human_service_action_;
     const cv::Scalar human_status_color = debug_info.human_state == "OBSTACLE_STOP"
                                               ? cv::Scalar(0, 0, 255)
@@ -2728,6 +2852,41 @@ class FusedPerceptionNode : public rclcpp::Node {
         cv::putText(vis, "ACTIVE",
                     human.expanded_bbox.tl() + cv::Point2f(0.0f, -4.0f),
                     cv::FONT_HERSHEY_SIMPLEX, 0.45, expanded_color, 1, cv::LINE_AA);
+      }
+      const size_t guard_sample_count =
+          debug_info.human_curve_guard_active
+              ? std::min(human.fit_sample_points.size(),
+                         human.guard_sample_points.size())
+              : 0;
+      for (size_t sample_index = 0; sample_index < guard_sample_count;
+           ++sample_index) {
+        const auto& fit_sample = human.fit_sample_points[sample_index];
+        const auto& guard_sample = human.guard_sample_points[sample_index];
+        const float corridor_left = std::min(fit_sample.x, guard_sample.x);
+        const float corridor_right = std::max(fit_sample.x, guard_sample.x);
+        const bool corridor_intersects =
+            corridor_right >= human.expanded_bbox.x &&
+            corridor_left <= human.expanded_bbox.x + human.expanded_bbox.width;
+        const cv::Scalar corridor_color =
+            !human.active
+                ? cv::Scalar(128, 128, 128)
+                : (corridor_intersects ? cv::Scalar(0, 165, 255)
+                                       : cv::Scalar(0, 255, 255));
+        const cv::Point fit_point(
+            std::clamp(static_cast<int>(std::round(fit_sample.x)),
+                       0, std::max(0, vis.cols - 1)),
+            std::clamp(static_cast<int>(std::round(fit_sample.y)),
+                       0, std::max(0, vis.rows - 1)));
+        const cv::Point guard_point(
+            std::clamp(static_cast<int>(std::round(guard_sample.x)),
+                       0, std::max(0, vis.cols - 1)),
+            std::clamp(static_cast<int>(std::round(guard_sample.y)),
+                       0, std::max(0, vis.rows - 1)));
+        cv::line(vis, guard_point, fit_point, corridor_color, 2, cv::LINE_AA);
+        cv::drawMarker(vis, guard_point,
+                       human.active ? cv::Scalar(255, 0, 0)
+                                    : cv::Scalar(128, 128, 128),
+                       cv::MARKER_DIAMOND, 9, 2, cv::LINE_AA);
       }
       for (const auto& sample : human.fit_sample_points) {
         const bool sample_intersects =
@@ -3167,9 +3326,11 @@ class FusedPerceptionNode : public rclcpp::Node {
   bool guideboard_log_only_{true};
   std::string line_follower_start_service_{"/line_follower/start"};
   std::string line_follower_stop_service_{"/line_follower/stop"};
+  std::string line_follower_finish_turn_service_{"/line_follower/finish_turn"};
   const std::string guideboard_start_service_{"/line_follower/start"};
   const std::string guideboard_stop_service_{"/line_follower/stop"};
   double human_service_retry_interval_sec_{0.20};
+  double finish_turn_service_retry_interval_sec_{0.20};
 
   std::string det_model_path_;
   std::string label_list_path_;
@@ -3221,6 +3382,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr guideboard_recognition_pub_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr line_follower_start_client_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr line_follower_stop_client_;
+  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr finish_turn_client_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr guideboard_start_client_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr guideboard_stop_client_;
   rclcpp::Subscription<std_msgs::msg::Int64>::SharedPtr encoder_count_sub_;
@@ -3234,6 +3396,10 @@ class FusedPerceptionNode : public rclcpp::Node {
   int human_clear_confirm_frames_{2};
   double human_service_last_call_sec_{0.0};
   std::string human_service_action_{"idle"};
+  bool finish_turn_call_pending_{false};
+  bool finish_turn_service_accepted_{false};
+  double finish_turn_service_last_call_sec_{0.0};
+  std::string finish_turn_service_action_{"idle"};
 
   uint64_t last_fid_{0};
   uint64_t upstream_frames_{0};

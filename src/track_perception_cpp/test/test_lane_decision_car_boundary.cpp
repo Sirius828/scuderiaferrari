@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <string>
@@ -74,6 +75,19 @@ cv::Mat roadMask(int x0 = 80, int x1 = 240) {
 
 cv::Mat fullRoadMask() {
   cv::Mat mask = cv::Mat::ones(kHeight, kWidth, CV_8UC1);
+  return mask;
+}
+
+cv::Mat clockwiseRightCurveMask() {
+  cv::Mat mask = cv::Mat::zeros(kHeight, kWidth, CV_8UC1);
+  for (int y = 0; y < kHeight; ++y) {
+    // Forward is toward smaller image y.  Decreasing y moves the road center
+    // right, matching the clockwise track's right-pointing curve.
+    const int center_x = static_cast<int>(std::round(230.0 - 0.4 * y));
+    const int x0 = std::clamp(center_x - 40, 0, kWidth - 1);
+    const int x1 = std::clamp(center_x + 40, x0 + 1, kWidth);
+    mask.row(y).colRange(x0, x1).setTo(1);
+  }
   return mask;
 }
 
@@ -566,6 +580,200 @@ TEST(LaneDecisionCarTemplateTest, HumanAndFinishProtectionRemainIndependent) {
   EXPECT_EQ(decision.debugInfo().human_state, "NONE");
 }
 
+TEST(LaneDecisionCarTemplateTest, HumanCenterInTopFortyPercentIsRejected) {
+  auto config = makeConfig();
+  config.human_min_center_y_ratio = 0.40f;
+  config.human_stop_confirm_frames = 1;
+  config.human_stop_raw_area_ratio = 0.001f;
+  LaneDecision decision;
+  decision.configure(config);
+
+  Detection background_human;
+  background_human.class_name = "Human";
+  background_human.confidence = 0.95f;
+  background_human.bbox = cv::Rect2f(130.0f, 0.0f, 60.0f, 80.0f);
+  background_human.center = cv::Point2f(160.0f, 40.0f);
+
+  const LaneState state = decision.decide(roadMask(), {background_human});
+  EXPECT_EQ(state.task_state, "CLEAR");
+  EXPECT_EQ(decision.debugInfo().human_horizon_rejected_count, 1);
+  EXPECT_EQ(decision.debugInfo().human_candidate_count, 0);
+  EXPECT_EQ(decision.debugInfo().human_valid_count, 0);
+  EXPECT_TRUE(decision.debugInfo().humans.empty());
+}
+
+TEST(LaneDecisionCarTemplateTest, HumanCenterAtFortyPercentBoundaryIsAccepted) {
+  auto config = makeConfig();
+  config.human_min_center_y_ratio = 0.40f;
+  config.human_stop_confirm_frames = 1;
+  config.human_stop_raw_area_ratio = 0.001f;
+  LaneDecision decision;
+  decision.configure(config);
+
+  Detection track_human;
+  track_human.class_name = "Human";
+  track_human.confidence = 0.95f;
+  // 76 + 40 / 2 = 96, exactly 40% of the 240-pixel image height.
+  track_human.bbox = cv::Rect2f(140.0f, 76.0f, 40.0f, 40.0f);
+  track_human.center = cv::Point2f(160.0f, 96.0f);
+
+  const LaneState state = decision.decide(roadMask(), {track_human});
+  EXPECT_EQ(decision.debugInfo().human_horizon_rejected_count, 0);
+  EXPECT_EQ(decision.debugInfo().human_candidate_count, 1);
+  EXPECT_EQ(decision.debugInfo().human_valid_count, 1);
+  EXPECT_EQ(state.task_state, "OBSTACLE_STOP");
+}
+
+TEST(LaneDecisionCarTemplateTest, ZeroHumanCenterRatioDisablesHorizonFilter) {
+  auto config = makeConfig();
+  config.human_min_center_y_ratio = 0.0f;
+  config.human_stop_confirm_frames = 1;
+  config.human_stop_raw_area_ratio = 0.001f;
+  LaneDecision decision;
+  decision.configure(config);
+
+  Detection top_human;
+  top_human.class_name = "Human";
+  top_human.confidence = 0.95f;
+  top_human.bbox = cv::Rect2f(130.0f, 0.0f, 60.0f, 80.0f);
+  top_human.center = cv::Point2f(160.0f, 40.0f);
+
+  const LaneState state = decision.decide(roadMask(), {top_human});
+  EXPECT_EQ(decision.debugInfo().human_horizon_rejected_count, 0);
+  EXPECT_EQ(decision.debugInfo().human_candidate_count, 1);
+  EXPECT_EQ(state.task_state, "OBSTACLE_STOP");
+}
+
+TEST(LaneDecisionCarTemplateTest, ClockwiseCurveGuardStopsBeforeOriginalLineOverlap) {
+  auto config = makeConfig();
+  config.human_horizontal_expand_px = 0.0f;
+  config.human_horizontal_expand_width_ratio = 0.0f;
+  config.human_stop_raw_area_ratio = 0.001f;
+  config.human_stop_confirm_frames = 1;
+  config.human_clear_confirm_frames = 1;
+  config.enable_human_clockwise_curve_guard = true;
+  config.human_curve_guard_heading_start = 0.08f;
+  config.human_curve_guard_shift_gain_px = 120.0f;
+  config.human_curve_guard_max_shift_px = 60.0f;
+  LaneDecision decision;
+  decision.configure(config);
+
+  Detection human;
+  human.class_name = "Human";
+  human.confidence = 0.95f;
+  human.bbox = cv::Rect2f(150.0f, 120.0f, 10.0f, 40.0f);
+  human.center = cv::Point2f(155.0f, 140.0f);
+
+  const LaneState state = decision.decide(clockwiseRightCurveMask(), {human});
+  const auto& debug = decision.debugInfo();
+  ASSERT_EQ(debug.humans.size(), 1u);
+  EXPECT_LT(debug.human_curve_guard_heading, -0.08f);
+  EXPECT_TRUE(debug.human_curve_guard_active);
+  EXPECT_GT(debug.human_curve_guard_shift_px, 0.0f);
+  EXPECT_FALSE(debug.humans.front().original_line_intersects);
+  EXPECT_TRUE(debug.humans.front().curve_guard_intersects);
+  EXPECT_TRUE(debug.human_curve_guard_intersects);
+  EXPECT_EQ(state.task_state, "OBSTACLE_STOP");
+}
+
+TEST(LaneDecisionCarTemplateTest, DisabledCurveGuardKeepsOriginalHumanRule) {
+  auto config = makeConfig();
+  config.human_horizontal_expand_px = 0.0f;
+  config.human_horizontal_expand_width_ratio = 0.0f;
+  config.human_stop_raw_area_ratio = 0.001f;
+  config.human_stop_confirm_frames = 1;
+  config.enable_human_clockwise_curve_guard = false;
+  LaneDecision decision;
+  decision.configure(config);
+
+  Detection human;
+  human.class_name = "Human";
+  human.confidence = 0.95f;
+  human.bbox = cv::Rect2f(150.0f, 120.0f, 10.0f, 40.0f);
+  human.center = cv::Point2f(155.0f, 140.0f);
+
+  const LaneState state = decision.decide(clockwiseRightCurveMask(), {human});
+  const auto& debug = decision.debugInfo();
+  ASSERT_EQ(debug.humans.size(), 1u);
+  EXPECT_FALSE(debug.human_curve_guard_active);
+  EXPECT_FLOAT_EQ(debug.human_curve_guard_shift_px, 0.0f);
+  EXPECT_FALSE(debug.humans.front().original_line_intersects);
+  EXPECT_FALSE(debug.humans.front().line_intersects);
+  EXPECT_EQ(debug.human_state, "PASSABLE");
+  EXPECT_EQ(state.task_state, "CLEAR");
+}
+
+TEST(LaneDecisionCarTemplateTest, CurveGuardCorridorPreventsEarlyResume) {
+  auto config = makeConfig();
+  config.human_horizontal_expand_px = 0.0f;
+  config.human_horizontal_expand_width_ratio = 0.0f;
+  config.human_stop_raw_area_ratio = 0.001f;
+  config.human_stop_confirm_frames = 1;
+  config.human_clear_confirm_frames = 1;
+  config.enable_human_clockwise_curve_guard = true;
+  LaneDecision decision;
+  decision.configure(config);
+
+  Detection human;
+  human.class_name = "Human";
+  human.confidence = 0.95f;
+  human.bbox = cv::Rect2f(150.0f, 120.0f, 10.0f, 40.0f);
+  human.center = cv::Point2f(155.0f, 140.0f);
+  ASSERT_EQ(decision.decide(clockwiseRightCurveMask(), {human}).task_state,
+            "OBSTACLE_STOP");
+
+  // This narrow bbox lies between the shifted guard and the original fit at
+  // every sampled height.  It touches neither boundary line, but must remain
+  // unsafe because it is still inside the swept corridor.
+  human.bbox = cv::Rect2f(163.0f, 120.0f, 2.0f, 40.0f);
+  human.center = cv::Point2f(164.0f, 140.0f);
+  const LaneState between_state = decision.decide(
+      clockwiseRightCurveMask(), {human});
+  ASSERT_EQ(decision.debugInfo().humans.size(), 1u);
+  EXPECT_FALSE(decision.debugInfo().humans.front().original_line_intersects);
+  EXPECT_TRUE(decision.debugInfo().humans.front().curve_guard_intersects);
+  EXPECT_EQ(between_state.task_state, "OBSTACLE_STOP");
+
+  human.bbox = cv::Rect2f(190.0f, 120.0f, 10.0f, 40.0f);
+  human.center = cv::Point2f(195.0f, 140.0f);
+  const LaneState clear_state = decision.decide(
+      clockwiseRightCurveMask(), {human});
+  EXPECT_EQ(clear_state.task_state, "CLEAR");
+  EXPECT_EQ(decision.debugInfo().human_state, "PASSABLE");
+}
+
+TEST(LaneDecisionCarTemplateTest, CurveGuardDoesNotChangeFittedGeometry) {
+  auto config = makeConfig();
+  config.human_horizontal_expand_px = 0.0f;
+  config.human_horizontal_expand_width_ratio = 0.0f;
+  config.human_stop_raw_area_ratio = 0.001f;
+  config.human_stop_confirm_frames = 1;
+  LaneDecision baseline_decision;
+  LaneDecision human_decision;
+  baseline_decision.configure(config);
+  human_decision.configure(config);
+
+  Detection human;
+  human.class_name = "Human";
+  human.confidence = 0.95f;
+  human.bbox = cv::Rect2f(150.0f, 120.0f, 10.0f, 40.0f);
+  human.center = cv::Point2f(155.0f, 140.0f);
+
+  const LaneState baseline = baseline_decision.decide(
+      clockwiseRightCurveMask(), {});
+  const LaneState guarded = human_decision.decide(
+      clockwiseRightCurveMask(), {human});
+  EXPECT_NEAR(guarded.offset_y07, baseline.offset_y07, 1e-6);
+  EXPECT_NEAR(guarded.offset_y08, baseline.offset_y08, 1e-6);
+  EXPECT_NEAR(guarded.offset_y09, baseline.offset_y09, 1e-6);
+  ASSERT_EQ(human_decision.debugInfo().fit_coeffs.size(),
+            baseline_decision.debugInfo().fit_coeffs.size());
+  for (size_t i = 0; i < human_decision.debugInfo().fit_coeffs.size(); ++i) {
+    EXPECT_NEAR(human_decision.debugInfo().fit_coeffs[i],
+                baseline_decision.debugInfo().fit_coeffs[i], 1e-9);
+  }
+}
+
 TEST(LaneDecisionCarTemplateTest, OnlyNearestHumanControlsAvoidance) {
   auto config = makeConfig();
   config.human_stop_confirm_frames = 1;
@@ -576,8 +784,11 @@ TEST(LaneDecisionCarTemplateTest, OnlyNearestHumanControlsAvoidance) {
   Detection far_human;
   far_human.class_name = "Human";
   far_human.confidence = 0.95f;
-  far_human.bbox = cv::Rect2f(140.0f, 20.0f, 40.0f, 80.0f);
-  far_human.center = cv::Point2f(160.0f, 60.0f);
+  // Keep both detections below the horizon filter so this test continues to
+  // isolate nearest-target selection.  Top-area rejection is covered by the
+  // dedicated HumanCenterInTopFortyPercentIsRejected test.
+  far_human.bbox = cv::Rect2f(140.0f, 70.0f, 40.0f, 80.0f);
+  far_human.center = cv::Point2f(160.0f, 110.0f);
 
   Detection near_human;
   near_human.class_name = "Human";

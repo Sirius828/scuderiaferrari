@@ -1,0 +1,29 @@
+-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp':
+ - /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_finish_turn_state --gtest_output=xml:/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_finish_turn_state.gtest.xml
+
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from FinishTurnStateTest
+[ RUN      ] FinishTurnStateTest.RequiresFreshEncoderBeforeStart
+[       OK ] FinishTurnStateTest.RequiresFreshEncoderBeforeStart (0 ms)
+[ RUN      ] FinishTurnStateTest.UsesEncoderDeltaFromArbitraryBaseline
+[       OK ] FinishTurnStateTest.UsesEncoderDeltaFromArbitraryBaseline (0 ms)
+[ RUN      ] FinishTurnStateTest.StaleEncoderFaultsAndStops
+[       OK ] FinishTurnStateTest.StaleEncoderFaultsAndStops (0 ms)
+[ RUN      ] FinishTurnStateTest.EncoderDecreaseFaultsImmediately
+[       OK ] FinishTurnStateTest.EncoderDecreaseFaultsImmediately (0 ms)
+[ RUN      ] FinishTurnStateTest.OverallTimeoutFaultsEvenWithFreshEncoder
+[       OK ] FinishTurnStateTest.OverallTimeoutFaultsEvenWithFreshEncoder (0 ms)
+[ RUN      ] FinishTurnStateTest.CancelLatchesUntilExplicitReset
+[       OK ] FinishTurnStateTest.CancelLatchesUntilExplicitReset (0 ms)
+[----------] 6 tests from FinishTurnStateTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 6 tests.
+
+
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_finish_turn_state.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_finish_turn_state.gtest.xml'

@@ -324,6 +324,9 @@ ament_cmake_symlink_install_directory("/home/orangepi/scuderiaferrari/src/line_f
 # install(DIRECTORY "launch" "DESTINATION" "share/line_follower_control_cpp")
 ament_cmake_symlink_install_directory("/home/orangepi/scuderiaferrari/src/line_follower_control_cpp" DIRECTORY "launch" "DESTINATION" "share/line_follower_control_cpp")
 
+# install(DIRECTORY "include/" "DESTINATION" "include")
+ament_cmake_symlink_install_directory("/home/orangepi/scuderiaferrari/src/line_follower_control_cpp" DIRECTORY "include/" "DESTINATION" "include")
+
 # install(FILES "package.xml" "DESTINATION" "share/line_follower_control_cpp")
 ament_cmake_symlink_install_files("/home/orangepi/scuderiaferrari/src/line_follower_control_cpp" FILES "package.xml" "DESTINATION" "share/line_follower_control_cpp")
 

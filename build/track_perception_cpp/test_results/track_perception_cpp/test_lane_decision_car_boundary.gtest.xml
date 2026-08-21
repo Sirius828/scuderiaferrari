@@ -1,30 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites tests="25" failures="0" disabled="0" errors="0" time="0.598" timestamp="2026-08-20T04:50:26" name="AllTests">
-  <testsuite name="LaneDecisionCarTemplateTest" tests="25" failures="0" disabled="0" errors="0" time="0.598" timestamp="2026-08-20T04:50:26">
-    <testcase name="NoCarLeavesOrdinaryQuadraticFitUnchanged" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="RightCarUsesAllLeftRoadBoundaries" status="run" result="completed" time="0.006" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="FarCarUsesHeightRatioEvenWhenBottomIsNearHorizon" status="run" result="completed" time="0.004" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="SameHeightFitPointRightOfCarMeansCarIsLeft" status="run" result="completed" time="0" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="SameHeightFitPointLeftOfCarMeansCarIsRight" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="ConnectedRoadMaskMeansCarIsOnLeft" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="SplitRoadMaskMeansCarIsOnRight" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="ConnectivityOverridesContradictoryFitPoint" status="run" result="completed" time="0.002" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="CarSideUsesLowestFitPointInDownwardExtension" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="LeftCarUsesLeftBoundaryOffsets" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="LeftCarUsesDirectPerBandEmpiricalOffsets" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="PerBandOffsetsMoveTemplateTowardRoadInterior" status="run" result="completed" time="0.008" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="DoesNotStartWithoutEnoughTemplatePoints" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="DoesNotStartWithStaleEncoderFeedback" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="ActiveDetourKeepsCachedTemplateWhenBandsDisappear" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="EncoderTransitionsAtExactBoundariesAndBlendsReturn" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="WaitClearRequiresThreeConsecutiveNoCarFrames" status="run" result="completed" time="0.002" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="SideAndTemplateStayLatchedAfterDetectionLoss" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="ConfirmedOppositeSideSwitchesTemplateWithoutEncoderReset" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="ActiveTemplateDoesNotSwitchFromFitFallback" status="run" result="completed" time="0.006" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="ShortEncoderFaultHoldsTemplate" status="run" result="completed" time="0.002" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="EncoderRollbackUsesFaultExitInsteadOfAbsoluteDelta" status="run" result="completed" time="0.554" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="BranchEncoderExtendsWhileCarOverridesOutput" status="run" result="completed" time="0.001" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="HumanAndFinishProtectionRemainIndependent" status="run" result="completed" time="0" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
-    <testcase name="OnlyNearestHumanControlsAvoidance" status="run" result="completed" time="0" timestamp="2026-08-20T04:50:26" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+<testsuites tests="32" failures="0" disabled="0" errors="0" time="0.583" timestamp="2026-08-22T00:51:32" name="AllTests">
+  <testsuite name="LaneDecisionCarTemplateTest" tests="32" failures="0" disabled="0" errors="0" time="0.583" timestamp="2026-08-22T00:51:32">
+    <testcase name="NoCarLeavesOrdinaryQuadraticFitUnchanged" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="RightCarUsesAllLeftRoadBoundaries" status="run" result="completed" time="0.015" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="FarCarUsesHeightRatioEvenWhenBottomIsNearHorizon" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="SameHeightFitPointRightOfCarMeansCarIsLeft" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="SameHeightFitPointLeftOfCarMeansCarIsRight" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="ConnectedRoadMaskMeansCarIsOnLeft" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="SplitRoadMaskMeansCarIsOnRight" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="ConnectivityOverridesContradictoryFitPoint" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="CarSideUsesLowestFitPointInDownwardExtension" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="LeftCarUsesLeftBoundaryOffsets" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="LeftCarUsesDirectPerBandEmpiricalOffsets" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="PerBandOffsetsMoveTemplateTowardRoadInterior" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="DoesNotStartWithoutEnoughTemplatePoints" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="DoesNotStartWithStaleEncoderFeedback" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="ActiveDetourKeepsCachedTemplateWhenBandsDisappear" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="EncoderTransitionsAtExactBoundariesAndBlendsReturn" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="WaitClearRequiresThreeConsecutiveNoCarFrames" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="SideAndTemplateStayLatchedAfterDetectionLoss" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="ConfirmedOppositeSideSwitchesTemplateWithoutEncoderReset" status="run" result="completed" time="0.002" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="ActiveTemplateDoesNotSwitchFromFitFallback" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="ShortEncoderFaultHoldsTemplate" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="EncoderRollbackUsesFaultExitInsteadOfAbsoluteDelta" status="run" result="completed" time="0.551" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="BranchEncoderExtendsWhileCarOverridesOutput" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="HumanAndFinishProtectionRemainIndependent" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="HumanCenterInTopFortyPercentIsRejected" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="HumanCenterAtFortyPercentBoundaryIsAccepted" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="ZeroHumanCenterRatioDisablesHorizonFilter" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="ClockwiseCurveGuardStopsBeforeOriginalLineOverlap" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="DisabledCurveGuardKeepsOriginalHumanRule" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="CurveGuardCorridorPreventsEarlyResume" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="CurveGuardDoesNotChangeFittedGeometry" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
+    <testcase name="OnlyNearestHumanControlsAvoidance" status="run" result="completed" time="0.001" timestamp="2026-08-22T00:51:32" classname="track_perception_cpp.LaneDecisionCarTemplateTest" />
   </testsuite>
 </testsuites>

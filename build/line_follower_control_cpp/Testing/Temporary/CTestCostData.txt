@@ -1,2 +1,3 @@
-test_control_core 9 0.0176096
+test_control_core 10 0.017486
+test_finish_turn_state 1 0.1402
 ---

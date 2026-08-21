@@ -8,6 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/home/orangepi/scuderiaferrari/src/line_follower_control_cpp/src/control_core.cpp" "CMakeFiles/test_control_core.dir/src/control_core.cpp.o" "gcc" "CMakeFiles/test_control_core.dir/src/control_core.cpp.o.d"
   "/home/orangepi/scuderiaferrari/src/line_follower_control_cpp/test/test_control_core.cpp" "CMakeFiles/test_control_core.dir/test/test_control_core.cpp.o" "gcc" "CMakeFiles/test_control_core.dir/test/test_control_core.cpp.o.d"
   )
 
@@ -15,7 +16,6 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
 set(CMAKE_TARGET_LINKED_INFO_FILES
   "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/gtest/CMakeFiles/gtest_main.dir/DependInfo.cmake"
   "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/gtest/CMakeFiles/gtest.dir/DependInfo.cmake"
-  "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/control_core.dir/DependInfo.cmake"
   )
 
 # Fortran module output directory.

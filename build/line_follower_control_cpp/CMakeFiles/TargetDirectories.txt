@@ -1,6 +1,8 @@
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/uninstall.dir
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/line_follower_control_cpp_uninstall.dir
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/controller_node.dir
+/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/test_control_core.dir
+/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/test_finish_turn_state.dir
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/test.dir
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/edit_cache.dir
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/rebuild_cache.dir
@@ -8,3 +10,12 @@
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/install.dir
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/install/local.dir
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/install/strip.dir
+/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/gtest/CMakeFiles/gtest.dir
+/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/gtest/CMakeFiles/gtest_main.dir
+/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/gtest/CMakeFiles/test.dir
+/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/gtest/CMakeFiles/edit_cache.dir
+/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/gtest/CMakeFiles/rebuild_cache.dir
+/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/gtest/CMakeFiles/list_install_components.dir
+/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/gtest/CMakeFiles/install.dir
+/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/gtest/CMakeFiles/install/local.dir
+/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/gtest/CMakeFiles/install/strip.dir

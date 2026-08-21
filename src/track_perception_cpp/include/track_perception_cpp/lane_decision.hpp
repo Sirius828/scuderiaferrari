@@ -86,10 +86,15 @@ struct LaneDecisionConfig {
   bool enable_human_obstacle_stop{true};
   float human_horizontal_expand_px{25.0f};
   float human_horizontal_expand_width_ratio{0.50f};
+  float human_min_center_y_ratio{0.40f};
   int human_line_sample_count{5};
   float human_stop_raw_area_ratio{0.004f};
   int human_stop_confirm_frames{2};
   int human_clear_confirm_frames{2};
+  bool enable_human_clockwise_curve_guard{true};
+  float human_curve_guard_heading_start{0.08f};
+  float human_curve_guard_shift_gain_px{120.0f};
+  float human_curve_guard_max_shift_px{60.0f};
 
   bool enable_car_obstacle_avoidance{true};
   int car_side_confirm_frames{2};
@@ -148,6 +153,7 @@ struct LaneDecisionConfig {
   float finish_stop_min_confidence{0.45f};
   float finish_stop_arm_y_ratio{0.70f};
   int finish_stop_lost_frames{3};
+  int finish_stop_required_occurrences{2};
 
 };
 
@@ -171,9 +177,12 @@ struct LaneHumanDebug {
   cv::Rect2f raw_bbox;
   cv::Rect2f expanded_bbox;
   std::vector<cv::Point2f> fit_sample_points;
+  std::vector<cv::Point2f> guard_sample_points;
   float raw_area_ratio{0.0f};
   bool active{false};
   bool fit_available{false};
+  bool original_line_intersects{false};
+  bool curve_guard_intersects{false};
   bool line_intersects{false};
   bool passable{false};
   bool stop_candidate{false};
@@ -242,6 +251,16 @@ struct LaneDebugInfo {
   int human_count_at_stop{0};
   int human_valid_count{0};
   int human_candidate_count{0};
+  int human_horizon_rejected_count{0};
+  bool human_curve_guard_active{false};
+  bool human_curve_guard_intersects{false};
+  float human_curve_guard_heading{0.0f};
+  float human_curve_guard_shift_px{0.0f};
+  bool finish_stop_active{false};
+  std::string finish_stop_state{"CLEAR"};
+  int finish_stop_occurrence_count{0};
+  int finish_stop_required_occurrences{2};
+  int finish_stop_lost_count{0};
   bool car_avoidance_active{false};
   std::string car_side{"UNKNOWN"};
   std::string car_side_candidate{"UNKNOWN"};
@@ -421,7 +440,7 @@ class LaneDecision {
   void updateFinishStopState(const std::vector<Detection>& detections, int image_height);
   void updateHumanStopState(const std::vector<Detection>& detections, int image_width,
                             int image_height, const std::vector<double>& fit_coeffs,
-                            bool fit_valid);
+                            bool fit_valid, double heading_error);
   void evaluateCoinsShadow(const std::vector<Detection>& detections,
                            int image_width, int image_height,
                            const std::vector<cv::Point3f>& fit_points,
@@ -485,6 +504,7 @@ class LaneDecision {
   std::string finish_stop_state_{"CLEAR"};
   std::string human_state_{"NONE"};
   int finish_stop_lost_count_{0};
+  int finish_stop_occurrence_count_{0};
   int human_stop_confirm_count_{0};
   int human_clear_confirm_count_{0};
   int human_count_at_stop_{0};

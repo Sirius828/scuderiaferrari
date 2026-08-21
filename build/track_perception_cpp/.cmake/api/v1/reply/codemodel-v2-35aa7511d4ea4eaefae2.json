@@ -28,7 +28,8 @@
 						7,
 						8,
 						9,
-						10
+						10,
+						11
 					]
 				},
 				{
@@ -71,7 +72,8 @@
 						7,
 						8,
 						9,
-						10
+						10,
+						11
 					]
 				},
 				{
@@ -144,6 +146,13 @@
 					"id" : "test_lane_decision_coin_shadow::@6890427a1f51a3e7e1df",
 					"jsonFile" : "target-test_lane_decision_coin_shadow-Release-5644bbf1c7741ad99c62.json",
 					"name" : "test_lane_decision_coin_shadow",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "test_lane_decision_finish_stop::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-test_lane_decision_finish_stop-Release-19b080b886326da859f8.json",
+					"name" : "test_lane_decision_finish_stop",
 					"projectIndex" : 0
 				},
 				{

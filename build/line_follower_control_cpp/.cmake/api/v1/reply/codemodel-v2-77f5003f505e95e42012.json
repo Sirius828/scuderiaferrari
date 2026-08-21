@@ -1,0 +1,148 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-38a99914dc00cf6ac624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.12"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						3,
+						4,
+						5,
+						6
+					]
+				},
+				{
+					"build" : "gtest",
+					"jsonFile" : "directory-gtest-a2408fe1a73b92c5e636.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.8"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "/opt/ros/humble/src/gtest_vendor",
+					"targetIndexes" : 
+					[
+						1,
+						2
+					]
+				}
+			],
+			"name" : "",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "line_follower_control_cpp",
+					"targetIndexes" : 
+					[
+						0,
+						3,
+						4,
+						5,
+						6
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "gtest",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						1,
+						2
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "controller_node::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-controller_node-f8a55016925a774ab645.json",
+					"name" : "controller_node",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "gtest::@0af4add9fe94340e763e",
+					"jsonFile" : "target-gtest-afee3818c1457980a531.json",
+					"name" : "gtest",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "gtest_main::@0af4add9fe94340e763e",
+					"jsonFile" : "target-gtest_main-f58db9d5deb220a71a53.json",
+					"name" : "gtest_main",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "line_follower_control_cpp_uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-line_follower_control_cpp_uninstall-5f1e7139326d613e81b5.json",
+					"name" : "line_follower_control_cpp_uninstall",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "test_control_core::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-test_control_core-7119a4bf5086970299a1.json",
+					"name" : "test_control_core",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "test_finish_turn_state::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-test_finish_turn_state-36819ffa4f53edc5ab03.json",
+					"name" : "test_finish_turn_state",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-uninstall-6f25050d3008631571d8.json",
+					"name" : "uninstall",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp",
+		"source" : "/home/orangepi/scuderiaferrari/src/line_follower_control_cpp"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

@@ -34,6 +34,8 @@ fused_perception_node:
     line_follower_start_service: "/line_follower/obstacle_resume"
     line_follower_stop_service: "/line_follower/obstacle_pause"
     human_service_retry_interval_sec: 0.20
+    line_follower_finish_turn_service: "/line_follower/finish_turn"
+    finish_turn_service_retry_interval_sec: 0.20
 
     # 目标检测模型
     det_model_path: "model/det_815.rknn"
@@ -199,10 +201,18 @@ fused_perception_node:
     enable_human_obstacle_stop: true
     human_horizontal_expand_px: 10.0
     human_horizontal_expand_width_ratio: 2.5
+    # bbox 中心位于画面顶部 40% 时视为现实背景误检，不进入 Human 避障。
+    human_min_center_y_ratio: 0.40
     human_line_sample_count: 5
     human_stop_raw_area_ratio: 0.003
     human_stop_confirm_frames: 2
     human_clear_confirm_frames: 2
+    # 顺时针右弯中，将 Human 危险判定线按最终拟合 heading 向左平移；
+    # 左移线与真实拟合线之间整段均为危险走廊，避免穿过左移线后提前恢复。
+    enable_human_clockwise_curve_guard: true
+    human_curve_guard_heading_start: 0.07
+    human_curve_guard_shift_gain_px: 130.0
+    human_curve_guard_max_shift_px: 80.0
     # Car 首先根据 bbox 两侧赛道 mask 是否连通确认侧别；证据不足时仅在 IDLE
     # 使用同高度拟合点作初始备用判断。DETOUR/RETURN 中只有 mask 证据能切换模板。
     enable_car_obstacle_avoidance: true
@@ -271,12 +281,12 @@ fused_perception_node:
     coin_route_max_abs_curvature: 0.85
     coin_route_obstacle_clearance_px: 18.0
 
-    # 终点停车：Stop bbox 底部达到阈值才 FINISH_STOP
-    # 联调阶段忽略 Stop 标签，不产生 FINISH_STOP；后续接入专用终点联锁后再开启。
-    enable_finish_stop: false
+    # 完整经过 Stop（识别、到达脚底阈值、连续丢失）才计一次；第二次触发终点旋转。
+    enable_finish_stop: true
     finish_stop_min_confidence: 0.45
     finish_stop_arm_y_ratio: 0.70
     finish_stop_lost_frames: 3
+    finish_stop_required_occurrences: 2
     finish_stop_max_age: 0.5
 
     # 话题发布

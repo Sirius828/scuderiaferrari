@@ -659,6 +659,11 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: \
  /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32__builder.hpp \
  /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32__traits.hpp \
  /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32__type_support.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/int64.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int64__struct.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int64__builder.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int64__traits.hpp \
+ /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int64__type_support.hpp \
  /opt/ros/humble/include/std_msgs/std_msgs/msg/int8.hpp \
  /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int8__struct.hpp \
  /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int8__builder.hpp \
@@ -684,4 +689,5 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: \
  /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__struct.hpp \
  /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__builder.hpp \
  /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__traits.hpp \
- /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__type_support.hpp
+ /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__type_support.hpp \
+ /home/orangepi/scuderiaferrari/src/line_follower_control_cpp/include/line_follower_control_cpp/finish_turn_state.hpp

@@ -21,11 +21,14 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/float32.hpp"
+#include "std_msgs/msg/int64.hpp"
 #include "std_msgs/msg/int8.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/u_int64.hpp"
 #include "std_srvs/srv/set_bool.hpp"
 #include "std_srvs/srv/trigger.hpp"
+
+#include "line_follower_control_cpp/finish_turn_state.hpp"
 
 using namespace std::chrono_literals;
 
@@ -115,6 +118,11 @@ struct ControllerParameters
   double straight_allowed_offset{0.05};
   double curve_allowed_offset{0.60};
   double min_perception_confidence{0.50};
+  int64_t finish_turn_encoder_counts{20000};
+  double finish_turn_speed_mps{0.8};
+  double finish_turn_steering{-1.0};
+  double finish_turn_timeout_sec{8.0};
+  double finish_turn_encoder_max_age_sec{0.30};
 };
 
 class LineFollowerControllerCpp : public rclcpp::Node
@@ -236,6 +244,13 @@ public:
     declare_parameter<double>("straight_allowed_offset", params_.straight_allowed_offset);
     declare_parameter<double>("curve_allowed_offset", params_.curve_allowed_offset);
     declare_parameter<double>("min_perception_confidence", params_.min_perception_confidence);
+    declare_parameter<int64_t>(
+      "finish_turn_encoder_counts", params_.finish_turn_encoder_counts);
+    declare_parameter<double>("finish_turn_speed_mps", params_.finish_turn_speed_mps);
+    declare_parameter<double>("finish_turn_steering", params_.finish_turn_steering);
+    declare_parameter<double>("finish_turn_timeout_sec", params_.finish_turn_timeout_sec);
+    declare_parameter<double>(
+      "finish_turn_encoder_max_age_sec", params_.finish_turn_encoder_max_age_sec);
     declare_parameter<double>("steering_sign", 1.0);
     declare_parameter<double>("control_frequency", 50.0);
     declare_parameter<bool>("autonomous_enabled_on_start", false);
@@ -247,6 +262,8 @@ public:
     declare_parameter<std::string>("curvature_topic", "/segmentation/curvature");
     declare_parameter<std::string>("lane_state_topic", "/perception/lane_state");
     declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
+    declare_parameter<std::string>(
+      "finish_turn_encoder_topic", "/chassis/encoder_count");
 
     load_parameters();
     validate_startup_parameters();
@@ -285,6 +302,11 @@ public:
       "/perception/frame_signature", sensor_qos,
       std::bind(
         &LineFollowerControllerCpp::frame_signature_callback, this, std::placeholders::_1));
+    finish_turn_encoder_subscription_ = create_subscription<std_msgs::msg::Int64>(
+      finish_turn_encoder_topic_, rclcpp::QoS(10).reliable(),
+      std::bind(
+        &LineFollowerControllerCpp::finish_turn_encoder_callback, this,
+        std::placeholders::_1));
 
     cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic_, 10);
     chassis_enable_publisher_ = create_publisher<std_msgs::msg::Int8>("/chassis/enable", 10);
@@ -309,6 +331,11 @@ public:
       "/line_follower/obstacle_resume",
       std::bind(
         &LineFollowerControllerCpp::obstacle_resume_service_callback, this,
+        std::placeholders::_1, std::placeholders::_2));
+    finish_turn_service_ = create_service<std_srvs::srv::Trigger>(
+      "/line_follower/finish_turn",
+      std::bind(
+        &LineFollowerControllerCpp::finish_turn_service_callback, this,
         std::placeholders::_1, std::placeholders::_2));
     set_enabled_service_ = create_service<std_srvs::srv::SetBool>(
       "/line_follower/set_enabled",
@@ -347,6 +374,20 @@ public:
   }
 
 private:
+  static double steady_seconds(const std::chrono::steady_clock::time_point & now)
+  {
+    return std::chrono::duration<double>(now.time_since_epoch()).count();
+  }
+
+  line_follower_control_cpp::FinishTurnConfig finish_turn_config() const
+  {
+    line_follower_control_cpp::FinishTurnConfig config;
+    config.target_encoder_counts = params_.finish_turn_encoder_counts;
+    config.timeout_sec = params_.finish_turn_timeout_sec;
+    config.encoder_max_age_sec = params_.finish_turn_encoder_max_age_sec;
+    return config;
+  }
+
   void load_parameters()
   {
     params_.kp = get_parameter("Kp").as_double();
@@ -435,6 +476,13 @@ private:
     params_.straight_allowed_offset = get_parameter("straight_allowed_offset").as_double();
     params_.curve_allowed_offset = get_parameter("curve_allowed_offset").as_double();
     params_.min_perception_confidence = get_parameter("min_perception_confidence").as_double();
+    params_.finish_turn_encoder_counts =
+      get_parameter("finish_turn_encoder_counts").as_int();
+    params_.finish_turn_speed_mps = get_parameter("finish_turn_speed_mps").as_double();
+    params_.finish_turn_steering = get_parameter("finish_turn_steering").as_double();
+    params_.finish_turn_timeout_sec = get_parameter("finish_turn_timeout_sec").as_double();
+    params_.finish_turn_encoder_max_age_sec =
+      get_parameter("finish_turn_encoder_max_age_sec").as_double();
     steering_sign_ = get_parameter("steering_sign").as_double();
     control_frequency_ = get_parameter("control_frequency").as_double();
     autonomous_enabled_on_start_ = get_parameter("autonomous_enabled_on_start").as_bool();
@@ -446,6 +494,7 @@ private:
     curvature_topic_ = get_parameter("curvature_topic").as_string();
     lane_state_topic_ = get_parameter("lane_state_topic").as_string();
     cmd_vel_topic_ = get_parameter("cmd_vel_topic").as_string();
+    finish_turn_encoder_topic_ = get_parameter("finish_turn_encoder_topic").as_string();
   }
 
   bool validate_controller_parameters(
@@ -789,6 +838,29 @@ private:
     {
       return fail("min_perception_confidence must be in [0, 1]");
     }
+    if (parameters.finish_turn_encoder_counts <= 0) {
+      return fail("finish_turn_encoder_counts must be > 0");
+    }
+    if (!std::isfinite(parameters.finish_turn_speed_mps) ||
+      parameters.finish_turn_speed_mps <= 0.0)
+    {
+      return fail("finish_turn_speed_mps must be finite and > 0");
+    }
+    if (!std::isfinite(parameters.finish_turn_steering) ||
+      parameters.finish_turn_steering < -1.0 || parameters.finish_turn_steering > 1.0)
+    {
+      return fail("finish_turn_steering must be in [-1, 1]");
+    }
+    if (!std::isfinite(parameters.finish_turn_timeout_sec) ||
+      parameters.finish_turn_timeout_sec <= 0.0)
+    {
+      return fail("finish_turn_timeout_sec must be finite and > 0");
+    }
+    if (!std::isfinite(parameters.finish_turn_encoder_max_age_sec) ||
+      parameters.finish_turn_encoder_max_age_sec <= 0.0)
+    {
+      return fail("finish_turn_encoder_max_age_sec must be finite and > 0");
+    }
     return true;
   }
 
@@ -808,8 +880,8 @@ private:
       heading_error_topic_.empty() || curvature_topic_.empty() || global_offset_topic_.empty()) {
       throw std::runtime_error("geometry feedback topics must not be empty");
     }
-    if (cmd_vel_topic_.empty()) {
-      throw std::runtime_error("cmd_vel_topic must not be empty");
+    if (cmd_vel_topic_.empty() || finish_turn_encoder_topic_.empty()) {
+      throw std::runtime_error("cmd_vel_topic and finish_turn_encoder_topic must not be empty");
     }
   }
 
@@ -821,11 +893,18 @@ private:
 
     for (const auto & parameter : parameters) {
       const auto & name = parameter.get_name();
+      if (finish_turn_state_.active() &&
+        name.compare(0, std::string("finish_turn_").size(), "finish_turn_") == 0)
+      {
+        return parameter_result(
+          false, name + " cannot change while the finish turn is active");
+      }
       if (name == "control_frequency" || name == "offset_y07_topic" ||
         name == "offset_y08_topic" || name == "offset_y09_topic" ||
         name == "global_offset_topic" ||
         name == "heading_error_topic" ||
         name == "curvature_topic" || name == "lane_state_topic" || name == "cmd_vel_topic" ||
+        name == "finish_turn_encoder_topic" ||
         name == "autonomous_enabled_on_start")
       {
         return parameter_result(false, name + " is startup-only; restart the node to apply it");
@@ -979,6 +1058,16 @@ private:
         pending.curve_allowed_offset = parameter.as_double();
       } else if (name == "min_perception_confidence") {
         pending.min_perception_confidence = parameter.as_double();
+      } else if (name == "finish_turn_encoder_counts") {
+        pending.finish_turn_encoder_counts = parameter.as_int();
+      } else if (name == "finish_turn_speed_mps") {
+        pending.finish_turn_speed_mps = parameter.as_double();
+      } else if (name == "finish_turn_steering") {
+        pending.finish_turn_steering = parameter.as_double();
+      } else if (name == "finish_turn_timeout_sec") {
+        pending.finish_turn_timeout_sec = parameter.as_double();
+      } else if (name == "finish_turn_encoder_max_age_sec") {
+        pending.finish_turn_encoder_max_age_sec = parameter.as_double();
       } else if (name == "steering_sign") {
         pending_steering_sign = parameter.as_double();
       }
@@ -1099,8 +1188,15 @@ private:
   {
     emergency_stop_active_ = msg->data;
     if (emergency_stop_active_) {
+      finish_turn_state_.cancel("emergency_stop");
       lock_and_stop("emergency_stop");
     }
+  }
+
+  void finish_turn_encoder_callback(const std_msgs::msg::Int64::SharedPtr msg)
+  {
+    finish_turn_state_.set_encoder_count(
+      msg->data, steady_seconds(std::chrono::steady_clock::now()));
   }
 
   void lane_state_callback(const std_msgs::msg::String::SharedPtr msg)
@@ -1262,6 +1358,24 @@ private:
 
   bool try_start(std::string * reason, bool obstacle_resume = false)
   {
+    if (finish_turn_state_.active()) {
+      if (reason) {
+        *reason = "finish turn is active";
+      }
+      return false;
+    }
+    if (finish_turn_state_.terminal()) {
+      if (obstacle_resume) {
+        if (reason) {
+          *reason = "finish turn is latched; automatic resume is disabled";
+        }
+        publish_stop_state();
+        return false;
+      }
+      // /line_follower/start is the explicit operator reset after a completed
+      // or faulted finish maneuver.
+      finish_turn_state_.reset();
+    }
     if (obstacle_hold_active_ && !obstacle_resume) {
       if (reason) {
         *reason = "obstacle hold is active";
@@ -1401,6 +1515,7 @@ private:
     if (reason != "geometry_stall") {
       cancel_geometry_stall_resume();
     }
+    finish_turn_state_.cancel(reason);
     if (!auto_enabled_ && safety_locked_ && stop_reason_ == reason) {
       publish_stop_state();
       return;
@@ -1426,6 +1541,7 @@ private:
     obstacle_resume_armed_ = false;
     obstacle_resume_command_valid_ = false;
     cancel_geometry_stall_resume();
+    finish_turn_state_.cancel("service_stop");
     disable_control("service_stop", false);
     response->success = true;
     response->message = "line following stopped; chassis disabled";
@@ -1438,6 +1554,17 @@ private:
   {
     // A Human hold always takes priority over an automatic stall recovery.
     cancel_geometry_stall_resume();
+    if (finish_turn_state_.active()) {
+      finish_turn_state_.cancel("obstacle_pause");
+      obstacle_hold_active_ = true;
+      obstacle_resume_armed_ = false;
+      obstacle_resume_command_valid_ = false;
+      disable_control("obstacle_pause", false);
+      response->success = true;
+      response->message = "finish turn cancelled by obstacle pause; controller remains stopped";
+      RCLCPP_WARN(get_logger(), "Finish turn cancelled by obstacle pause");
+      return;
+    }
     if (obstacle_hold_active_) {
       publish_stop_state();
       response->success = true;
@@ -1517,6 +1644,61 @@ private:
     RCLCPP_INFO(get_logger(), "Obstacle cleared; line following resumed");
   }
 
+  void finish_turn_service_callback(
+    const std::shared_ptr<std_srvs::srv::Trigger::Request>,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+  {
+    if (emergency_stop_active_) {
+      publish_stop_state();
+      response->success = false;
+      response->message = "finish turn rejected: emergency stop is active";
+      return;
+    }
+    if (obstacle_hold_active_) {
+      publish_stop_state();
+      response->success = false;
+      response->message = "finish turn rejected: obstacle hold is active";
+      return;
+    }
+    if (safety_locked_ && !finish_turn_state_.active()) {
+      publish_stop_state();
+      response->success = false;
+      response->message = "finish turn rejected: controller safety lock is active";
+      return;
+    }
+
+    const bool was_active = finish_turn_state_.active();
+    std::string reason;
+    response->success = finish_turn_state_.start(
+      finish_turn_config(), steady_seconds(std::chrono::steady_clock::now()), &reason);
+    response->message = reason;
+    if (!response->success || was_active ||
+      finish_turn_state_.phase() == line_follower_control_cpp::FinishTurnPhase::Complete)
+    {
+      return;
+    }
+
+    auto_enabled_ = false;
+    auto_start_pending_ = false;
+    safety_locked_ = false;
+    obstacle_resume_armed_ = false;
+    obstacle_resume_command_valid_ = false;
+    cancel_geometry_stall_resume();
+    invalid_since_.reset();
+    current_speed_mps_ = params_.finish_turn_speed_mps;
+    current_steering_ = params_.finish_turn_steering;
+    stop_reason_ = "finish_turn_rotating";
+    last_mode_ = "finish_turn_rotating";
+    publish_chassis_enable(true);
+    publish_motion_command(current_speed_mps_, current_steering_);
+    RCLCPP_WARN(
+      get_logger(),
+      "Finish turn started: speed=%.3fm/s steering=%.3f target=%ld timeout=%.2fs",
+      params_.finish_turn_speed_mps, params_.finish_turn_steering,
+      static_cast<long>(params_.finish_turn_encoder_counts),
+      params_.finish_turn_timeout_sec);
+  }
+
   void set_enabled_service_callback(
     const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
     std::shared_ptr<std_srvs::srv::SetBool::Response> response)
@@ -1532,6 +1714,7 @@ private:
     obstacle_resume_armed_ = false;
     obstacle_resume_command_valid_ = false;
     cancel_geometry_stall_resume();
+    finish_turn_state_.cancel("service_stop");
     disable_control("service_stop", false);
     response->success = true;
     response->message = "autonomous line following disabled; chassis disabled";
@@ -1543,6 +1726,53 @@ private:
     const auto now = std::chrono::steady_clock::now();
     const std::chrono::duration<double> elapsed = now - previous_control_time_;
     const double dt = std::clamp(elapsed.count(), 1e-4, 0.2);
+
+    if (emergency_stop_active_) {
+      finish_turn_state_.cancel("emergency_stop");
+      lock_and_stop("emergency_stop");
+      last_mode_ = "emergency_stop";
+      publish_debug(now);
+      previous_control_time_ = now;
+      return;
+    }
+
+    if (finish_turn_state_.active()) {
+      const auto finish_snapshot = finish_turn_state_.update(
+        finish_turn_config(), steady_seconds(now));
+      if (finish_snapshot.phase == line_follower_control_cpp::FinishTurnPhase::Rotating) {
+        current_speed_mps_ = params_.finish_turn_speed_mps;
+        current_steering_ = params_.finish_turn_steering;
+        publish_chassis_enable(true);
+        publish_motion_command(current_speed_mps_, current_steering_);
+        last_mode_ = "finish_turn_rotating";
+        stop_reason_ = "finish_turn_rotating";
+      } else {
+        current_speed_mps_ = 0.0;
+        current_steering_ = 0.0;
+        auto_enabled_ = false;
+        safety_locked_ =
+          finish_snapshot.phase == line_follower_control_cpp::FinishTurnPhase::Fault;
+        stop_reason_ = finish_snapshot.reason;
+        last_mode_ = finish_snapshot.phase ==
+          line_follower_control_cpp::FinishTurnPhase::Complete ?
+          "finish_turn_complete" : "finish_turn_fault";
+        publish_stop_state();
+        if (finish_snapshot.phase == line_follower_control_cpp::FinishTurnPhase::Complete) {
+          RCLCPP_WARN(
+            get_logger(), "Finish turn complete: encoder delta=%ld/%ld; chassis disabled",
+            static_cast<long>(finish_snapshot.encoder_delta),
+            static_cast<long>(finish_snapshot.encoder_target));
+        } else {
+          RCLCPP_ERROR(
+            get_logger(), "Finish turn fault: %s delta=%ld/%ld; chassis disabled",
+            finish_snapshot.reason.c_str(), static_cast<long>(finish_snapshot.encoder_delta),
+            static_cast<long>(finish_snapshot.encoder_target));
+        }
+      }
+      publish_debug(now);
+      previous_control_time_ = now;
+      return;
+    }
 
     if (auto_start_pending_) {
       std::string reason;
@@ -1571,13 +1801,6 @@ private:
       return;
     }
 
-    if (emergency_stop_active_) {
-      lock_and_stop("emergency_stop");
-      last_mode_ = "emergency_stop";
-      publish_debug(now);
-      previous_control_time_ = now;
-      return;
-    }
     if (geometry_content_stalled(now)) {
       geometry_stall_resume_armed_ = params_.enable_geometry_stall_auto_resume;
       geometry_stall_stop_time_ = now;
@@ -2312,6 +2535,7 @@ private:
   {
     std_msgs::msg::String message;
     std::ostringstream text;
+    const auto finish_turn = finish_turn_state_.snapshot(steady_seconds(now));
     const double raw_control_error = compute_control_error();
     const double control_error = auto_enabled_ ? limited_control_error_ : raw_control_error;
     const double curve_outer_bias = compute_curve_outer_bias();
@@ -2415,6 +2639,15 @@ private:
          << " wheel_rps=" << speed_to_wheel_rps(current_speed_mps_)
          << " steering_cmd=" << current_steering_
          << " max_steer=" << dynamic_max
+         << " finish_turn_state=" <<
+      line_follower_control_cpp::FinishTurnState::phase_name(finish_turn.phase)
+         << " finish_turn_start_count=" << finish_turn.encoder_start_count
+         << " finish_turn_encoder_count=" << finish_turn.encoder_count
+         << " finish_turn_encoder_delta=" << finish_turn.encoder_delta
+         << " finish_turn_encoder_target=" << finish_turn.encoder_target
+         << " finish_turn_elapsed=" << finish_turn.elapsed_sec
+         << " finish_turn_encoder_age=" << finish_turn.encoder_age_sec
+         << " finish_turn_reason=" << finish_turn.reason
          << " stop_reason=" << stop_reason_;
     message.data = text.str();
     debug_publisher_->publish(message);
@@ -2442,6 +2675,9 @@ private:
   std::string curvature_topic_{"/segmentation/curvature"};
   std::string lane_state_topic_{"/perception/lane_state"};
   std::string cmd_vel_topic_{"/cmd_vel"};
+  std::string finish_turn_encoder_topic_{"/chassis/encoder_count"};
+
+  line_follower_control_cpp::FinishTurnState finish_turn_state_;
 
   bool auto_enabled_{false};
   bool safety_locked_{false};
@@ -2514,6 +2750,7 @@ private:
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr emergency_subscription_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr lane_state_subscription_;
   rclcpp::Subscription<std_msgs::msg::UInt64>::SharedPtr frame_signature_subscription_;
+  rclcpp::Subscription<std_msgs::msg::Int64>::SharedPtr finish_turn_encoder_subscription_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
   rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr chassis_enable_publisher_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr debug_publisher_;
@@ -2521,6 +2758,7 @@ private:
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_service_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr obstacle_pause_service_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr obstacle_resume_service_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr finish_turn_service_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_enabled_service_;
   rclcpp::TimerBase::SharedPtr control_timer_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;
@@ -2552,7 +2790,9 @@ int main(int argc, char ** argv)
   }
 
   if (node) {
-    RCLCPP_INFO(node->get_logger(), "Shutting down - publishing zero /cmd_vel and disabling chassis...");
+    RCLCPP_INFO(
+      node->get_logger(),
+      "Shutting down - publishing zero /cmd_vel and disabling chassis...");
     node->publish_stop_commands(5);
   }
 

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="6" failures="0" disabled="0" errors="0" time="0" timestamp="2026-08-22T00:51:31" name="AllTests">
+  <testsuite name="FinishTurnStateTest" tests="6" failures="0" disabled="0" errors="0" time="0" timestamp="2026-08-22T00:51:31">
+    <testcase name="RequiresFreshEncoderBeforeStart" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:31" classname="line_follower_control_cpp.FinishTurnStateTest" />
+    <testcase name="UsesEncoderDeltaFromArbitraryBaseline" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:31" classname="line_follower_control_cpp.FinishTurnStateTest" />
+    <testcase name="StaleEncoderFaultsAndStops" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:31" classname="line_follower_control_cpp.FinishTurnStateTest" />
+    <testcase name="EncoderDecreaseFaultsImmediately" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:31" classname="line_follower_control_cpp.FinishTurnStateTest" />
+    <testcase name="OverallTimeoutFaultsEvenWithFreshEncoder" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:31" classname="line_follower_control_cpp.FinishTurnStateTest" />
+    <testcase name="CancelLatchesUntilExplicitReset" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:31" classname="line_follower_control_cpp.FinishTurnStateTest" />
+  </testsuite>
+</testsuites>

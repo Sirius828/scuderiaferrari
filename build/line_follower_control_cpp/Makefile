@@ -210,6 +210,82 @@ controller_node/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/controller_node.dir/build.make CMakeFiles/controller_node.dir/build
 .PHONY : controller_node/fast
 
+#=============================================================================
+# Target rules for targets named test_control_core
+
+# Build rule for target.
+test_control_core: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_control_core
+.PHONY : test_control_core
+
+# fast build rule for target.
+test_control_core/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_control_core.dir/build.make CMakeFiles/test_control_core.dir/build
+.PHONY : test_control_core/fast
+
+#=============================================================================
+# Target rules for targets named test_finish_turn_state
+
+# Build rule for target.
+test_finish_turn_state: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_finish_turn_state
+.PHONY : test_finish_turn_state
+
+# fast build rule for target.
+test_finish_turn_state/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_finish_turn_state.dir/build.make CMakeFiles/test_finish_turn_state.dir/build
+.PHONY : test_finish_turn_state/fast
+
+#=============================================================================
+# Target rules for targets named gtest
+
+# Build rule for target.
+gtest: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 gtest
+.PHONY : gtest
+
+# fast build rule for target.
+gtest/fast:
+	$(MAKE) $(MAKESILENT) -f gtest/CMakeFiles/gtest.dir/build.make gtest/CMakeFiles/gtest.dir/build
+.PHONY : gtest/fast
+
+#=============================================================================
+# Target rules for targets named gtest_main
+
+# Build rule for target.
+gtest_main: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 gtest_main
+.PHONY : gtest_main
+
+# fast build rule for target.
+gtest_main/fast:
+	$(MAKE) $(MAKESILENT) -f gtest/CMakeFiles/gtest_main.dir/build.make gtest/CMakeFiles/gtest_main.dir/build
+.PHONY : gtest_main/fast
+
+src/control_core.o: src/control_core.cpp.o
+.PHONY : src/control_core.o
+
+# target to build an object file
+src/control_core.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_control_core.dir/build.make CMakeFiles/test_control_core.dir/src/control_core.cpp.o
+.PHONY : src/control_core.cpp.o
+
+src/control_core.i: src/control_core.cpp.i
+.PHONY : src/control_core.i
+
+# target to preprocess a source file
+src/control_core.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_control_core.dir/build.make CMakeFiles/test_control_core.dir/src/control_core.cpp.i
+.PHONY : src/control_core.cpp.i
+
+src/control_core.s: src/control_core.cpp.s
+.PHONY : src/control_core.s
+
+# target to generate assembly for a file
+src/control_core.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_control_core.dir/build.make CMakeFiles/test_control_core.dir/src/control_core.cpp.s
+.PHONY : src/control_core.cpp.s
+
 src/controller_node.o: src/controller_node.cpp.o
 .PHONY : src/controller_node.o
 
@@ -234,6 +310,54 @@ src/controller_node.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/controller_node.dir/build.make CMakeFiles/controller_node.dir/src/controller_node.cpp.s
 .PHONY : src/controller_node.cpp.s
 
+test/test_control_core.o: test/test_control_core.cpp.o
+.PHONY : test/test_control_core.o
+
+# target to build an object file
+test/test_control_core.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_control_core.dir/build.make CMakeFiles/test_control_core.dir/test/test_control_core.cpp.o
+.PHONY : test/test_control_core.cpp.o
+
+test/test_control_core.i: test/test_control_core.cpp.i
+.PHONY : test/test_control_core.i
+
+# target to preprocess a source file
+test/test_control_core.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_control_core.dir/build.make CMakeFiles/test_control_core.dir/test/test_control_core.cpp.i
+.PHONY : test/test_control_core.cpp.i
+
+test/test_control_core.s: test/test_control_core.cpp.s
+.PHONY : test/test_control_core.s
+
+# target to generate assembly for a file
+test/test_control_core.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_control_core.dir/build.make CMakeFiles/test_control_core.dir/test/test_control_core.cpp.s
+.PHONY : test/test_control_core.cpp.s
+
+test/test_finish_turn_state.o: test/test_finish_turn_state.cpp.o
+.PHONY : test/test_finish_turn_state.o
+
+# target to build an object file
+test/test_finish_turn_state.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_finish_turn_state.dir/build.make CMakeFiles/test_finish_turn_state.dir/test/test_finish_turn_state.cpp.o
+.PHONY : test/test_finish_turn_state.cpp.o
+
+test/test_finish_turn_state.i: test/test_finish_turn_state.cpp.i
+.PHONY : test/test_finish_turn_state.i
+
+# target to preprocess a source file
+test/test_finish_turn_state.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_finish_turn_state.dir/build.make CMakeFiles/test_finish_turn_state.dir/test/test_finish_turn_state.cpp.i
+.PHONY : test/test_finish_turn_state.cpp.i
+
+test/test_finish_turn_state.s: test/test_finish_turn_state.cpp.s
+.PHONY : test/test_finish_turn_state.s
+
+# target to generate assembly for a file
+test/test_finish_turn_state.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_finish_turn_state.dir/build.make CMakeFiles/test_finish_turn_state.dir/test/test_finish_turn_state.cpp.s
+.PHONY : test/test_finish_turn_state.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -250,9 +374,22 @@ help:
 	@echo "... line_follower_control_cpp_uninstall"
 	@echo "... uninstall"
 	@echo "... controller_node"
+	@echo "... gtest"
+	@echo "... gtest_main"
+	@echo "... test_control_core"
+	@echo "... test_finish_turn_state"
+	@echo "... src/control_core.o"
+	@echo "... src/control_core.i"
+	@echo "... src/control_core.s"
 	@echo "... src/controller_node.o"
 	@echo "... src/controller_node.i"
 	@echo "... src/controller_node.s"
+	@echo "... test/test_control_core.o"
+	@echo "... test/test_control_core.i"
+	@echo "... test/test_control_core.s"
+	@echo "... test/test_finish_turn_state.o"
+	@echo "... test/test_finish_turn_state.i"
+	@echo "... test/test_finish_turn_state.s"
 .PHONY : help
 
 

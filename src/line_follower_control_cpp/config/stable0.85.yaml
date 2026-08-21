@@ -170,6 +170,13 @@
     invalid_hold_speed: 0.10
     # 丢线/置信度暂时不足时保持上一帧速度和舵量，直到感知恢复。
     enable_line_loss_command_hold: true
+    # 终点动作：右满舵低速旋转，以触发时编码器为基准累计到目标后停车。
+    finish_turn_encoder_topic: "/chassis/encoder_count"
+    finish_turn_encoder_counts: 20000
+    finish_turn_speed_mps: 0.8
+    finish_turn_steering: -1.0
+    finish_turn_timeout_sec: 8.0
+    finish_turn_encoder_max_age_sec: 0.30
     # 启动后是否自动尝试发车；false 时必须调用 /line_follower/start。
     autonomous_enabled_on_start: false
 

@@ -1,4 +1,6 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/test_control_core.dir/src/control_core.cpp.o"
+  "CMakeFiles/test_control_core.dir/src/control_core.cpp.o.d"
   "CMakeFiles/test_control_core.dir/test/test_control_core.cpp.o"
   "CMakeFiles/test_control_core.dir/test/test_control_core.cpp.o.d"
   "test_control_core"

@@ -55,6 +55,12 @@
     enable_dynamic_steering_limit: false
     enable_geometry_stall_auto_resume: true
     enable_line_loss_command_hold: true
+    finish_turn_encoder_topic: "/chassis/encoder_count"
+    finish_turn_encoder_counts: 20000
+    finish_turn_speed_mps: 0.8
+    finish_turn_steering: -1.0
+    finish_turn_timeout_sec: 8.0
+    finish_turn_encoder_max_age_sec: 0.30
     far_offset_speed_weight: 0.0
     geometry_stall_recovery_time: 0.5
     geometry_stall_timeout: 0.2

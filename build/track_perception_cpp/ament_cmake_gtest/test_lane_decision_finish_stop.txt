@@ -1,0 +1,23 @@
+-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/track_perception_cpp':
+ - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_lane_decision_finish_stop --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_finish_stop.gtest.xml
+
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 3 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 3 tests from LaneDecisionFinishStopTest
+[ RUN      ] LaneDecisionFinishStopTest.LowConfidenceAndUnarmedStopDoNotCount
+[       OK ] LaneDecisionFinishStopTest.LowConfidenceAndUnarmedStopDoNotCount (0 ms)
+[ RUN      ] LaneDecisionFinishStopTest.TwoCompletePassesTriggerOnceOnSecondPass
+[       OK ] LaneDecisionFinishStopTest.TwoCompletePassesTriggerOnceOnSecondPass (1 ms)
+[ RUN      ] LaneDecisionFinishStopTest.RequiredOccurrenceParameterSupportsOneAndThree
+[       OK ] LaneDecisionFinishStopTest.RequiredOccurrenceParameterSupportsOneAndThree (0 ms)
+[----------] 3 tests from LaneDecisionFinishStopTest (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 3 tests from 1 test suite ran. (1 ms total)
+[  PASSED  ] 3 tests.
+
+
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_finish_stop.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_lane_decision_finish_stop.gtest.xml'

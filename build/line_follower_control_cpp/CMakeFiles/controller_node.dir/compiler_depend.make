@@ -726,6 +726,11 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
   /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32__builder.hpp \
   /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32__traits.hpp \
   /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32__type_support.hpp \
+  /opt/ros/humble/include/std_msgs/std_msgs/msg/int64.hpp \
+  /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int64__struct.hpp \
+  /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int64__builder.hpp \
+  /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int64__traits.hpp \
+  /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int64__type_support.hpp \
   /opt/ros/humble/include/std_msgs/std_msgs/msg/int8.hpp \
   /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int8__struct.hpp \
   /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int8__builder.hpp \
@@ -751,8 +756,11 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
   /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__struct.hpp \
   /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__builder.hpp \
   /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__traits.hpp \
-  /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__type_support.hpp
+  /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__type_support.hpp \
+  /home/orangepi/scuderiaferrari/src/line_follower_control_cpp/include/line_follower_control_cpp/finish_turn_state.hpp
 
+
+/home/orangepi/scuderiaferrari/src/line_follower_control_cpp/include/line_follower_control_cpp/finish_turn_state.hpp:
 
 /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__type_support.hpp:
 
@@ -775,6 +783,12 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int8__type_support.hpp:
 
 /opt/ros/humble/include/std_msgs/std_msgs/msg/int8.hpp:
+
+/opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int64__builder.hpp:
+
+/opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int64__struct.hpp:
+
+/opt/ros/humble/include/std_msgs/std_msgs/msg/int64.hpp:
 
 /opt/ros/humble/include/std_msgs/std_msgs/msg/detail/float32__traits.hpp:
 
@@ -923,6 +937,8 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 /opt/ros/humble/include/rclcpp/rclcpp/node.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/future_return_code.hpp:
+
+/opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int64__type_support.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/detail/rmw_implementation_specific_publisher_payload.hpp:
 
@@ -1499,6 +1515,8 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 /opt/ros/humble/include/rcl_interfaces/rcl_interfaces/msg/rosidl_generator_cpp__visibility_control.hpp:
 
 /usr/include/c++/11/bits/std_thread.h:
+
+/opt/ros/humble/include/std_msgs/std_msgs/msg/detail/int64__traits.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/qos_event.hpp:
 
