@@ -177,6 +177,15 @@
     finish_turn_steering: -1.0
     finish_turn_timeout_sec: 8.0
     finish_turn_encoder_max_age_sec: 0.30
+    # GuideBoard 增强：直线倒车到编码器目标；单发布者和跳变检查防止残留节点干扰。
+    guideboard_reverse_encoder_counts: 1250
+    guideboard_reverse_speed_mps: 0.40
+    guideboard_reverse_steering: 0.0
+    guideboard_reverse_timeout_sec: 3.0
+    guideboard_reverse_encoder_max_age_sec: 0.30
+    guideboard_reverse_encoder_jitter_counts: 10
+    guideboard_reverse_encoder_max_step_counts: 500
+    guideboard_reverse_require_single_encoder_publisher: true
     # 启动后是否自动尝试发车；false 时必须调用 /line_follower/start。
     autonomous_enabled_on_start: false
 

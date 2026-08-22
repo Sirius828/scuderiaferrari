@@ -11,7 +11,11 @@ source ~/scuderiaferrari/install/setup.bash
 四种速度从快到慢
 ./manettino/esc_off.sh
 
+
+./scripts/start_setup_webui.sh
 ./manettino/tc_off.sh 是国赛配置
+
+
 
 ./manettino/race.sh
 ./manettino/sport.sh

@@ -66,6 +66,7 @@ CMAKE_BINARY_DIR = /home/orangepi/scuderiaferrari/build/line_follower_control_cp
 all: CMakeFiles/controller_node.dir/all
 all: CMakeFiles/test_control_core.dir/all
 all: CMakeFiles/test_finish_turn_state.dir/all
+all: CMakeFiles/test_guideboard_reverse_state.dir/all
 all: gtest/all
 .PHONY : all
 
@@ -79,6 +80,7 @@ clean: CMakeFiles/line_follower_control_cpp_uninstall.dir/clean
 clean: CMakeFiles/controller_node.dir/clean
 clean: CMakeFiles/test_control_core.dir/clean
 clean: CMakeFiles/test_finish_turn_state.dir/clean
+clean: CMakeFiles/test_guideboard_reverse_state.dir/clean
 clean: gtest/clean
 .PHONY : clean
 
@@ -229,6 +231,33 @@ test_finish_turn_state: CMakeFiles/test_finish_turn_state.dir/rule
 CMakeFiles/test_finish_turn_state.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_finish_turn_state.dir/build.make CMakeFiles/test_finish_turn_state.dir/clean
 .PHONY : CMakeFiles/test_finish_turn_state.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/test_guideboard_reverse_state.dir
+
+# All Build rule for target.
+CMakeFiles/test_guideboard_reverse_state.dir/all: gtest/CMakeFiles/gtest.dir/all
+CMakeFiles/test_guideboard_reverse_state.dir/all: gtest/CMakeFiles/gtest_main.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_reverse_state.dir/build.make CMakeFiles/test_guideboard_reverse_state.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_reverse_state.dir/build.make CMakeFiles/test_guideboard_reverse_state.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles --progress-num=12,13 "Built target test_guideboard_reverse_state"
+.PHONY : CMakeFiles/test_guideboard_reverse_state.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/test_guideboard_reverse_state.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles 6
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_guideboard_reverse_state.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles 0
+.PHONY : CMakeFiles/test_guideboard_reverse_state.dir/rule
+
+# Convenience name for target.
+test_guideboard_reverse_state: CMakeFiles/test_guideboard_reverse_state.dir/rule
+.PHONY : test_guideboard_reverse_state
+
+# clean rule for target.
+CMakeFiles/test_guideboard_reverse_state.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_reverse_state.dir/build.make CMakeFiles/test_guideboard_reverse_state.dir/clean
+.PHONY : CMakeFiles/test_guideboard_reverse_state.dir/clean
 
 #=============================================================================
 # Target rules for target gtest/CMakeFiles/gtest.dir

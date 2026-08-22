@@ -3,6 +3,7 @@
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/controller_node.dir
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/test_control_core.dir
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/test_finish_turn_state.dir
+/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/test_guideboard_reverse_state.dir
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/test.dir
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/edit_cache.dir
 /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/CMakeFiles/rebuild_cache.dir

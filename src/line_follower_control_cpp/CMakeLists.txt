@@ -58,6 +58,11 @@ if(BUILD_TESTING)
     test/test_finish_turn_state.cpp
   )
   target_include_directories(test_finish_turn_state PRIVATE include)
+
+  ament_add_gtest(test_guideboard_reverse_state
+    test/test_guideboard_reverse_state.cpp
+  )
+  target_include_directories(test_guideboard_reverse_state PRIVATE include)
 endif()
 
 ament_package()

@@ -384,6 +384,7 @@ src/guideboard_recognizer.o: src/guideboard_recognizer.cpp.o
 # target to build an object file
 src/guideboard_recognizer.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_api_client.dir/build.make CMakeFiles/test_guideboard_api_client.dir/src/guideboard_recognizer.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_recognizer.dir/build.make CMakeFiles/test_guideboard_recognizer.dir/src/guideboard_recognizer.cpp.o
 .PHONY : src/guideboard_recognizer.cpp.o
 
@@ -393,6 +394,7 @@ src/guideboard_recognizer.i: src/guideboard_recognizer.cpp.i
 # target to preprocess a source file
 src/guideboard_recognizer.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_api_client.dir/build.make CMakeFiles/test_guideboard_api_client.dir/src/guideboard_recognizer.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_recognizer.dir/build.make CMakeFiles/test_guideboard_recognizer.dir/src/guideboard_recognizer.cpp.i
 .PHONY : src/guideboard_recognizer.cpp.i
 
@@ -402,6 +404,7 @@ src/guideboard_recognizer.s: src/guideboard_recognizer.cpp.s
 # target to generate assembly for a file
 src/guideboard_recognizer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fused_perception_node.dir/build.make CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_api_client.dir/build.make CMakeFiles/test_guideboard_api_client.dir/src/guideboard_recognizer.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_recognizer.dir/build.make CMakeFiles/test_guideboard_recognizer.dir/src/guideboard_recognizer.cpp.s
 .PHONY : src/guideboard_recognizer.cpp.s
 

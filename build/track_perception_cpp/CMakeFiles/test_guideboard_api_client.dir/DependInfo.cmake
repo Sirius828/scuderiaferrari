@@ -9,6 +9,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/orangepi/scuderiaferrari/src/track_perception_cpp/src/guideboard_api_client.cpp" "CMakeFiles/test_guideboard_api_client.dir/src/guideboard_api_client.cpp.o" "gcc" "CMakeFiles/test_guideboard_api_client.dir/src/guideboard_api_client.cpp.o.d"
+  "/home/orangepi/scuderiaferrari/src/track_perception_cpp/src/guideboard_recognizer.cpp" "CMakeFiles/test_guideboard_api_client.dir/src/guideboard_recognizer.cpp.o" "gcc" "CMakeFiles/test_guideboard_api_client.dir/src/guideboard_recognizer.cpp.o.d"
   "/home/orangepi/scuderiaferrari/src/track_perception_cpp/test/test_guideboard_api_client.cpp" "CMakeFiles/test_guideboard_api_client.dir/test/test_guideboard_api_client.cpp.o" "gcc" "CMakeFiles/test_guideboard_api_client.dir/test/test_guideboard_api_client.cpp.o.d"
   )
 

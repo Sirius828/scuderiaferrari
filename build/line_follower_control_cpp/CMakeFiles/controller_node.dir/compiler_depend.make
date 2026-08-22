@@ -757,7 +757,8 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
   /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__builder.hpp \
   /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__traits.hpp \
   /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__type_support.hpp \
-  /home/orangepi/scuderiaferrari/src/line_follower_control_cpp/include/line_follower_control_cpp/finish_turn_state.hpp
+  /home/orangepi/scuderiaferrari/src/line_follower_control_cpp/include/line_follower_control_cpp/finish_turn_state.hpp \
+  /home/orangepi/scuderiaferrari/src/line_follower_control_cpp/include/line_follower_control_cpp/guideboard_reverse_state.hpp
 
 
 /home/orangepi/scuderiaferrari/src/line_follower_control_cpp/include/line_follower_control_cpp/finish_turn_state.hpp:
@@ -883,6 +884,8 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o: /home/orangepi/scuderi
 /opt/ros/humble/include/rclcpp/rclcpp/node_options.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_waitables_interface.hpp:
+
+/home/orangepi/scuderiaferrari/src/line_follower_control_cpp/include/line_follower_control_cpp/guideboard_reverse_state.hpp:
 
 /opt/ros/humble/include/rclcpp/rclcpp/node_interfaces/node_time_source_interface.hpp:
 

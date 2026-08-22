@@ -11,6 +11,8 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
+#include "track_perception_cpp/guideboard_recognizer.hpp"
+
 namespace track_perception_cpp {
 namespace {
 
@@ -121,11 +123,16 @@ bool parseDecisionObject(const std::string& json, double uncertain_min_confidenc
     return false;
   }
   result->uncertain = uncertain_it->value.GetBool();
+  const double confidence_threshold =
+      std::clamp(uncertain_min_confidence, 0.0, 1.0);
+  result->high_confidence = std::isfinite(result->confidence) &&
+                            result->confidence >= confidence_threshold &&
+                            result->confidence <= 1.0f;
   result->valid = GuideboardApiClient::shouldAcceptDecision(
       result->uncertain, result->confidence, uncertain_min_confidence);
   result->accepted_uncertain = result->valid && result->uncertain;
   if (!result->valid) {
-    result->error = "api semantic result is uncertain below confidence threshold";
+    result->error = "api semantic result has invalid confidence";
   }
   return true;
 }
@@ -180,12 +187,56 @@ bool parseResponse(const std::string& body, double uncertain_min_confidence,
 }  // namespace
 
 bool GuideboardApiClient::shouldAcceptDecision(
-    bool uncertain, float confidence, double uncertain_min_confidence) {
-  if (!uncertain) {
-    return true;
+    bool, float confidence, double) {
+  return std::isfinite(confidence) && confidence >= 0.0f && confidence <= 1.0f;
+}
+
+std::vector<GuideboardApiSample> GuideboardApiClient::selectDiverseSamples(
+    const std::vector<GuideboardApiSample>& samples, size_t max_samples,
+    double similarity_threshold) {
+  struct IndexedSample {
+    size_t index{0};
+    GuideboardApiSample sample;
+  };
+  std::vector<IndexedSample> ranked;
+  ranked.reserve(samples.size());
+  for (size_t i = 0; i < samples.size(); ++i) {
+    if (!GuideboardRecognizer::normalizeUtf8(samples[i].text).empty()) {
+      ranked.push_back({i, samples[i]});
+    }
   }
-  const double threshold = std::clamp(uncertain_min_confidence, 0.0, 1.0);
-  return std::isfinite(confidence) && confidence >= threshold && confidence <= 1.0f;
+  std::stable_sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) {
+    return a.sample.score > b.sample.score;
+  });
+
+  const double threshold = std::clamp(similarity_threshold, 0.0, 1.0);
+  std::vector<IndexedSample> selected;
+  for (const auto& candidate : ranked) {
+    bool duplicate = false;
+    for (const auto& existing : selected) {
+      if (GuideboardRecognizer::normalizedLcsRatio(
+              candidate.sample.text, existing.sample.text) >= threshold) {
+        duplicate = true;
+        break;
+      }
+    }
+    if (!duplicate) {
+      selected.push_back(candidate);
+      if (selected.size() >= max_samples) {
+        break;
+      }
+    }
+  }
+  std::sort(selected.begin(), selected.end(), [](const auto& a, const auto& b) {
+    return a.index < b.index;
+  });
+
+  std::vector<GuideboardApiSample> result;
+  result.reserve(selected.size());
+  for (const auto& sample : selected) {
+    result.push_back(sample.sample);
+  }
+  return result;
 }
 
 GuideboardApiResult GuideboardApiClient::request(

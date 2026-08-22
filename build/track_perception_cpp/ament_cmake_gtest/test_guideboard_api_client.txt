@@ -2,24 +2,28 @@
  - /home/orangepi/scuderiaferrari/build/track_perception_cpp/test_guideboard_api_client --gtest_output=xml:/home/orangepi/scuderiaferrari/build/track_perception_cpp/test_results/track_perception_cpp/test_guideboard_api_client.gtest.xml
 
 Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
-[==========] Running 5 tests from 1 test suite.
+[==========] Running 7 tests from 1 test suite.
 [----------] Global test environment set-up.
-[----------] 5 tests from GuideboardApiClientTest
+[----------] 7 tests from GuideboardApiClientTest
 [ RUN      ] GuideboardApiClientTest.CertainDecisionIsAlwaysAccepted
 [       OK ] GuideboardApiClientTest.CertainDecisionIsAlwaysAccepted (0 ms)
 [ RUN      ] GuideboardApiClientTest.HighConfidenceUncertainDecisionIsAccepted
 [       OK ] GuideboardApiClientTest.HighConfidenceUncertainDecisionIsAccepted (0 ms)
-[ RUN      ] GuideboardApiClientTest.LowConfidenceUncertainDecisionIsRejected
-[       OK ] GuideboardApiClientTest.LowConfidenceUncertainDecisionIsRejected (0 ms)
-[ RUN      ] GuideboardApiClientTest.InvalidConfidenceIsRejectedForUncertainDecision
-[       OK ] GuideboardApiClientTest.InvalidConfidenceIsRejectedForUncertainDecision (0 ms)
-[ RUN      ] GuideboardApiClientTest.ThresholdIsClampedToUnitInterval
-[       OK ] GuideboardApiClientTest.ThresholdIsClampedToUnitInterval (0 ms)
-[----------] 5 tests from GuideboardApiClientTest (0 ms total)
+[ RUN      ] GuideboardApiClientTest.LowConfidenceUncertainDecisionIsAccepted
+[       OK ] GuideboardApiClientTest.LowConfidenceUncertainDecisionIsAccepted (0 ms)
+[ RUN      ] GuideboardApiClientTest.InvalidConfidenceIsRejected
+[       OK ] GuideboardApiClientTest.InvalidConfidenceIsRejected (0 ms)
+[ RUN      ] GuideboardApiClientTest.ThresholdDoesNotControlAcceptance
+[       OK ] GuideboardApiClientTest.ThresholdDoesNotControlAcceptance (0 ms)
+[ RUN      ] GuideboardApiClientTest.SelectsBestDiverseSamplesAndRestoresTimeOrder
+[       OK ] GuideboardApiClientTest.SelectsBestDiverseSamplesAndRestoresTimeOrder (0 ms)
+[ RUN      ] GuideboardApiClientTest.SampleSelectionHonorsMaximumWithoutCountGate
+[       OK ] GuideboardApiClientTest.SampleSelectionHonorsMaximumWithoutCountGate (0 ms)
+[----------] 7 tests from GuideboardApiClientTest (0 ms total)
 
 [----------] Global test environment tear-down
-[==========] 5 tests from 1 test suite ran. (0 ms total)
-[  PASSED  ] 5 tests.
+[==========] 7 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 7 tests.
 
 
 -- run_test.py: return code 0

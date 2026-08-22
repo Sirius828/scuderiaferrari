@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="(empty)"
+	BuildStamp="20260822-1946-Experimental"
+	Name="orangepi5"
+	Generator="ctest-3.22.1"
+	CompilerName="/usr/bin/c++"
+	CompilerVersion="11.4.0"
+	OSName="Linux"
+	Hostname="orangepi5"
+	OSRelease="6.1.99-rockchip-rk3588"
+	OSVersion="#1.2.2 SMP Thu Jun 26 14:42:53 CST 2025"
+	OSPlatform="aarch64"
+	Is64Bits="1"
+	VendorString=""
+	VendorID="Unknown Manufacturer"
+	FamilyID="8"
+	ModelID="0"
+	ProcessorCacheSize="0"
+	NumberOfLogicalCPU="8"
+	NumberOfPhysicalCPU="1"
+	TotalVirtualMemory="3967"
+	TotalPhysicalMemory="7934"
+	LogicalProcessorsPerPhysical="8"
+	ProcessorClockFrequency="0"
+	>
+	<Testing>
+		<StartDateTime>Aug 23 03:46 CST</StartDateTime>
+		<StartTestTime>1787427989</StartTestTime>
+		<TestList>
+			<Test>./test_control_core</Test>
+			<Test>./test_finish_turn_state</Test>
+			<Test>./test_guideboard_reverse_state</Test>
+		</TestList>
+		<Test Status="passed">
+			<Name>test_control_core</Name>
+			<Path>.</Path>
+			<FullName>./test_control_core</FullName>
+			<FullCommandLine>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_control_core.gtest.xml" "--package-name" "line_follower_control_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/ament_cmake_gtest/test_control_core.txt" "--command" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_control_core" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_control_core.gtest.xml"</FullCommandLine>
+			<Results>
+				<NamedMeasurement type="numeric/double" name="Execution Time">
+					<Value>0.19574</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="numeric/double" name="Processors">
+					<Value>1</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Completion Status">
+					<Value>Completed</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Command Line">
+					<Value>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_control_core.gtest.xml" "--package-name" "line_follower_control_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/ament_cmake_gtest/test_control_core.txt" "--command" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_control_core" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_control_core.gtest.xml"</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Environment">
+					<Value>#CTEST_RESOURCE_GROUP_COUNT=</Value>
+				</NamedMeasurement>
+				<Measurement>
+					<Value>-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp':
+ - /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_control_core --gtest_output=xml:/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_control_core.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 9 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 9 tests from ControlCoreTest
+[ RUN      ] ControlCoreTest.PureStraightUsesNearErrorForPd
+[       OK ] ControlCoreTest.PureStraightUsesNearErrorForPd (0 ms)
+[ RUN      ] ControlCoreTest.CurveFeedforwardRemainsWithZeroNearError
+[       OK ] ControlCoreTest.CurveFeedforwardRemainsWithZeroNearError (0 ms)
+[ RUN      ] ControlCoreTest.HeadingCancelsStraightLinePreviewSlope
+[       OK ] ControlCoreTest.HeadingCancelsStraightLinePreviewSlope (0 ms)
+[ RUN      ] ControlCoreTest.DerivativeOnlyChangesForNewSample
+[       OK ] ControlCoreTest.DerivativeOnlyChangesForNewSample (0 ms)
+[ RUN      ] ControlCoreTest.CurveStateUsesEntryAndExitHysteresis
+[       OK ] ControlCoreTest.CurveStateUsesEntryAndExitHysteresis (0 ms)
+[ RUN      ] ControlCoreTest.SteeringIsLimitedAndSlewed
+[       OK ] ControlCoreTest.SteeringIsLimitedAndSlewed (0 ms)
+[ RUN      ] ControlCoreTest.RejectsInvalidConfiguration
+[       OK ] ControlCoreTest.RejectsInvalidConfiguration (0 ms)
+[ RUN      ] ControlCoreTest.InvalidLaneTargetsAStopAndClearsFeedback
+[       OK ] ControlCoreTest.InvalidLaneTargetsAStopAndClearsFeedback (0 ms)
+[ RUN      ] ControlCoreTest.InvalidFrameDoesNotCauseAFalseCurveExit
+[       OK ] ControlCoreTest.InvalidFrameDoesNotCauseAFalseCurveExit (0 ms)
+[----------] 9 tests from ControlCoreTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 9 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 9 tests.
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_control_core.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_control_core.gtest.xml'
+</Value>
+				</Measurement>
+			</Results>
+			<Labels>
+				<Label>gtest</Label>
+			</Labels>
+		</Test>
+		<Test Status="passed">
+			<Name>test_finish_turn_state</Name>
+			<Path>.</Path>
+			<FullName>./test_finish_turn_state</FullName>
+			<FullCommandLine>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_finish_turn_state.gtest.xml" "--package-name" "line_follower_control_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/ament_cmake_gtest/test_finish_turn_state.txt" "--command" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_finish_turn_state" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_finish_turn_state.gtest.xml"</FullCommandLine>
+			<Results>
+				<NamedMeasurement type="numeric/double" name="Execution Time">
+					<Value>0.155733</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="numeric/double" name="Processors">
+					<Value>1</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Completion Status">
+					<Value>Completed</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Command Line">
+					<Value>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_finish_turn_state.gtest.xml" "--package-name" "line_follower_control_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/ament_cmake_gtest/test_finish_turn_state.txt" "--command" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_finish_turn_state" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_finish_turn_state.gtest.xml"</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Environment">
+					<Value>#CTEST_RESOURCE_GROUP_COUNT=</Value>
+				</NamedMeasurement>
+				<Measurement>
+					<Value>-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp':
+ - /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_finish_turn_state --gtest_output=xml:/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_finish_turn_state.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from FinishTurnStateTest
+[ RUN      ] FinishTurnStateTest.RequiresFreshEncoderBeforeStart
+[       OK ] FinishTurnStateTest.RequiresFreshEncoderBeforeStart (0 ms)
+[ RUN      ] FinishTurnStateTest.UsesEncoderDeltaFromArbitraryBaseline
+[       OK ] FinishTurnStateTest.UsesEncoderDeltaFromArbitraryBaseline (0 ms)
+[ RUN      ] FinishTurnStateTest.StaleEncoderFaultsAndStops
+[       OK ] FinishTurnStateTest.StaleEncoderFaultsAndStops (0 ms)
+[ RUN      ] FinishTurnStateTest.EncoderDecreaseFaultsImmediately
+[       OK ] FinishTurnStateTest.EncoderDecreaseFaultsImmediately (0 ms)
+[ RUN      ] FinishTurnStateTest.OverallTimeoutFaultsEvenWithFreshEncoder
+[       OK ] FinishTurnStateTest.OverallTimeoutFaultsEvenWithFreshEncoder (0 ms)
+[ RUN      ] FinishTurnStateTest.CancelLatchesUntilExplicitReset
+[       OK ] FinishTurnStateTest.CancelLatchesUntilExplicitReset (0 ms)
+[----------] 6 tests from FinishTurnStateTest (1 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (1 ms total)
+[  PASSED  ] 6 tests.
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_finish_turn_state.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_finish_turn_state.gtest.xml'
+</Value>
+				</Measurement>
+			</Results>
+			<Labels>
+				<Label>gtest</Label>
+			</Labels>
+		</Test>
+		<Test Status="passed">
+			<Name>test_guideboard_reverse_state</Name>
+			<Path>.</Path>
+			<FullName>./test_guideboard_reverse_state</FullName>
+			<FullCommandLine>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_guideboard_reverse_state.gtest.xml" "--package-name" "line_follower_control_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/ament_cmake_gtest/test_guideboard_reverse_state.txt" "--command" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_guideboard_reverse_state" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_guideboard_reverse_state.gtest.xml"</FullCommandLine>
+			<Results>
+				<NamedMeasurement type="numeric/double" name="Execution Time">
+					<Value>0.11468</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="numeric/double" name="Processors">
+					<Value>1</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Completion Status">
+					<Value>Completed</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Command Line">
+					<Value>/usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_guideboard_reverse_state.gtest.xml" "--package-name" "line_follower_control_cpp" "--output-file" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/ament_cmake_gtest/test_guideboard_reverse_state.txt" "--command" "/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_guideboard_reverse_state" "--gtest_output=xml:/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_guideboard_reverse_state.gtest.xml"</Value>
+				</NamedMeasurement>
+				<NamedMeasurement type="text/string" name="Environment">
+					<Value>#CTEST_RESOURCE_GROUP_COUNT=</Value>
+				</NamedMeasurement>
+				<Measurement>
+					<Value>-- run_test.py: invoking following command in '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp':
+ - /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_guideboard_reverse_state --gtest_output=xml:/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_guideboard_reverse_state.gtest.xml
+Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+[==========] Running 6 tests from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 6 tests from GuideboardReverseState
+[ RUN      ] GuideboardReverseState.CompletesWithIncreasingEncoder
+[       OK ] GuideboardReverseState.CompletesWithIncreasingEncoder (0 ms)
+[ RUN      ] GuideboardReverseState.CompletesWithDecreasingEncoder
+[       OK ] GuideboardReverseState.CompletesWithDecreasingEncoder (0 ms)
+[ RUN      ] GuideboardReverseState.IgnoresJitterButRejectsDirectionReversal
+[       OK ] GuideboardReverseState.IgnoresJitterButRejectsDirectionReversal (0 ms)
+[ RUN      ] GuideboardReverseState.RejectsLargeStep
+[       OK ] GuideboardReverseState.RejectsLargeStep (0 ms)
+[ RUN      ] GuideboardReverseState.FaultsOnStaleEncoderAndTimeout
+[       OK ] GuideboardReverseState.FaultsOnStaleEncoderAndTimeout (0 ms)
+[ RUN      ] GuideboardReverseState.RejectsMissingOrStaleInitialEncoder
+[       OK ] GuideboardReverseState.RejectsMissingOrStaleInitialEncoder (0 ms)
+[----------] 6 tests from GuideboardReverseState (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 6 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 6 tests.
+-- run_test.py: return code 0
+-- run_test.py: inject classname prefix into gtest result file '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_guideboard_reverse_state.gtest.xml'
+-- run_test.py: verify result file '/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_guideboard_reverse_state.gtest.xml'
+</Value>
+				</Measurement>
+			</Results>
+			<Labels>
+				<Label>gtest</Label>
+			</Labels>
+		</Test>
+		<EndDateTime>Aug 23 03:46 CST</EndDateTime>
+		<EndTestTime>1787427990</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>

@@ -897,6 +897,29 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: /home/oran
   /usr/include/opencv4/opencv2/video.hpp \
   /usr/include/opencv4/opencv2/video/tracking.hpp \
   /usr/include/opencv4/opencv2/video/background_segm.hpp \
+  /usr/include/rapidjson/document.h \
+  /usr/include/rapidjson/reader.h \
+  /usr/include/rapidjson/allocators.h \
+  /usr/include/rapidjson/rapidjson.h \
+  /usr/include/inttypes.h \
+  /usr/include/rapidjson/stream.h \
+  /usr/include/rapidjson/encodings.h \
+  /usr/include/rapidjson/encodedstream.h \
+  /usr/include/rapidjson/memorystream.h \
+  /usr/include/rapidjson/internal/meta.h \
+  /usr/include/rapidjson/rapidjson.h \
+  /usr/include/rapidjson/internal/stack.h \
+  /usr/include/rapidjson/allocators.h \
+  /usr/include/rapidjson/internal/swap.h \
+  /usr/include/rapidjson/internal/strtod.h \
+  /usr/include/rapidjson/internal/ieee754.h \
+  /usr/include/rapidjson/internal/biginteger.h \
+  /usr/include/rapidjson/internal/diyfp.h \
+  /usr/include/rapidjson/internal/pow10.h \
+  /usr/include/rapidjson/error/error.h \
+  /usr/include/rapidjson/rapidjson.h \
+  /usr/include/rapidjson/internal/strfunc.h \
+  /usr/include/rapidjson/stream.h \
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/ppocr_direction_system.h \
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/ppocr_system.h \
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/rknn/include/rknn_api.h \
@@ -914,7 +937,7 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: /home/oran
 CMakeFiles/fused_perception_node.dir/src/guideboard_api_client.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/guideboard_api_client.cpp \
   /usr/include/stdc-predef.h \
   /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/guideboard_api_client.hpp \
-  /usr/include/c++/11/string \
+  /usr/include/c++/11/cstddef \
   /usr/include/aarch64-linux-gnu/c++/11/bits/c++config.h \
   /usr/include/aarch64-linux-gnu/c++/11/bits/os_defines.h \
   /usr/include/features.h \
@@ -927,6 +950,8 @@ CMakeFiles/fused_perception_node.dir/src/guideboard_api_client.cpp.o: /home/oran
   /usr/include/aarch64-linux-gnu/gnu/stubs-lp64.h \
   /usr/include/aarch64-linux-gnu/c++/11/bits/cpu_defines.h \
   /usr/include/c++/11/pstl/pstl_config.h \
+  /usr/lib/gcc/aarch64-linux-gnu/11/include/stddef.h \
+  /usr/include/c++/11/string \
   /usr/include/c++/11/bits/stringfwd.h \
   /usr/include/c++/11/bits/memoryfwd.h \
   /usr/include/c++/11/bits/char_traits.h \
@@ -953,7 +978,6 @@ CMakeFiles/fused_perception_node.dir/src/guideboard_api_client.cpp.o: /home/oran
   /usr/include/aarch64-linux-gnu/bits/libc-header-start.h \
   /usr/include/aarch64-linux-gnu/bits/floatn.h \
   /usr/include/aarch64-linux-gnu/bits/floatn-common.h \
-  /usr/lib/gcc/aarch64-linux-gnu/11/include/stddef.h \
   /usr/lib/gcc/aarch64-linux-gnu/11/include/stdarg.h \
   /usr/include/aarch64-linux-gnu/bits/wchar.h \
   /usr/include/aarch64-linux-gnu/bits/types/wint_t.h \
@@ -1233,7 +1257,10 @@ CMakeFiles/fused_perception_node.dir/src/guideboard_api_client.cpp.o: /home/oran
   /usr/include/rapidjson/internal/dtoa.h \
   /usr/include/rapidjson/internal/itoa.h \
   /usr/include/rapidjson/internal/itoa.h \
-  /usr/include/rapidjson/stringbuffer.h
+  /usr/include/rapidjson/stringbuffer.h \
+  /home/orangepi/scuderiaferrari/src/track_perception_cpp/include/track_perception_cpp/guideboard_recognizer.hpp \
+  /usr/include/c++/11/unordered_set \
+  /usr/include/c++/11/bits/unordered_set.h
 
 CMakeFiles/fused_perception_node.dir/src/guideboard_recognizer.cpp.o: /home/orangepi/scuderiaferrari/src/track_perception_cpp/src/guideboard_recognizer.cpp \
   /usr/include/stdc-predef.h \
@@ -5633,25 +5660,7 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 
 /usr/include/rapidjson/internal/dtoa.h:
 
-/home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/utils/image_utils.h:
-
-/usr/include/rapidjson/internal/pow10.h:
-
-/usr/include/rapidjson/internal/biginteger.h:
-
-/usr/include/rapidjson/internal/stack.h:
-
-/usr/include/rapidjson/stream.h:
-
-/usr/include/inttypes.h:
-
-/usr/include/rapidjson/document.h:
-
 /usr/include/aarch64-linux-gnu/bits/socket2.h:
-
-/usr/include/rapidjson/internal/swap.h:
-
-/usr/include/aarch64-linux-gnu/bits/sockaddr.h:
 
 /usr/include/aarch64-linux-gnu/curl/easy.h:
 
@@ -5680,6 +5689,24 @@ CMakeFiles/fused_perception_node.dir/third_party/ppocr/utils/image_utils.c.o: /h
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/rknn/include/rknn_api.h:
 
 /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/ppocr_system.h:
+
+/home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/utils/image_utils.h:
+
+/usr/include/rapidjson/internal/pow10.h:
+
+/usr/include/rapidjson/internal/biginteger.h:
+
+/usr/include/aarch64-linux-gnu/bits/sockaddr.h:
+
+/usr/include/rapidjson/internal/swap.h:
+
+/usr/include/rapidjson/internal/stack.h:
+
+/usr/include/rapidjson/stream.h:
+
+/usr/include/inttypes.h:
+
+/usr/include/rapidjson/document.h:
 
 /usr/include/opencv4/opencv2/video/background_segm.hpp:
 

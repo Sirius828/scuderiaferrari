@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -15,6 +16,7 @@ struct GuideboardApiResult {
   bool valid{false};
   bool uncertain{false};
   bool accepted_uncertain{false};
+  bool high_confidence{false};
   int http_status{0};
   int curl_code{0};
   double latency_ms{-1.0};
@@ -28,6 +30,10 @@ class GuideboardApiClient {
  public:
   static bool shouldAcceptDecision(bool uncertain, float confidence,
                                    double uncertain_min_confidence);
+
+  static std::vector<GuideboardApiSample> selectDiverseSamples(
+      const std::vector<GuideboardApiSample>& samples, size_t max_samples,
+      double similarity_threshold);
 
   static GuideboardApiResult request(const std::string& url,
                                      const std::string& api_key,

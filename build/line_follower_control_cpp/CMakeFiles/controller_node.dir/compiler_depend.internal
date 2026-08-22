@@ -759,4 +759,5 @@ CMakeFiles/controller_node.dir/src/controller_node.cpp.o
  /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__traits.hpp
  /opt/ros/humble/include/std_srvs/std_srvs/srv/detail/trigger__type_support.hpp
  /home/orangepi/scuderiaferrari/src/line_follower_control_cpp/include/line_follower_control_cpp/finish_turn_state.hpp
+ /home/orangepi/scuderiaferrari/src/line_follower_control_cpp/include/line_follower_control_cpp/guideboard_reverse_state.hpp
 

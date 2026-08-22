@@ -13,11 +13,11 @@ fused_perception_node:
     model_input_format: "RGB"
 
     # 性能日志：只看 FPS、RKNN 推理耗时、后处理耗时、发布耗时
-    enable_perf_stats: true
+    enable_perf_stats: false
     perf_interval: 2.0
 
     # 画面显示：只影响 OpenCV 预览窗口，不影响终端日志
-    show_window: true
+    show_window: false
     blend_alpha: 0.5
     show_branch_debug: true
     enable_debug_screenshots: false
@@ -26,9 +26,9 @@ fused_perception_node:
     debug_screenshot_dir: "/tmp/fused_perception_screenshots"
 
     # 结果日志：只打印稳定识别、回退、轨迹和最终分支事件
-    enable_result_log: false
+    enable_result_log: true
     # 终端只输出 GuideBoard OCR/API 日志；详细 JSON 仍发布到 ROS 话题
-    enable_data_log: false
+    enable_data_log: true
     guideboard_log_only: false
     # Human 使用带运行状态记忆的专用服务：只有避障前已发车才允许清障后恢复。
     line_follower_start_service: "/line_follower/obstacle_resume"
@@ -80,8 +80,8 @@ fused_perception_node:
     guideboard_api_key: ""
     guideboard_api_url: "https://qianfan.baidubce.com/v2/chat/completions"
     guideboard_api_model: "qwen3.5-35b-a3b"
-    guideboard_api_timeout_sec: 1.8
-    # uncertain=true 不再一票否决；动作合法且置信度达到此阈值时接受
+    guideboard_api_timeout_sec: 5.0
+    # 合法 straight/right 无论高低置信度均执行；此阈值只标记日志 high/low
     guideboard_api_uncertain_min_confidence: 0.50
     guideboard_api_text_history_size: 3
     guideboard_api_text_similarity: 0.70
@@ -90,6 +90,12 @@ fused_perception_node:
     guideboard_api_stop_height_ratio: 0.14
     guideboard_api_retry_on_transport_failure: true
     guideboard_api_max_attempts: 1
+    # 首次/失败恢复事件连续确认后，先后退并持续 OCR，再调用 API。
+    enable_guideboard_reverse_reposition: true
+    guideboard_confirm_frames: 3
+    guideboard_reverse_service: "/line_follower/guideboard_reverse"
+    guideboard_reverse_state_topic: "/line_follower/guideboard_reverse_state"
+    guideboard_reverse_api_max_samples: 8
     ocr_det_model_path: "model/ppocrv4_det.rknn"
     ocr_rec_model_path: "model/ppocrv4_rec.rknn"
     # rec_only: 固定两行直接识别；det_rec: 文字检测+识别；rec_then_det: Rec优先，必要时回退
@@ -282,12 +288,11 @@ fused_perception_node:
     coin_route_obstacle_clearance_px: 18.0
 
     # 完整经过 Stop（识别、到达脚底阈值、连续丢失）才计一次；第二次触发终点旋转。
-    enable_finish_stop: true
+    enable_finish_stop: false
     finish_stop_min_confidence: 0.45
     finish_stop_arm_y_ratio: 0.70
     finish_stop_lost_frames: 3
     finish_stop_required_occurrences: 2
-    finish_stop_max_age: 0.5
 
     # 话题发布
     publish_lane_state: true

@@ -27,6 +27,7 @@
 #include <std_srvs/srv/trigger.hpp>
 
 #include <opencv2/opencv.hpp>
+#include <rapidjson/document.h>
 
 #include "ppocr_direction_system.h"
 #include "track_perception_cpp/guideboard_api_client.hpp"
@@ -166,7 +167,13 @@ int inferDebugImageWidth(const LaneDebugInfo& debug_info, int fallback_width) {
 }
 
 std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width,
-                            const std::string& finish_turn_service_state) {
+                            const std::string& finish_turn_service_state,
+                            const std::string& guideboard_reverse_phase,
+                            const std::string& guideboard_reverse_reason,
+                            bool guideboard_reverse_workflow_active,
+                            int guideboard_confirm_count,
+                            int guideboard_confirm_target,
+                            bool guideboard_invalid_event) {
   const int image_width = inferDebugImageWidth(debug_info, fallback_width);
   const int top_x = selectedCenterAtRatio(debug_info, 0.0);
   const int mid_x = selectedCenterAtRatio(debug_info, 0.5);
@@ -278,6 +285,16 @@ std::string laneDebugToJson(const LaneDebugInfo& debug_info, int fallback_width,
      << debug_info.finish_stop_lost_count << ","
      << "\"finish_turn_service_state\":\""
      << jsonEscape(finish_turn_service_state) << "\","
+     << "\"guideboard_reverse_phase\":\""
+     << jsonEscape(guideboard_reverse_phase) << "\","
+     << "\"guideboard_reverse_reason\":\""
+     << jsonEscape(guideboard_reverse_reason) << "\","
+     << "\"guideboard_reverse_workflow_active\":"
+     << (guideboard_reverse_workflow_active ? "true" : "false") << ","
+     << "\"guideboard_confirm_count\":" << guideboard_confirm_count << ","
+     << "\"guideboard_confirm_target\":" << guideboard_confirm_target << ","
+     << "\"guideboard_invalid_event\":"
+     << (guideboard_invalid_event ? "true" : "false") << ","
      << "\"coin_on_route_count\":" << debug_info.coin_on_route_count << ","
      << "\"coin_reachable_count\":" << debug_info.coin_reachable_count << ","
      << "\"coin_too_far_count\":" << debug_info.coin_too_far_count << ","
@@ -601,14 +618,21 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<std::string>("guideboard_api_url",
                                    "https://qianfan.baidubce.com/v2/chat/completions");
     declare_parameter<std::string>("guideboard_api_model", "qwen3.5-35b-a3b");
-    declare_parameter<double>("guideboard_api_timeout_sec", 1.8);
-    declare_parameter<double>("guideboard_api_uncertain_min_confidence", 0.75);
+    declare_parameter<double>("guideboard_api_timeout_sec", 5.0);
+    declare_parameter<double>("guideboard_api_uncertain_min_confidence", 0.50);
     declare_parameter<int>("guideboard_api_text_history_size", 3);
     declare_parameter<double>("guideboard_api_text_similarity", 0.70);
     declare_parameter<int>("guideboard_api_force_ocr_count_after_stop", 2);
     declare_parameter<double>("guideboard_api_stop_height_ratio", 0.12);
     declare_parameter<bool>("guideboard_api_retry_on_transport_failure", true);
     declare_parameter<int>("guideboard_api_max_attempts", 1);
+    declare_parameter<bool>("enable_guideboard_reverse_reposition", true);
+    declare_parameter<int>("guideboard_confirm_frames", 3);
+    declare_parameter<std::string>(
+        "guideboard_reverse_service", "/line_follower/guideboard_reverse");
+    declare_parameter<std::string>(
+        "guideboard_reverse_state_topic", "/line_follower/guideboard_reverse_state");
+    declare_parameter<int>("guideboard_reverse_api_max_samples", 8);
     declare_parameter<std::string>("ocr_det_model_path", "model/ppocrv4_det.rknn");
     declare_parameter<std::string>("ocr_rec_model_path", "model/ppocrv4_rec.rknn");
     declare_parameter<std::string>("ocr_pipeline_mode", "rec_then_det");
@@ -726,7 +750,6 @@ class FusedPerceptionNode : public rclcpp::Node {
     declare_parameter<double>("finish_stop_arm_y_ratio", 0.70);
     declare_parameter<int>("finish_stop_lost_frames", 3);
     declare_parameter<int>("finish_stop_required_occurrences", 2);
-    declare_parameter<double>("finish_stop_max_age", 0.5);
     declare_parameter<double>("offset_y07_ratio", 0.70);
     declare_parameter<double>("offset_y08_ratio", 0.80);
     declare_parameter<double>("offset_y09_ratio", 0.90);
@@ -826,6 +849,15 @@ class FusedPerceptionNode : public rclcpp::Node {
         get_parameter("guideboard_api_retry_on_transport_failure").as_bool();
     guideboard_api_max_attempts_ = std::clamp(
         static_cast<int>(get_parameter("guideboard_api_max_attempts").as_int()), 1, 2);
+    enable_guideboard_reverse_reposition_ =
+        get_parameter("enable_guideboard_reverse_reposition").as_bool();
+    guideboard_confirm_frames_ = std::max(
+        1, static_cast<int>(get_parameter("guideboard_confirm_frames").as_int()));
+    guideboard_reverse_service_ = get_parameter("guideboard_reverse_service").as_string();
+    guideboard_reverse_state_topic_ =
+        get_parameter("guideboard_reverse_state_topic").as_string();
+    guideboard_reverse_api_max_samples_ = std::max(
+        1, static_cast<int>(get_parameter("guideboard_reverse_api_max_samples").as_int()));
     const std::string configured_api_key = get_parameter("guideboard_api_key").as_string();
     const char* environment_api_key = std::getenv("QIANFAN_API_KEY");
     api_key_ = !configured_api_key.empty()
@@ -1271,6 +1303,7 @@ class FusedPerceptionNode : public rclcpp::Node {
     tracked_guideboard_bbox_ = cv::Rect2f{};
     guideboard_last_seen_sec_ = 0.0;
     last_guideboard_height_ratio_ = 0.0;
+    guideboard_confirm_count_ = 0;
   }
 
   void resetGuideboardRecognitionSession() {
@@ -1297,8 +1330,15 @@ class FusedPerceptionNode : public rclcpp::Node {
     last_api_confidence_ = 0.0f;
     last_api_uncertain_ = false;
     last_api_accepted_uncertain_ = false;
+    last_api_high_confidence_ = false;
     last_api_corrected_text_.clear();
     lane_decision_.setGuideboardBranchHint("", false);
+    lane_decision_.setGuideboardDecisionPending(false);
+    guideboard_reverse_workflow_active_ = false;
+    guideboard_reverse_request_pending_ = false;
+    guideboard_reverse_service_accepted_ = false;
+    guideboard_reverse_completed_ = false;
+    guideboard_reverse_faulted_ = false;
   }
 
   void startGuideboardTrack(const cv::Rect2f& bbox, double now) {
@@ -1307,8 +1347,9 @@ class FusedPerceptionNode : public rclcpp::Node {
     tracked_guideboard_bbox_ = bbox;
     guideboard_last_seen_sec_ = now;
     ++guideboard_sequence_;
-    guideboard_track_route_eligible_ = accept_guideboard_for_route_ &&
-                                       lane_decision_.branchEventArmed();
+    guideboard_track_route_eligible_ =
+        !enable_guideboard_reverse_reposition_ && accept_guideboard_for_route_ &&
+        lane_decision_.branchEventArmed();
     if (guideboard_track_route_eligible_ &&
         guideboard_route_policy_.prepareKnownDecision()) {
       setCurrentGuideboardDecision(guideboard_route_policy_.preparedAction(),
@@ -1341,7 +1382,8 @@ class FusedPerceptionNode : public rclcpp::Node {
                                                 tracked_guideboard_bbox_.height);
     const float current_diagonal = std::hypot(bbox.width, bbox.height);
     const bool center_jump = center_distance > 0.25f * std::max(previous_diagonal, current_diagonal);
-    if (bboxIoU(tracked_guideboard_bbox_, bbox) < 0.2f && center_jump) {
+    if (!guideboard_reverse_workflow_active_ &&
+        bboxIoU(tracked_guideboard_bbox_, bbox) < 0.2f && center_jump) {
       startGuideboardTrack(bbox, now);
       return;
     }
@@ -1435,8 +1477,16 @@ class FusedPerceptionNode : public rclcpp::Node {
   }
 
   void applyGuideboardHint() {
+    if (guideboard_invalid_event_) {
+      lane_decision_.setGuideboardDecisionPending(false);
+      lane_decision_.setGuideboardBranchHint(
+          "left", true, "guideboard_no_text_ignored");
+      return;
+    }
     const bool valid = ocr_apply_to_control_ && current_guideboard_decision_valid_ &&
                        accept_guideboard_for_route_;
+    lane_decision_.setGuideboardDecisionPending(
+        guideboard_reverse_workflow_active_ && !current_guideboard_decision_valid_);
     lane_decision_.setGuideboardBranchHint(valid ? current_guideboard_branch_ : "", valid,
                                            current_guideboard_decision_source_);
   }
@@ -1472,6 +1522,8 @@ class FusedPerceptionNode : public rclcpp::Node {
        << ",\"api_uncertain\":" << (last_api_uncertain_ ? "true" : "false")
        << ",\"api_accepted_uncertain\":"
        << (last_api_accepted_uncertain_ ? "true" : "false")
+       << ",\"api_confidence_level\":\""
+       << (last_api_high_confidence_ ? "high" : "low") << "\""
        << ",\"ocr_history\":" << guideboardOcrHistoryJson() << "}";
     std_msgs::msg::String recognition_msg;
     recognition_msg.data = ss.str();
@@ -1573,6 +1625,15 @@ class FusedPerceptionNode : public rclcpp::Node {
        << ",\"api_accepted_uncertain\":"
        << (last_api_accepted_uncertain_ ? "true" : "false")
        << ",\"api_fallback\":" << (api_fallback_ ? "true" : "false")
+       << ",\"reverse_reposition_enabled\":"
+       << (enable_guideboard_reverse_reposition_ ? "true" : "false")
+       << ",\"reverse_workflow_active\":"
+       << (guideboard_reverse_workflow_active_ ? "true" : "false")
+       << ",\"reverse_phase\":\"" << jsonEscape(guideboard_reverse_phase_) << "\""
+       << ",\"reverse_reason\":\"" << jsonEscape(guideboard_reverse_reason_) << "\""
+       << ",\"confirm_count\":" << guideboard_confirm_count_
+       << ",\"confirm_target\":" << guideboard_confirm_frames_
+       << ",\"invalid_event\":" << (guideboard_invalid_event_ ? "true" : "false")
        << ",\"stop_wait_active\":"
        << (guideboard_stop_wait_active_ ? "true" : "false")
        << ",\"ocr_history\":" << guideboardOcrHistoryJson() << "}"
@@ -1643,9 +1704,11 @@ class FusedPerceptionNode : public rclcpp::Node {
     }
     if (!result.text.empty()) {
       guideboard_api_ocr_history_.push_back({result.text, result.ocr_score});
-      while (guideboard_api_ocr_history_.size() >
-             static_cast<size_t>(guideboard_api_text_history_size_)) {
-        guideboard_api_ocr_history_.pop_front();
+      if (!enable_guideboard_reverse_reposition_) {
+        while (guideboard_api_ocr_history_.size() >
+               static_cast<size_t>(guideboard_api_text_history_size_)) {
+          guideboard_api_ocr_history_.pop_front();
+        }
       }
     }
 
@@ -1667,6 +1730,7 @@ class FusedPerceptionNode : public rclcpp::Node {
           task.fallback_reason.c_str(), result.error.c_str());
     }
     maybeTriggerGuideboardApi();
+    maybeFinalizeGuideboardReverseAfterOcr();
     applyGuideboardHint();
   }
 
@@ -1722,7 +1786,145 @@ class FusedPerceptionNode : public rclcpp::Node {
     for (const auto& sample : guideboard_api_ocr_history_) {
       samples.push_back({sample.text, sample.score});
     }
+    if (enable_guideboard_reverse_reposition_) {
+      return GuideboardApiClient::selectDiverseSamples(
+          samples, static_cast<size_t>(guideboard_reverse_api_max_samples_),
+          guideboard_api_text_similarity_);
+    }
     return samples;
+  }
+
+  void invalidateGuideboardEvent(const std::string& reason) {
+    guideboard_invalid_event_ = true;
+    guideboard_invalid_branch_event_id_ = active_guideboard_branch_event_id_;
+    accept_guideboard_for_route_ = false;
+    guideboard_track_route_eligible_ = false;
+    guideboard_reverse_workflow_active_ = false;
+    guideboard_reverse_request_pending_ = false;
+    guideboard_reverse_service_accepted_ = false;
+    guideboard_reverse_completed_ = false;
+    lane_decision_.setGuideboardDecisionPending(false);
+    logGuideboardApiEvent("GUIDEBOARD_IGNORED", reason, last_ocr_text_, last_ocr_score_,
+                          "straight", "", false);
+    publishGuideboardRouteEvent(
+        "ignored_no_text", guideboard_invalid_branch_event_id_, reason,
+        "straight", "left");
+    applyGuideboardHint();
+    requestGuideboardStart();
+  }
+
+  void maybeFinalizeGuideboardReverseAfterOcr() {
+    if (!guideboard_reverse_workflow_active_ || !guideboard_reverse_completed_ ||
+        guideboard_reverse_faulted_ || guideboard_ocr_future_.valid() ||
+        guideboard_api_request_in_flight_ || api_session_attempted_) {
+      return;
+    }
+    const auto samples = guideboardApiSamples();
+    if (samples.empty()) {
+      invalidateGuideboardEvent("reverse_complete_without_text");
+      return;
+    }
+    beginGuideboardApiRequest("reverse_complete");
+  }
+
+  void handleGuideboardReverseState(const std::string& payload) {
+    rapidjson::Document state;
+    state.Parse(payload.c_str());
+    if (state.HasParseError() || !state.IsObject()) {
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000,
+                           "GUIDEBOARD_REVERSE_STATE invalid JSON: %s", payload.c_str());
+      return;
+    }
+    const auto phase_it = state.FindMember("phase");
+    if (phase_it == state.MemberEnd() || !phase_it->value.IsString()) {
+      return;
+    }
+    guideboard_reverse_phase_ = phase_it->value.GetString();
+    const auto reason_it = state.FindMember("reason");
+    guideboard_reverse_reason_ =
+        reason_it != state.MemberEnd() && reason_it->value.IsString()
+            ? reason_it->value.GetString()
+            : "";
+    if (!guideboard_reverse_workflow_active_) {
+      return;
+    }
+
+    if (guideboard_reverse_phase_ == "REVERSING") {
+      guideboard_reverse_service_accepted_ = true;
+      guideboard_stop_active_ = true;
+    } else if (guideboard_reverse_phase_ == "COMPLETE") {
+      guideboard_reverse_service_accepted_ = true;
+      guideboard_reverse_completed_ = true;
+      guideboard_stop_active_ = true;
+      logGuideboardApiEvent(
+          "GUIDEBOARD_REVERSE_COMPLETE", guideboard_reverse_reason_, last_ocr_text_,
+          last_ocr_score_, current_guideboard_maneuver_, "", false);
+      maybeFinalizeGuideboardReverseAfterOcr();
+    } else if (guideboard_reverse_phase_ == "FAULT") {
+      guideboard_reverse_faulted_ = true;
+      guideboard_stop_active_ = true;
+      lane_decision_.setGuideboardDecisionPending(true);
+      logGuideboardApiEvent(
+          "GUIDEBOARD_REVERSE_FAULT", guideboard_reverse_reason_, last_ocr_text_,
+          last_ocr_score_, current_guideboard_maneuver_, "", false);
+    } else if (guideboard_reverse_phase_ == "IDLE" && guideboard_reverse_faulted_) {
+      // IDLE after a latched fault can only be produced by the operator's
+      // explicit /line_follower/start reset.  The failed sign is ignored and
+      // never committed as a route-policy encounter.
+      guideboard_reverse_faulted_ = false;
+      invalidateGuideboardEvent("reverse_fault_operator_reset");
+    }
+  }
+
+  void requestGuideboardReverse() {
+    if (!guideboard_reverse_workflow_active_ || guideboard_reverse_request_pending_ ||
+        guideboard_reverse_service_accepted_ || guideboard_reverse_faulted_) {
+      return;
+    }
+    guideboard_stop_wait_active_ = true;
+    lane_decision_.setGuideboardDecisionPending(true);
+    if (guideboard_stop_call_pending_) {
+      // A fail-safe stop requested while this service was unavailable must
+      // finish first; otherwise its late callback would cancel active reverse.
+      return;
+    }
+    if (!guideboard_reverse_client_->service_is_ready()) {
+      RCLCPP_WARN_THROTTLE(
+          get_logger(), *get_clock(), 1000,
+          "GUIDEBOARD_REVERSE_REQUEST service not ready: %s; holding stopped and retrying",
+          guideboard_reverse_service_.c_str());
+      requestGuideboardStop();
+      return;
+    }
+
+    guideboard_reverse_request_pending_ = true;
+    logGuideboardApiEvent(
+        "GUIDEBOARD_REVERSE_REQUEST", "bbox_height_reached", last_ocr_text_,
+        last_ocr_score_, current_guideboard_maneuver_, "", false);
+    auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
+    guideboard_reverse_client_->async_send_request(
+        request,
+        [this](rclcpp::Client<std_srvs::srv::Trigger>::SharedFuture future) {
+          guideboard_reverse_request_pending_ = false;
+          try {
+            const auto response = future.get();
+            if (response->success) {
+              guideboard_reverse_service_accepted_ = true;
+              guideboard_stop_active_ = true;
+              RCLCPP_INFO(get_logger(), "GUIDEBOARD_REVERSE_REQUEST completed: %s",
+                          response->message.c_str());
+            } else {
+              guideboard_reverse_faulted_ = true;
+              guideboard_stop_active_ = true;
+              lane_decision_.setGuideboardDecisionPending(true);
+              RCLCPP_ERROR(get_logger(), "GUIDEBOARD_REVERSE_REQUEST rejected: %s",
+                           response->message.c_str());
+            }
+          } catch (const std::exception& e) {
+            RCLCPP_WARN(get_logger(), "GUIDEBOARD_REVERSE_REQUEST failed: %s; retrying",
+                        e.what());
+          }
+        });
   }
 
   void requestGuideboardStop() {
@@ -1780,7 +1982,12 @@ class FusedPerceptionNode : public rclcpp::Node {
       return;
     }
     if (last_guideboard_height_ratio_ >= guideboard_api_stop_height_ratio_) {
-      requestGuideboardStop();
+      if (enable_guideboard_reverse_reposition_ &&
+          guideboard_reverse_workflow_active_) {
+        requestGuideboardReverse();
+      } else {
+        requestGuideboardStop();
+      }
     }
   }
 
@@ -1839,6 +2046,9 @@ class FusedPerceptionNode : public rclcpp::Node {
   void handleGuideboardBranchEvent(const LaneState& lane_state,
                                    const LaneDebugInfo& debug_info) {
     if (debug_info.branch_event_rearmed) {
+      const bool reset_invalid_session = guideboard_invalid_event_;
+      guideboard_invalid_event_ = false;
+      guideboard_invalid_branch_event_id_ = 0;
       accept_guideboard_for_route_ = true;
       guideboard_track_route_eligible_ = false;
       active_guideboard_branch_event_id_ = 0;
@@ -1846,6 +2056,9 @@ class FusedPerceptionNode : public rclcpp::Node {
         // A sign track that survived the previous branch cannot represent the
         // next signed encounter. The route session itself remains untouched.
         resetGuideboardTrack(true);
+      }
+      if (reset_invalid_session) {
+        resetGuideboardRecognitionSession();
       }
       if (enable_data_log_) {
         RCLCPP_INFO(get_logger(),
@@ -1861,6 +2074,19 @@ class FusedPerceptionNode : public rclcpp::Node {
     accept_guideboard_for_route_ = false;
     guideboard_track_route_eligible_ = false;
     active_guideboard_branch_event_id_ = 0;
+    if (guideboard_invalid_event_) {
+      logGuideboardResult(
+          "branch_lock", guideboard_track_id_, "guideboard", "straight",
+          lane_state.branch_side.empty() ? "left" : lane_state.branch_side,
+          "guideboard_no_text_ignored", last_ocr_score_, 0.0, 0.0,
+          stable_decision_latency_ms_);
+      publishGuideboardRouteEvent(
+          "branch_locked_ignored", debug_info.branch_event_id,
+          "guideboard_no_text_ignored", "straight",
+          lane_state.branch_side.empty() ? "left" : lane_state.branch_side);
+      requestGuideboardStart();
+      return;
+    }
     if (!debug_info.branch_lock_guideboard) {
       logGuideboardResult("branch_lock", guideboard_track_id_, "none", "straight",
                           lane_state.branch_side.empty() ? "left" : lane_state.branch_side,
@@ -1997,17 +2223,20 @@ class FusedPerceptionNode : public rclcpp::Node {
     last_api_confidence_ = task.result.confidence;
     last_api_uncertain_ = task.result.uncertain;
     last_api_accepted_uncertain_ = task.result.accepted_uncertain;
+    last_api_high_confidence_ = task.result.high_confidence;
     last_api_corrected_text_ = task.result.corrected_text;
     if (enable_data_log_) {
       RCLCPP_INFO(get_logger(),
                   "GUIDEBOARD_API_RESPONSE track_id=%lu sequence=%lu attempt=%d valid=%d "
                   "uncertain=%d accepted_uncertain=%d maneuver=%s confidence=%.3f "
+                  "confidence_level=%s "
                   "corrected_text=%s "
                   "latency_ms=%.1f http_status=%d error=%s",
                   static_cast<unsigned long>(task.track_id),
                   static_cast<unsigned long>(guideboard_sequence_), task.attempt,
                   task.result.valid, task.result.uncertain, task.result.accepted_uncertain,
                   task.result.maneuver.c_str(), task.result.confidence,
+                  task.result.high_confidence ? "high" : "low",
                   task.result.corrected_text.c_str(),
                   task.result.latency_ms, task.result.http_status, task.result.error.c_str());
     }
@@ -2045,6 +2274,11 @@ class FusedPerceptionNode : public rclcpp::Node {
         api_fallback_ || guideboard_api_request_in_flight_) {
       return;
     }
+    if (enable_guideboard_reverse_reposition_) {
+      // Reposition mode owns the API trigger: stable text and the legacy
+      // two-OCR-after-stop rule must not bypass reverse completion.
+      return;
+    }
     const bool stable = guideboardTextStable();
     if (guideboard_stop_wait_active_) {
       if (guideboard_api_force_ocr_count_ >= guideboard_api_force_ocr_count_after_stop_) {
@@ -2067,11 +2301,13 @@ class FusedPerceptionNode : public rclcpp::Node {
 
     consumeGuideboardApiResult();
     consumeGuideboardOcrResult();
+    maybeFinalizeGuideboardReverseAfterOcr();
 
     const Detection* guideboard = selectGuideboardForOcr(detections, frame_rgb.rows);
     const double now = nowSeconds();
     if (guideboard == nullptr) {
-      if (has_guideboard_track_ && now - guideboard_last_seen_sec_ > 0.25) {
+      if (has_guideboard_track_ && now - guideboard_last_seen_sec_ > 0.25 &&
+          !guideboard_reverse_workflow_active_) {
         logGuideboardApiEvent("GUIDEBOARD_TRACK_LOST", "guideboard_missing_0.25s",
                               last_ocr_text_, last_ocr_score_, current_guideboard_maneuver_,
                               last_api_corrected_text_, current_guideboard_opposite_);
@@ -2087,10 +2323,32 @@ class FusedPerceptionNode : public rclcpp::Node {
       return;
     }
     updateGuideboardTrack(guideboard->bbox, now);
-    if (!guideboard_track_route_eligible_ && accept_guideboard_for_route_ &&
-        lane_decision_.branchEventArmed()) {
-      guideboard_track_route_eligible_ = true;
-      active_guideboard_branch_event_id_ = lane_decision_.branchEventId();
+    if (enable_guideboard_reverse_reposition_) {
+      guideboard_confirm_count_ = std::min(
+          guideboard_confirm_count_ + 1, guideboard_confirm_frames_);
+      if (!guideboard_track_route_eligible_ && accept_guideboard_for_route_ &&
+          lane_decision_.branchEventArmed() &&
+          guideboard_confirm_count_ >= guideboard_confirm_frames_) {
+        guideboard_track_route_eligible_ = true;
+        active_guideboard_branch_event_id_ = lane_decision_.branchEventId();
+        if (guideboard_route_policy_.recognitionRequired()) {
+          guideboard_reverse_workflow_active_ = true;
+          guideboard_reverse_request_pending_ = false;
+          guideboard_reverse_service_accepted_ = false;
+          guideboard_reverse_completed_ = false;
+          guideboard_reverse_faulted_ = false;
+          guideboard_api_ocr_history_.clear();
+          guideboard_api_force_ocr_count_ = 0;
+          lane_decision_.setGuideboardDecisionPending(true);
+          logGuideboardApiEvent(
+              "GUIDEBOARD_CONFIRMED", "confirmed_frames", last_ocr_text_,
+              last_ocr_score_, current_guideboard_maneuver_, "", false);
+        }
+      }
+    } else if (!guideboard_track_route_eligible_ && accept_guideboard_for_route_ &&
+               lane_decision_.branchEventArmed()) {
+        guideboard_track_route_eligible_ = true;
+        active_guideboard_branch_event_id_ = lane_decision_.branchEventId();
     }
     last_guideboard_height_ratio_ =
         frame_rgb.rows > 0 ? static_cast<double>(guideboard->bbox.height) / frame_rgb.rows : 0.0;
@@ -2108,6 +2366,7 @@ class FusedPerceptionNode : public rclcpp::Node {
 
     if (!guideboard_track_route_eligible_ ||
         !guideboard_route_policy_.recognitionRequired() ||
+        guideboard_reverse_completed_ || guideboard_reverse_faulted_ ||
         guideboard_api_request_in_flight_ || guideboard_ocr_future_.valid()) {
       return;
     }
@@ -2202,6 +2461,15 @@ class FusedPerceptionNode : public rclcpp::Node {
     // configurable pair above remains dedicated to the Human obstacle state.
     guideboard_start_client_ = create_client<std_srvs::srv::Trigger>(guideboard_start_service_);
     guideboard_stop_client_ = create_client<std_srvs::srv::Trigger>(guideboard_stop_service_);
+    guideboard_reverse_client_ =
+        create_client<std_srvs::srv::Trigger>(guideboard_reverse_service_);
+    rclcpp::QoS reverse_state_qos(1);
+    reverse_state_qos.reliable().transient_local();
+    guideboard_reverse_state_sub_ = create_subscription<std_msgs::msg::String>(
+        guideboard_reverse_state_topic_, reverse_state_qos,
+        [this](const std_msgs::msg::String::SharedPtr msg) {
+          handleGuideboardReverseState(msg->data);
+        });
     encoder_count_sub_ = create_subscription<std_msgs::msg::Int64>(
       encoder_count_topic_, rclcpp::QoS(10).reliable(),
       [this](const std_msgs::msg::Int64::SharedPtr msg) {
@@ -2596,7 +2864,10 @@ class FusedPerceptionNode : public rclcpp::Node {
 
     std_msgs::msg::String lane_debug_msg;
     lane_debug_msg.data = laneDebugToJson(
-        lane_debug, seg_input_width_, finish_turn_service_action_);
+        lane_debug, seg_input_width_, finish_turn_service_action_,
+        guideboard_reverse_phase_, guideboard_reverse_reason_,
+        guideboard_reverse_workflow_active_, guideboard_confirm_count_,
+        guideboard_confirm_frames_, guideboard_invalid_event_);
     lane_debug_pub_->publish(lane_debug_msg);
 
     std_msgs::msg::UInt64 signature_msg;
@@ -3385,8 +3656,10 @@ class FusedPerceptionNode : public rclcpp::Node {
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr finish_turn_client_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr guideboard_start_client_;
   rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr guideboard_stop_client_;
+  rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr guideboard_reverse_client_;
   rclcpp::Subscription<std_msgs::msg::Int64>::SharedPtr encoder_count_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr steering_command_sub_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr guideboard_reverse_state_sub_;
 
   bool human_stop_desired_{false};
   bool human_service_stop_active_{false};
@@ -3438,11 +3711,17 @@ class FusedPerceptionNode : public rclcpp::Node {
   bool enable_guideboard_ocr_{true};
   bool guideboard_ocr_ready_{false};
   bool enable_guideboard_api_{true};
+  bool enable_guideboard_reverse_reposition_{true};
+  int guideboard_confirm_frames_{3};
+  std::string guideboard_reverse_service_{"/line_follower/guideboard_reverse"};
+  std::string guideboard_reverse_state_topic_{
+      "/line_follower/guideboard_reverse_state"};
+  int guideboard_reverse_api_max_samples_{8};
   std::string guideboard_api_url_{"https://qianfan.baidubce.com/v2/chat/completions"};
   std::string guideboard_api_model_{"qwen3.5-35b-a3b"};
   std::string api_key_;
-  double guideboard_api_timeout_sec_{1.8};
-  double guideboard_api_uncertain_min_confidence_{0.75};
+  double guideboard_api_timeout_sec_{5.0};
+  double guideboard_api_uncertain_min_confidence_{0.50};
   int guideboard_api_text_history_size_{3};
   double guideboard_api_text_similarity_{0.70};
   int guideboard_api_force_ocr_count_after_stop_{2};
@@ -3480,6 +3759,7 @@ class FusedPerceptionNode : public rclcpp::Node {
   float last_api_confidence_{0.0f};
   bool last_api_uncertain_{false};
   bool last_api_accepted_uncertain_{false};
+  bool last_api_high_confidence_{false};
   std::string last_api_corrected_text_;
   int ocr_task_crop_width_{0};
   int ocr_task_crop_height_{0};
@@ -3497,6 +3777,16 @@ class FusedPerceptionNode : public rclcpp::Node {
   bool current_guideboard_opposite_{false};
   double last_guideboard_height_ratio_{0.0};
   int guideboard_api_force_ocr_count_{0};
+  int guideboard_confirm_count_{0};
+  bool guideboard_reverse_workflow_active_{false};
+  bool guideboard_reverse_request_pending_{false};
+  bool guideboard_reverse_service_accepted_{false};
+  bool guideboard_reverse_completed_{false};
+  bool guideboard_reverse_faulted_{false};
+  std::string guideboard_reverse_phase_{"IDLE"};
+  std::string guideboard_reverse_reason_{"idle"};
+  bool guideboard_invalid_event_{false};
+  uint64_t guideboard_invalid_branch_event_id_{0};
   bool guideboard_stop_wait_active_{false};
   bool guideboard_stop_active_{false};
   bool guideboard_stop_call_pending_{false};

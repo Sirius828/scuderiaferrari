@@ -237,6 +237,19 @@ test_finish_turn_state/fast:
 .PHONY : test_finish_turn_state/fast
 
 #=============================================================================
+# Target rules for targets named test_guideboard_reverse_state
+
+# Build rule for target.
+test_guideboard_reverse_state: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_guideboard_reverse_state
+.PHONY : test_guideboard_reverse_state
+
+# fast build rule for target.
+test_guideboard_reverse_state/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_reverse_state.dir/build.make CMakeFiles/test_guideboard_reverse_state.dir/build
+.PHONY : test_guideboard_reverse_state/fast
+
+#=============================================================================
 # Target rules for targets named gtest
 
 # Build rule for target.
@@ -358,6 +371,30 @@ test/test_finish_turn_state.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_finish_turn_state.dir/build.make CMakeFiles/test_finish_turn_state.dir/test/test_finish_turn_state.cpp.s
 .PHONY : test/test_finish_turn_state.cpp.s
 
+test/test_guideboard_reverse_state.o: test/test_guideboard_reverse_state.cpp.o
+.PHONY : test/test_guideboard_reverse_state.o
+
+# target to build an object file
+test/test_guideboard_reverse_state.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_reverse_state.dir/build.make CMakeFiles/test_guideboard_reverse_state.dir/test/test_guideboard_reverse_state.cpp.o
+.PHONY : test/test_guideboard_reverse_state.cpp.o
+
+test/test_guideboard_reverse_state.i: test/test_guideboard_reverse_state.cpp.i
+.PHONY : test/test_guideboard_reverse_state.i
+
+# target to preprocess a source file
+test/test_guideboard_reverse_state.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_reverse_state.dir/build.make CMakeFiles/test_guideboard_reverse_state.dir/test/test_guideboard_reverse_state.cpp.i
+.PHONY : test/test_guideboard_reverse_state.cpp.i
+
+test/test_guideboard_reverse_state.s: test/test_guideboard_reverse_state.cpp.s
+.PHONY : test/test_guideboard_reverse_state.s
+
+# target to generate assembly for a file
+test/test_guideboard_reverse_state.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_guideboard_reverse_state.dir/build.make CMakeFiles/test_guideboard_reverse_state.dir/test/test_guideboard_reverse_state.cpp.s
+.PHONY : test/test_guideboard_reverse_state.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -378,6 +415,7 @@ help:
 	@echo "... gtest_main"
 	@echo "... test_control_core"
 	@echo "... test_finish_turn_state"
+	@echo "... test_guideboard_reverse_state"
 	@echo "... src/control_core.o"
 	@echo "... src/control_core.i"
 	@echo "... src/control_core.s"
@@ -390,6 +428,9 @@ help:
 	@echo "... test/test_finish_turn_state.o"
 	@echo "... test/test_finish_turn_state.i"
 	@echo "... test/test_finish_turn_state.s"
+	@echo "... test/test_guideboard_reverse_state.o"
+	@echo "... test/test_guideboard_reverse_state.i"
+	@echo "... test/test_guideboard_reverse_state.s"
 .PHONY : help
 
 

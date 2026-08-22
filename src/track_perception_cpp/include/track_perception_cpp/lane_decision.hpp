@@ -347,6 +347,9 @@ class LaneDecision {
   void configure(const LaneDecisionConfig& config);
   void setGuideboardBranchHint(const std::string& branch, bool valid,
                                const std::string& decision_source = "guideboard_hint");
+  void setGuideboardDecisionPending(bool pending) {
+    guideboard_decision_pending_ = pending;
+  }
   void setEncoderCount(int64_t count, double timestamp);
   void setSteeringCommand(double steering_ratio, double timestamp);
   void setHeadingWeights(double near_weight, double mid_weight, double far_weight);
@@ -480,6 +483,7 @@ class LaneDecision {
   std::string guideboard_branch_hint_source_{"guideboard_hint"};
   bool guideboard_branch_hint_valid_{false};
   double guideboard_hint_wait_start_sec_{0.0};
+  bool guideboard_decision_pending_{false};
   double lock_start_time_{0.0};
   int branch_confirm_count_{0};
   bool guideboard_seen_latched_{false};

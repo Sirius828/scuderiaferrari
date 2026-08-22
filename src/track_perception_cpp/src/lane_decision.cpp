@@ -585,6 +585,7 @@ LaneState LaneDecision::decide(const cv::Mat& seg_map_in, const std::vector<Dete
                                              ? std::max(0.0, current_time - guideboard_hint_wait_start_sec_)
                                              : 0.0;
         const bool hint_wait_timed_out = waiting_for_hint &&
+                                         !guideboard_decision_pending_ &&
                                          hint_wait_elapsed >= cfg_.guideboard_hint_wait_timeout_sec;
         debug_info_.guideboard_waiting_for_hint = waiting_for_hint && !hint_wait_timed_out;
         debug_info_.guideboard_hint_wait_elapsed = hint_wait_elapsed;

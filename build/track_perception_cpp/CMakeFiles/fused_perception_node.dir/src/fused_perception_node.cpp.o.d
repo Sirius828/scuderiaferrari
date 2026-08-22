@@ -822,6 +822,25 @@ CMakeFiles/fused_perception_node.dir/src/fused_perception_node.cpp.o: \
  /usr/include/opencv4/opencv2/video.hpp \
  /usr/include/opencv4/opencv2/video/tracking.hpp \
  /usr/include/opencv4/opencv2/video/background_segm.hpp \
+ /usr/include/rapidjson/document.h /usr/include/rapidjson/reader.h \
+ /usr/include/rapidjson/allocators.h /usr/include/rapidjson/rapidjson.h \
+ /usr/include/inttypes.h /usr/include/rapidjson/stream.h \
+ /usr/include/rapidjson/encodings.h \
+ /usr/include/rapidjson/encodedstream.h \
+ /usr/include/rapidjson/memorystream.h \
+ /usr/include/rapidjson/internal/meta.h \
+ /usr/include/rapidjson/rapidjson.h \
+ /usr/include/rapidjson/internal/stack.h \
+ /usr/include/rapidjson/allocators.h \
+ /usr/include/rapidjson/internal/swap.h \
+ /usr/include/rapidjson/internal/strtod.h \
+ /usr/include/rapidjson/internal/ieee754.h \
+ /usr/include/rapidjson/internal/biginteger.h \
+ /usr/include/rapidjson/internal/diyfp.h \
+ /usr/include/rapidjson/internal/pow10.h \
+ /usr/include/rapidjson/error/error.h /usr/include/rapidjson/rapidjson.h \
+ /usr/include/rapidjson/internal/strfunc.h \
+ /usr/include/rapidjson/stream.h \
  /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/ppocr_direction_system.h \
  /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/ppocr/ppocr_system.h \
  /home/orangepi/scuderiaferrari/src/track_perception_cpp/third_party/rknn/include/rknn_api.h \

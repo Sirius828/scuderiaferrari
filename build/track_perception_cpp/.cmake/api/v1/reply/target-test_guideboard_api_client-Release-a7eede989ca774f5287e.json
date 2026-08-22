@@ -68,7 +68,7 @@
 			{
 				"command" : 4,
 				"file" : 2,
-				"line" : 105,
+				"line" : 106,
 				"parent" : 0
 			},
 			{
@@ -141,7 +141,8 @@
 			"sourceIndexes" : 
 			[
 				0,
-				1
+				1,
+				2
 			]
 		}
 	],
@@ -205,7 +206,8 @@
 			"sourceIndexes" : 
 			[
 				0,
-				1
+				1,
+				2
 			]
 		}
 	],
@@ -221,6 +223,12 @@
 			"backtrace" : 4,
 			"compileGroupIndex" : 0,
 			"path" : "src/guideboard_api_client.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 4,
+			"compileGroupIndex" : 0,
+			"path" : "src/guideboard_recognizer.cpp",
 			"sourceGroupIndex" : 0
 		}
 	],

@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites tests="5" failures="0" disabled="0" errors="0" time="0" timestamp="2026-08-22T00:51:31" name="AllTests">
-  <testsuite name="GuideboardApiClientTest" tests="5" failures="0" disabled="0" errors="0" time="0" timestamp="2026-08-22T00:51:31">
-    <testcase name="CertainDecisionIsAlwaysAccepted" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:31" classname="track_perception_cpp.GuideboardApiClientTest" />
-    <testcase name="HighConfidenceUncertainDecisionIsAccepted" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:31" classname="track_perception_cpp.GuideboardApiClientTest" />
-    <testcase name="LowConfidenceUncertainDecisionIsRejected" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:31" classname="track_perception_cpp.GuideboardApiClientTest" />
-    <testcase name="InvalidConfidenceIsRejectedForUncertainDecision" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:31" classname="track_perception_cpp.GuideboardApiClientTest" />
-    <testcase name="ThresholdIsClampedToUnitInterval" status="run" result="completed" time="0" timestamp="2026-08-22T00:51:31" classname="track_perception_cpp.GuideboardApiClientTest" />
+<testsuites tests="7" failures="0" disabled="0" errors="0" time="0" timestamp="2026-08-23T04:00:22" name="AllTests">
+  <testsuite name="GuideboardApiClientTest" tests="7" failures="0" disabled="0" errors="0" time="0" timestamp="2026-08-23T04:00:22">
+    <testcase name="CertainDecisionIsAlwaysAccepted" status="run" result="completed" time="0" timestamp="2026-08-23T04:00:22" classname="track_perception_cpp.GuideboardApiClientTest" />
+    <testcase name="HighConfidenceUncertainDecisionIsAccepted" status="run" result="completed" time="0" timestamp="2026-08-23T04:00:22" classname="track_perception_cpp.GuideboardApiClientTest" />
+    <testcase name="LowConfidenceUncertainDecisionIsAccepted" status="run" result="completed" time="0" timestamp="2026-08-23T04:00:22" classname="track_perception_cpp.GuideboardApiClientTest" />
+    <testcase name="InvalidConfidenceIsRejected" status="run" result="completed" time="0" timestamp="2026-08-23T04:00:22" classname="track_perception_cpp.GuideboardApiClientTest" />
+    <testcase name="ThresholdDoesNotControlAcceptance" status="run" result="completed" time="0" timestamp="2026-08-23T04:00:22" classname="track_perception_cpp.GuideboardApiClientTest" />
+    <testcase name="SelectsBestDiverseSamplesAndRestoresTimeOrder" status="run" result="completed" time="0" timestamp="2026-08-23T04:00:22" classname="track_perception_cpp.GuideboardApiClientTest" />
+    <testcase name="SampleSelectionHonorsMaximumWithoutCountGate" status="run" result="completed" time="0" timestamp="2026-08-23T04:00:22" classname="track_perception_cpp.GuideboardApiClientTest" />
   </testsuite>
 </testsuites>

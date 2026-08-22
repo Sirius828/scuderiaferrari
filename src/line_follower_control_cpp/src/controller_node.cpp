@@ -29,6 +29,7 @@
 #include "std_srvs/srv/trigger.hpp"
 
 #include "line_follower_control_cpp/finish_turn_state.hpp"
+#include "line_follower_control_cpp/guideboard_reverse_state.hpp"
 
 using namespace std::chrono_literals;
 
@@ -123,6 +124,14 @@ struct ControllerParameters
   double finish_turn_steering{-1.0};
   double finish_turn_timeout_sec{8.0};
   double finish_turn_encoder_max_age_sec{0.30};
+  int64_t guideboard_reverse_encoder_counts{1250};
+  double guideboard_reverse_speed_mps{0.40};
+  double guideboard_reverse_steering{0.0};
+  double guideboard_reverse_timeout_sec{3.0};
+  double guideboard_reverse_encoder_max_age_sec{0.30};
+  int64_t guideboard_reverse_encoder_jitter_counts{10};
+  int64_t guideboard_reverse_encoder_max_step_counts{500};
+  bool guideboard_reverse_require_single_encoder_publisher{true};
 };
 
 class LineFollowerControllerCpp : public rclcpp::Node
@@ -251,6 +260,26 @@ public:
     declare_parameter<double>("finish_turn_timeout_sec", params_.finish_turn_timeout_sec);
     declare_parameter<double>(
       "finish_turn_encoder_max_age_sec", params_.finish_turn_encoder_max_age_sec);
+    declare_parameter<int64_t>(
+      "guideboard_reverse_encoder_counts", params_.guideboard_reverse_encoder_counts);
+    declare_parameter<double>(
+      "guideboard_reverse_speed_mps", params_.guideboard_reverse_speed_mps);
+    declare_parameter<double>(
+      "guideboard_reverse_steering", params_.guideboard_reverse_steering);
+    declare_parameter<double>(
+      "guideboard_reverse_timeout_sec", params_.guideboard_reverse_timeout_sec);
+    declare_parameter<double>(
+      "guideboard_reverse_encoder_max_age_sec",
+      params_.guideboard_reverse_encoder_max_age_sec);
+    declare_parameter<int64_t>(
+      "guideboard_reverse_encoder_jitter_counts",
+      params_.guideboard_reverse_encoder_jitter_counts);
+    declare_parameter<int64_t>(
+      "guideboard_reverse_encoder_max_step_counts",
+      params_.guideboard_reverse_encoder_max_step_counts);
+    declare_parameter<bool>(
+      "guideboard_reverse_require_single_encoder_publisher",
+      params_.guideboard_reverse_require_single_encoder_publisher);
     declare_parameter<double>("steering_sign", 1.0);
     declare_parameter<double>("control_frequency", 50.0);
     declare_parameter<bool>("autonomous_enabled_on_start", false);
@@ -311,6 +340,10 @@ public:
     cmd_vel_publisher_ = create_publisher<geometry_msgs::msg::Twist>(cmd_vel_topic_, 10);
     chassis_enable_publisher_ = create_publisher<std_msgs::msg::Int8>("/chassis/enable", 10);
     debug_publisher_ = create_publisher<std_msgs::msg::String>("/line_follower/debug", 10);
+    rclcpp::QoS reverse_state_qos(1);
+    reverse_state_qos.reliable().transient_local();
+    guideboard_reverse_state_publisher_ = create_publisher<std_msgs::msg::String>(
+      "/line_follower/guideboard_reverse_state", reverse_state_qos);
 
     start_service_ = create_service<std_srvs::srv::Trigger>(
       "/line_follower/start",
@@ -336,6 +369,11 @@ public:
       "/line_follower/finish_turn",
       std::bind(
         &LineFollowerControllerCpp::finish_turn_service_callback, this,
+        std::placeholders::_1, std::placeholders::_2));
+    guideboard_reverse_service_ = create_service<std_srvs::srv::Trigger>(
+      "/line_follower/guideboard_reverse",
+      std::bind(
+        &LineFollowerControllerCpp::guideboard_reverse_service_callback, this,
         std::placeholders::_1, std::placeholders::_2));
     set_enabled_service_ = create_service<std_srvs::srv::SetBool>(
       "/line_follower/set_enabled",
@@ -363,6 +401,7 @@ public:
       "Controller starts disabled; use /line_follower/start or /line_follower/set_enabled true; "
       "line_loss_command_hold=%s",
       params_.enable_line_loss_command_hold ? "true" : "false");
+    publish_guideboard_reverse_state(std::chrono::steady_clock::now());
   }
 
   void publish_stop_commands(int count = 5)
@@ -385,6 +424,17 @@ private:
     config.target_encoder_counts = params_.finish_turn_encoder_counts;
     config.timeout_sec = params_.finish_turn_timeout_sec;
     config.encoder_max_age_sec = params_.finish_turn_encoder_max_age_sec;
+    return config;
+  }
+
+  line_follower_control_cpp::GuideboardReverseConfig guideboard_reverse_config() const
+  {
+    line_follower_control_cpp::GuideboardReverseConfig config;
+    config.target_encoder_counts = params_.guideboard_reverse_encoder_counts;
+    config.timeout_sec = params_.guideboard_reverse_timeout_sec;
+    config.encoder_max_age_sec = params_.guideboard_reverse_encoder_max_age_sec;
+    config.encoder_jitter_counts = params_.guideboard_reverse_encoder_jitter_counts;
+    config.encoder_max_step_counts = params_.guideboard_reverse_encoder_max_step_counts;
     return config;
   }
 
@@ -483,6 +533,22 @@ private:
     params_.finish_turn_timeout_sec = get_parameter("finish_turn_timeout_sec").as_double();
     params_.finish_turn_encoder_max_age_sec =
       get_parameter("finish_turn_encoder_max_age_sec").as_double();
+    params_.guideboard_reverse_encoder_counts =
+      get_parameter("guideboard_reverse_encoder_counts").as_int();
+    params_.guideboard_reverse_speed_mps =
+      get_parameter("guideboard_reverse_speed_mps").as_double();
+    params_.guideboard_reverse_steering =
+      get_parameter("guideboard_reverse_steering").as_double();
+    params_.guideboard_reverse_timeout_sec =
+      get_parameter("guideboard_reverse_timeout_sec").as_double();
+    params_.guideboard_reverse_encoder_max_age_sec =
+      get_parameter("guideboard_reverse_encoder_max_age_sec").as_double();
+    params_.guideboard_reverse_encoder_jitter_counts =
+      get_parameter("guideboard_reverse_encoder_jitter_counts").as_int();
+    params_.guideboard_reverse_encoder_max_step_counts =
+      get_parameter("guideboard_reverse_encoder_max_step_counts").as_int();
+    params_.guideboard_reverse_require_single_encoder_publisher =
+      get_parameter("guideboard_reverse_require_single_encoder_publisher").as_bool();
     steering_sign_ = get_parameter("steering_sign").as_double();
     control_frequency_ = get_parameter("control_frequency").as_double();
     autonomous_enabled_on_start_ = get_parameter("autonomous_enabled_on_start").as_bool();
@@ -861,6 +927,39 @@ private:
     {
       return fail("finish_turn_encoder_max_age_sec must be finite and > 0");
     }
+    if (parameters.guideboard_reverse_encoder_counts <= 0) {
+      return fail("guideboard_reverse_encoder_counts must be > 0");
+    }
+    if (!std::isfinite(parameters.guideboard_reverse_speed_mps) ||
+      parameters.guideboard_reverse_speed_mps <= 0.0)
+    {
+      return fail("guideboard_reverse_speed_mps must be finite and > 0");
+    }
+    if (!std::isfinite(parameters.guideboard_reverse_steering) ||
+      parameters.guideboard_reverse_steering < -1.0 ||
+      parameters.guideboard_reverse_steering > 1.0)
+    {
+      return fail("guideboard_reverse_steering must be in [-1, 1]");
+    }
+    if (!std::isfinite(parameters.guideboard_reverse_timeout_sec) ||
+      parameters.guideboard_reverse_timeout_sec <= 0.0)
+    {
+      return fail("guideboard_reverse_timeout_sec must be finite and > 0");
+    }
+    if (!std::isfinite(parameters.guideboard_reverse_encoder_max_age_sec) ||
+      parameters.guideboard_reverse_encoder_max_age_sec <= 0.0)
+    {
+      return fail("guideboard_reverse_encoder_max_age_sec must be finite and > 0");
+    }
+    if (parameters.guideboard_reverse_encoder_jitter_counts < 0) {
+      return fail("guideboard_reverse_encoder_jitter_counts must be >= 0");
+    }
+    if (parameters.guideboard_reverse_encoder_max_step_counts <=
+      parameters.guideboard_reverse_encoder_jitter_counts)
+    {
+      return fail(
+        "guideboard_reverse_encoder_max_step_counts must be greater than jitter counts");
+    }
     return true;
   }
 
@@ -898,6 +997,13 @@ private:
       {
         return parameter_result(
           false, name + " cannot change while the finish turn is active");
+      }
+      if (guideboard_reverse_state_.active() &&
+        name.compare(
+          0, std::string("guideboard_reverse_").size(), "guideboard_reverse_") == 0)
+      {
+        return parameter_result(
+          false, name + " cannot change while guideboard reverse is active");
       }
       if (name == "control_frequency" || name == "offset_y07_topic" ||
         name == "offset_y08_topic" || name == "offset_y09_topic" ||
@@ -1068,6 +1174,22 @@ private:
         pending.finish_turn_timeout_sec = parameter.as_double();
       } else if (name == "finish_turn_encoder_max_age_sec") {
         pending.finish_turn_encoder_max_age_sec = parameter.as_double();
+      } else if (name == "guideboard_reverse_encoder_counts") {
+        pending.guideboard_reverse_encoder_counts = parameter.as_int();
+      } else if (name == "guideboard_reverse_speed_mps") {
+        pending.guideboard_reverse_speed_mps = parameter.as_double();
+      } else if (name == "guideboard_reverse_steering") {
+        pending.guideboard_reverse_steering = parameter.as_double();
+      } else if (name == "guideboard_reverse_timeout_sec") {
+        pending.guideboard_reverse_timeout_sec = parameter.as_double();
+      } else if (name == "guideboard_reverse_encoder_max_age_sec") {
+        pending.guideboard_reverse_encoder_max_age_sec = parameter.as_double();
+      } else if (name == "guideboard_reverse_encoder_jitter_counts") {
+        pending.guideboard_reverse_encoder_jitter_counts = parameter.as_int();
+      } else if (name == "guideboard_reverse_encoder_max_step_counts") {
+        pending.guideboard_reverse_encoder_max_step_counts = parameter.as_int();
+      } else if (name == "guideboard_reverse_require_single_encoder_publisher") {
+        pending.guideboard_reverse_require_single_encoder_publisher = parameter.as_bool();
       } else if (name == "steering_sign") {
         pending_steering_sign = parameter.as_double();
       }
@@ -1189,14 +1311,16 @@ private:
     emergency_stop_active_ = msg->data;
     if (emergency_stop_active_) {
       finish_turn_state_.cancel("emergency_stop");
+      guideboard_reverse_state_.cancel("emergency_stop");
       lock_and_stop("emergency_stop");
     }
   }
 
   void finish_turn_encoder_callback(const std_msgs::msg::Int64::SharedPtr msg)
   {
-    finish_turn_state_.set_encoder_count(
-      msg->data, steady_seconds(std::chrono::steady_clock::now()));
+    const double now_sec = steady_seconds(std::chrono::steady_clock::now());
+    finish_turn_state_.set_encoder_count(msg->data, now_sec);
+    guideboard_reverse_state_.set_encoder_count(msg->data, now_sec);
   }
 
   void lane_state_callback(const std_msgs::msg::String::SharedPtr msg)
@@ -1376,6 +1500,23 @@ private:
       // or faulted finish maneuver.
       finish_turn_state_.reset();
     }
+    if (guideboard_reverse_state_.active()) {
+      if (reason) {
+        *reason = "guideboard reverse is active";
+      }
+      return false;
+    }
+    if (guideboard_reverse_state_.terminal()) {
+      if (obstacle_resume) {
+        if (reason) {
+          *reason = "guideboard reverse is latched; automatic resume is disabled";
+        }
+        publish_stop_state();
+        return false;
+      }
+      guideboard_reverse_state_.reset();
+      publish_guideboard_reverse_state(std::chrono::steady_clock::now());
+    }
     if (obstacle_hold_active_ && !obstacle_resume) {
       if (reason) {
         *reason = "obstacle hold is active";
@@ -1516,6 +1657,7 @@ private:
       cancel_geometry_stall_resume();
     }
     finish_turn_state_.cancel(reason);
+    guideboard_reverse_state_.cancel(reason);
     if (!auto_enabled_ && safety_locked_ && stop_reason_ == reason) {
       publish_stop_state();
       return;
@@ -1542,6 +1684,7 @@ private:
     obstacle_resume_command_valid_ = false;
     cancel_geometry_stall_resume();
     finish_turn_state_.cancel("service_stop");
+    guideboard_reverse_state_.cancel("service_stop");
     disable_control("service_stop", false);
     response->success = true;
     response->message = "line following stopped; chassis disabled";
@@ -1563,6 +1706,19 @@ private:
       response->success = true;
       response->message = "finish turn cancelled by obstacle pause; controller remains stopped";
       RCLCPP_WARN(get_logger(), "Finish turn cancelled by obstacle pause");
+      return;
+    }
+    if (guideboard_reverse_state_.active()) {
+      guideboard_reverse_state_.cancel("obstacle_pause");
+      obstacle_hold_active_ = true;
+      obstacle_resume_armed_ = false;
+      obstacle_resume_command_valid_ = false;
+      disable_control("obstacle_pause", false);
+      publish_guideboard_reverse_state(std::chrono::steady_clock::now());
+      response->success = true;
+      response->message =
+        "guideboard reverse cancelled by obstacle pause; controller remains stopped";
+      RCLCPP_WARN(get_logger(), "Guideboard reverse cancelled by obstacle pause");
       return;
     }
     if (obstacle_hold_active_) {
@@ -1648,6 +1804,14 @@ private:
     const std::shared_ptr<std_srvs::srv::Trigger::Request>,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response)
   {
+    if (guideboard_reverse_state_.phase() !=
+      line_follower_control_cpp::GuideboardReversePhase::Idle)
+    {
+      publish_stop_state();
+      response->success = false;
+      response->message = "finish turn rejected: guideboard reverse is active or latched";
+      return;
+    }
     if (emergency_stop_active_) {
       publish_stop_state();
       response->success = false;
@@ -1699,6 +1863,98 @@ private:
       params_.finish_turn_timeout_sec);
   }
 
+  bool guideboard_reverse_encoder_publisher_ready(std::string * reason) const
+  {
+    if (!params_.guideboard_reverse_require_single_encoder_publisher) {
+      return true;
+    }
+    const size_t publisher_count = count_publishers(finish_turn_encoder_topic_);
+    if (publisher_count == 1) {
+      return true;
+    }
+    if (reason) {
+      *reason = "expected exactly one encoder publisher, found " +
+        std::to_string(publisher_count);
+    }
+    return false;
+  }
+
+  void guideboard_reverse_service_callback(
+    const std::shared_ptr<std_srvs::srv::Trigger::Request>,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+  {
+    if (emergency_stop_active_) {
+      publish_stop_state();
+      response->success = false;
+      response->message = "guideboard reverse rejected: emergency stop is active";
+      return;
+    }
+    if (obstacle_hold_active_) {
+      publish_stop_state();
+      response->success = false;
+      response->message = "guideboard reverse rejected: obstacle hold is active";
+      return;
+    }
+    if (finish_turn_state_.phase() != line_follower_control_cpp::FinishTurnPhase::Idle) {
+      publish_stop_state();
+      response->success = false;
+      response->message = "guideboard reverse rejected: finish turn is active or latched";
+      return;
+    }
+    if (safety_locked_ && !guideboard_reverse_state_.active()) {
+      publish_stop_state();
+      response->success = false;
+      response->message = "guideboard reverse rejected: controller safety lock is active";
+      return;
+    }
+
+    std::string reason;
+    if (!guideboard_reverse_encoder_publisher_ready(&reason)) {
+      guideboard_reverse_state_.latch_fault("encoder_publisher_count_invalid");
+      disable_control("encoder_publisher_count_invalid", true);
+      publish_guideboard_reverse_state(std::chrono::steady_clock::now());
+      response->success = false;
+      response->message = "guideboard reverse rejected: " + reason;
+      return;
+    }
+
+    const bool was_active = guideboard_reverse_state_.active();
+    response->success = guideboard_reverse_state_.start(
+      guideboard_reverse_config(), steady_seconds(std::chrono::steady_clock::now()), &reason);
+    response->message = reason;
+    if (!response->success) {
+      guideboard_reverse_state_.latch_fault(reason);
+      disable_control("guideboard_reverse_start_rejected", true);
+    }
+    publish_guideboard_reverse_state(std::chrono::steady_clock::now());
+    if (!response->success || was_active ||
+      guideboard_reverse_state_.phase() ==
+      line_follower_control_cpp::GuideboardReversePhase::Complete)
+    {
+      return;
+    }
+
+    auto_enabled_ = false;
+    auto_start_pending_ = false;
+    safety_locked_ = false;
+    obstacle_resume_armed_ = false;
+    obstacle_resume_command_valid_ = false;
+    cancel_geometry_stall_resume();
+    invalid_since_.reset();
+    current_speed_mps_ = -params_.guideboard_reverse_speed_mps;
+    current_steering_ = params_.guideboard_reverse_steering;
+    stop_reason_ = "guideboard_reverse_reversing";
+    last_mode_ = "guideboard_reverse_reversing";
+    publish_chassis_enable(true);
+    publish_motion_command(current_speed_mps_, current_steering_);
+    RCLCPP_WARN(
+      get_logger(),
+      "GuideBoard reverse started: speed=-%.3fm/s steering=%.3f target=%ld timeout=%.2fs",
+      params_.guideboard_reverse_speed_mps, params_.guideboard_reverse_steering,
+      static_cast<long>(params_.guideboard_reverse_encoder_counts),
+      params_.guideboard_reverse_timeout_sec);
+  }
+
   void set_enabled_service_callback(
     const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
     std::shared_ptr<std_srvs::srv::SetBool::Response> response)
@@ -1715,6 +1971,7 @@ private:
     obstacle_resume_command_valid_ = false;
     cancel_geometry_stall_resume();
     finish_turn_state_.cancel("service_stop");
+    guideboard_reverse_state_.cancel("service_stop");
     disable_control("service_stop", false);
     response->success = true;
     response->message = "autonomous line following disabled; chassis disabled";
@@ -1729,8 +1986,47 @@ private:
 
     if (emergency_stop_active_) {
       finish_turn_state_.cancel("emergency_stop");
+      guideboard_reverse_state_.cancel("emergency_stop");
       lock_and_stop("emergency_stop");
       last_mode_ = "emergency_stop";
+      publish_debug(now);
+      previous_control_time_ = now;
+      return;
+    }
+
+    if (guideboard_reverse_state_.phase() !=
+      line_follower_control_cpp::GuideboardReversePhase::Idle)
+    {
+      if (guideboard_reverse_state_.active()) {
+        std::string publisher_reason;
+        if (!guideboard_reverse_encoder_publisher_ready(&publisher_reason)) {
+          guideboard_reverse_state_.cancel("encoder_publisher_count_invalid");
+        }
+      }
+      const auto reverse_snapshot = guideboard_reverse_state_.update(
+        guideboard_reverse_config(), steady_seconds(now));
+      if (reverse_snapshot.phase ==
+        line_follower_control_cpp::GuideboardReversePhase::Reversing)
+      {
+        current_speed_mps_ = -params_.guideboard_reverse_speed_mps;
+        current_steering_ = params_.guideboard_reverse_steering;
+        publish_chassis_enable(true);
+        publish_motion_command(current_speed_mps_, current_steering_);
+        last_mode_ = "guideboard_reverse_reversing";
+        stop_reason_ = "guideboard_reverse_reversing";
+      } else {
+        current_speed_mps_ = 0.0;
+        current_steering_ = 0.0;
+        auto_enabled_ = false;
+        safety_locked_ = reverse_snapshot.phase ==
+          line_follower_control_cpp::GuideboardReversePhase::Fault;
+        stop_reason_ = reverse_snapshot.reason;
+        last_mode_ = reverse_snapshot.phase ==
+          line_follower_control_cpp::GuideboardReversePhase::Complete ?
+          "guideboard_reverse_complete" : "guideboard_reverse_fault";
+        publish_stop_state();
+      }
+      publish_guideboard_reverse_state(now);
       publish_debug(now);
       previous_control_time_ = now;
       return;
@@ -2513,7 +2809,7 @@ private:
   void publish_motion_command(double speed_mps, double steering)
   {
     geometry_msgs::msg::Twist command;
-    command.linear.x = speed_to_wheel_rps(std::max(0.0, speed_mps));
+    command.linear.x = speed_to_wheel_rps(speed_mps);
     command.angular.z = std::clamp(steering, -1.0, 1.0);
     cmd_vel_publisher_->publish(command);
   }
@@ -2531,11 +2827,34 @@ private:
     publish_chassis_enable(false);
   }
 
+  void publish_guideboard_reverse_state(
+    const std::chrono::steady_clock::time_point & now)
+  {
+    const auto reverse = guideboard_reverse_state_.snapshot(steady_seconds(now));
+    std_msgs::msg::String message;
+    std::ostringstream text;
+    text << std::fixed << std::setprecision(3)
+         << "{\"phase\":\"" <<
+      line_follower_control_cpp::GuideboardReverseState::phase_name(reverse.phase) << "\""
+         << ",\"encoder_start_count\":" << reverse.encoder_start_count
+         << ",\"encoder_count\":" << reverse.encoder_count
+         << ",\"encoder_direction\":" << reverse.encoder_direction
+         << ",\"encoder_delta\":" << reverse.encoder_delta
+         << ",\"encoder_target\":" << reverse.encoder_target
+         << ",\"elapsed_sec\":" << reverse.elapsed_sec
+         << ",\"encoder_age_sec\":" << reverse.encoder_age_sec
+         << ",\"reason\":\"" << reverse.reason << "\"}";
+    message.data = text.str();
+    guideboard_reverse_state_publisher_->publish(message);
+  }
+
   void publish_debug(const std::chrono::steady_clock::time_point & now)
   {
     std_msgs::msg::String message;
     std::ostringstream text;
     const auto finish_turn = finish_turn_state_.snapshot(steady_seconds(now));
+    const auto guideboard_reverse =
+      guideboard_reverse_state_.snapshot(steady_seconds(now));
     const double raw_control_error = compute_control_error();
     const double control_error = auto_enabled_ ? limited_control_error_ : raw_control_error;
     const double curve_outer_bias = compute_curve_outer_bias();
@@ -2648,6 +2967,16 @@ private:
          << " finish_turn_elapsed=" << finish_turn.elapsed_sec
          << " finish_turn_encoder_age=" << finish_turn.encoder_age_sec
          << " finish_turn_reason=" << finish_turn.reason
+         << " guideboard_reverse_state=" <<
+      line_follower_control_cpp::GuideboardReverseState::phase_name(guideboard_reverse.phase)
+         << " guideboard_reverse_start_count=" << guideboard_reverse.encoder_start_count
+         << " guideboard_reverse_encoder_count=" << guideboard_reverse.encoder_count
+         << " guideboard_reverse_direction=" << guideboard_reverse.encoder_direction
+         << " guideboard_reverse_encoder_delta=" << guideboard_reverse.encoder_delta
+         << " guideboard_reverse_encoder_target=" << guideboard_reverse.encoder_target
+         << " guideboard_reverse_elapsed=" << guideboard_reverse.elapsed_sec
+         << " guideboard_reverse_encoder_age=" << guideboard_reverse.encoder_age_sec
+         << " guideboard_reverse_reason=" << guideboard_reverse.reason
          << " stop_reason=" << stop_reason_;
     message.data = text.str();
     debug_publisher_->publish(message);
@@ -2678,6 +3007,7 @@ private:
   std::string finish_turn_encoder_topic_{"/chassis/encoder_count"};
 
   line_follower_control_cpp::FinishTurnState finish_turn_state_;
+  line_follower_control_cpp::GuideboardReverseState guideboard_reverse_state_;
 
   bool auto_enabled_{false};
   bool safety_locked_{false};
@@ -2754,11 +3084,13 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
   rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr chassis_enable_publisher_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr debug_publisher_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr guideboard_reverse_state_publisher_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_service_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_service_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr obstacle_pause_service_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr obstacle_resume_service_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr finish_turn_service_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr guideboard_reverse_service_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr set_enabled_service_;
   rclcpp::TimerBase::SharedPtr control_timer_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;

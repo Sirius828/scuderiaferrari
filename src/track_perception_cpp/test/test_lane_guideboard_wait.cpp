@@ -80,6 +80,27 @@ TEST(LaneGuideboardWaitTest, StableHintLocksImmediately) {
   EXPECT_EQ(decision.debugInfo().encoder_hold_target, 20000);
 }
 
+TEST(LaneGuideboardWaitTest, ExplicitPendingHoldDisablesHintTimeout) {
+  LaneDecision decision;
+  decision.configure(makeConfig());
+  decision.setGuideboardBranchHint("", false);
+  decision.setGuideboardDecisionPending(true);
+
+  auto first = decision.decide(branchMask(), guideboardDetection());
+  ASSERT_TRUE(decision.debugInfo().guideboard_waiting_for_hint);
+  ASSERT_TRUE(first.branch_side.empty());
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(30));
+  auto still_waiting = decision.decide(branchMask(), guideboardDetection());
+  EXPECT_TRUE(decision.debugInfo().guideboard_waiting_for_hint);
+  EXPECT_TRUE(still_waiting.branch_side.empty());
+
+  decision.setGuideboardDecisionPending(false);
+  auto released = decision.decide(branchMask(), guideboardDetection());
+  EXPECT_FALSE(decision.debugInfo().guideboard_waiting_for_hint);
+  EXPECT_EQ(released.branch_side, "left");
+}
+
 TEST(LaneGuideboardWaitTest, NoGuideboardLocksStraightWithoutHintWait) {
   LaneDecision decision;
   decision.configure(makeConfig());
