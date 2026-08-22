@@ -1849,24 +1849,31 @@ class FusedPerceptionNode : public rclcpp::Node {
       return;
     }
 
-    if (guideboard_reverse_phase_ == "REVERSING") {
+    if (guideboard_reverse_phase_ == "SETTLING" ||
+        guideboard_reverse_phase_ == "REVERSING") {
       guideboard_reverse_service_accepted_ = true;
       guideboard_stop_active_ = true;
     } else if (guideboard_reverse_phase_ == "COMPLETE") {
+      const bool first_complete = !guideboard_reverse_completed_;
       guideboard_reverse_service_accepted_ = true;
       guideboard_reverse_completed_ = true;
       guideboard_stop_active_ = true;
-      logGuideboardApiEvent(
-          "GUIDEBOARD_REVERSE_COMPLETE", guideboard_reverse_reason_, last_ocr_text_,
-          last_ocr_score_, current_guideboard_maneuver_, "", false);
+      if (first_complete) {
+        logGuideboardApiEvent(
+            "GUIDEBOARD_REVERSE_COMPLETE", guideboard_reverse_reason_, last_ocr_text_,
+            last_ocr_score_, current_guideboard_maneuver_, "", false);
+      }
       maybeFinalizeGuideboardReverseAfterOcr();
     } else if (guideboard_reverse_phase_ == "FAULT") {
+      const bool first_fault = !guideboard_reverse_faulted_;
       guideboard_reverse_faulted_ = true;
       guideboard_stop_active_ = true;
       lane_decision_.setGuideboardDecisionPending(true);
-      logGuideboardApiEvent(
-          "GUIDEBOARD_REVERSE_FAULT", guideboard_reverse_reason_, last_ocr_text_,
-          last_ocr_score_, current_guideboard_maneuver_, "", false);
+      if (first_fault) {
+        logGuideboardApiEvent(
+            "GUIDEBOARD_REVERSE_FAULT", guideboard_reverse_reason_, last_ocr_text_,
+            last_ocr_score_, current_guideboard_maneuver_, "", false);
+      }
     } else if (guideboard_reverse_phase_ == "IDLE" && guideboard_reverse_faulted_) {
       // IDLE after a latched fault can only be produced by the operator's
       // explicit /line_follower/start reset.  The failed sign is ignored and

@@ -1,4 +1,4 @@
-test_control_core 12 0.0282817
-test_finish_turn_state 3 0.077223
-test_guideboard_reverse_state 2 0.129468
+test_control_core 13 0.0176057
+test_finish_turn_state 4 0.0485058
+test_guideboard_reverse_state 3 0.0533456
 ---

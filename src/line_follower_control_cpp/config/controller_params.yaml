@@ -68,6 +68,9 @@
     guideboard_reverse_encoder_max_age_sec: 0.30
     guideboard_reverse_encoder_jitter_counts: 10
     guideboard_reverse_encoder_max_step_counts: 500
+    # 达到 GuideBoard 高度阈值后先停车；满足最短时间且编码器连续稳定后才开始倒车。
+    guideboard_reverse_settle_min_sec: 0.25
+    guideboard_reverse_settle_stable_samples: 3
     guideboard_reverse_require_single_encoder_publisher: true
     far_offset_speed_weight: 0.0
     geometry_stall_recovery_time: 0.5

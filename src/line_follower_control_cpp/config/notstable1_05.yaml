@@ -60,6 +60,8 @@
     guideboard_reverse_encoder_max_age_sec: 0.30
     guideboard_reverse_encoder_jitter_counts: 10
     guideboard_reverse_encoder_max_step_counts: 500
+    guideboard_reverse_settle_min_sec: 0.25
+    guideboard_reverse_settle_stable_samples: 3
     guideboard_reverse_require_single_encoder_publisher: true
     lane_state_topic: /perception/lane_state
     linear_speed: 1.2

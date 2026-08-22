@@ -6,9 +6,9 @@ Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
 [----------] Global test environment set-up.
 [----------] 8 tests from LaneGuideboardWaitTest
 [ RUN      ] LaneGuideboardWaitTest.WaitsForHintThenFallsBackStraight
-[       OK ] LaneGuideboardWaitTest.WaitsForHintThenFallsBackStraight (33 ms)
+[       OK ] LaneGuideboardWaitTest.WaitsForHintThenFallsBackStraight (30 ms)
 [ RUN      ] LaneGuideboardWaitTest.StableHintLocksImmediately
-[       OK ] LaneGuideboardWaitTest.StableHintLocksImmediately (1 ms)
+[       OK ] LaneGuideboardWaitTest.StableHintLocksImmediately (0 ms)
 [ RUN      ] LaneGuideboardWaitTest.ExplicitPendingHoldDisablesHintTimeout
 [       OK ] LaneGuideboardWaitTest.ExplicitPendingHoldDisablesHintTimeout (30 ms)
 [ RUN      ] LaneGuideboardWaitTest.NoGuideboardLocksStraightWithoutHintWait
@@ -21,10 +21,10 @@ Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
 [       OK ] LaneGuideboardWaitTest.RearmsOnlyAfterHoldEndsAndBranchClears (1 ms)
 [ RUN      ] LaneGuideboardWaitTest.ExtendsEncoderHoldWhileBranchRemainsDetected
 [       OK ] LaneGuideboardWaitTest.ExtendsEncoderHoldWhileBranchRemainsDetected (0 ms)
-[----------] 8 tests from LaneGuideboardWaitTest (65 ms total)
+[----------] 8 tests from LaneGuideboardWaitTest (61 ms total)
 
 [----------] Global test environment tear-down
-[==========] 8 tests from 1 test suite ran. (66 ms total)
+[==========] 8 tests from 1 test suite ran. (62 ms total)
 [  PASSED  ] 8 tests.
 
 

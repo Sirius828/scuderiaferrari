@@ -2,26 +2,32 @@
  - /home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_guideboard_reverse_state --gtest_output=xml:/home/orangepi/scuderiaferrari/build/line_follower_control_cpp/test_results/line_follower_control_cpp/test_guideboard_reverse_state.gtest.xml
 
 Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
-[==========] Running 6 tests from 1 test suite.
+[==========] Running 9 tests from 1 test suite.
 [----------] Global test environment set-up.
-[----------] 6 tests from GuideboardReverseState
+[----------] 9 tests from GuideboardReverseState
 [ RUN      ] GuideboardReverseState.CompletesWithIncreasingEncoder
 [       OK ] GuideboardReverseState.CompletesWithIncreasingEncoder (0 ms)
 [ RUN      ] GuideboardReverseState.CompletesWithDecreasingEncoder
 [       OK ] GuideboardReverseState.CompletesWithDecreasingEncoder (0 ms)
-[ RUN      ] GuideboardReverseState.IgnoresJitterButRejectsDirectionReversal
-[       OK ] GuideboardReverseState.IgnoresJitterButRejectsDirectionReversal (0 ms)
+[ RUN      ] GuideboardReverseState.SettlesForwardResidualBeforeMeasuringReverse
+[       OK ] GuideboardReverseState.SettlesForwardResidualBeforeMeasuringReverse (0 ms)
+[ RUN      ] GuideboardReverseState.WaitsForMinimumTimeAndConsecutiveStableSamples
+[       OK ] GuideboardReverseState.WaitsForMinimumTimeAndConsecutiveStableSamples (0 ms)
+[ RUN      ] GuideboardReverseState.IgnoresJitterButRejectsDirectionReversalAfterSettling
+[       OK ] GuideboardReverseState.IgnoresJitterButRejectsDirectionReversalAfterSettling (0 ms)
 [ RUN      ] GuideboardReverseState.RejectsLargeStep
 [       OK ] GuideboardReverseState.RejectsLargeStep (0 ms)
 [ RUN      ] GuideboardReverseState.FaultsOnStaleEncoderAndTimeout
 [       OK ] GuideboardReverseState.FaultsOnStaleEncoderAndTimeout (0 ms)
 [ RUN      ] GuideboardReverseState.RejectsMissingOrStaleInitialEncoder
 [       OK ] GuideboardReverseState.RejectsMissingOrStaleInitialEncoder (0 ms)
-[----------] 6 tests from GuideboardReverseState (0 ms total)
+[ RUN      ] GuideboardReverseState.RejectsInvalidSettlingConfiguration
+[       OK ] GuideboardReverseState.RejectsInvalidSettlingConfiguration (0 ms)
+[----------] 9 tests from GuideboardReverseState (0 ms total)
 
 [----------] Global test environment tear-down
-[==========] 6 tests from 1 test suite ran. (0 ms total)
-[  PASSED  ] 6 tests.
+[==========] 9 tests from 1 test suite ran. (0 ms total)
+[  PASSED  ] 9 tests.
 
 
 -- run_test.py: return code 0

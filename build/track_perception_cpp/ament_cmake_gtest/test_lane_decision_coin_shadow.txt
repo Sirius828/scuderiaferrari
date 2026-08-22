@@ -10,15 +10,15 @@ Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
 [ RUN      ] LaneDecisionCoinShadowTest.ObstacleInApproachCorridorVetoesCoin
 [       OK ] LaneDecisionCoinShadowTest.ObstacleInApproachCorridorVetoesCoin (0 ms)
 [ RUN      ] LaneDecisionCoinShadowTest.GoldNeverChangesFittedGeometry
-[       OK ] LaneDecisionCoinShadowTest.GoldNeverChangesFittedGeometry (0 ms)
+[       OK ] LaneDecisionCoinShadowTest.GoldNeverChangesFittedGeometry (1 ms)
 [ RUN      ] LaneDecisionCoinShadowTest.ReportsNoFitWithoutChangingInvalidState
 [       OK ] LaneDecisionCoinShadowTest.ReportsNoFitWithoutChangingInvalidState (0 ms)
 [ RUN      ] LaneDecisionCoinShadowTest.FarWaitsAndNearCommitsWithoutDistanceEvaluation
-[       OK ] LaneDecisionCoinShadowTest.FarWaitsAndNearCommitsWithoutDistanceEvaluation (1 ms)
+[       OK ] LaneDecisionCoinShadowTest.FarWaitsAndNearCommitsWithoutDistanceEvaluation (0 ms)
 [ RUN      ] LaneDecisionCoinShadowTest.EqualAreaUsesEqualThresholdAtDifferentHeights
 [       OK ] LaneDecisionCoinShadowTest.EqualAreaUsesEqualThresholdAtDifferentHeights (0 ms)
 [ RUN      ] LaneDecisionCoinShadowTest.LargerCoinGetsLargerThresholdAtSameHeight
-[       OK ] LaneDecisionCoinShadowTest.LargerCoinGetsLargerThresholdAtSameHeight (0 ms)
+[       OK ] LaneDecisionCoinShadowTest.LargerCoinGetsLargerThresholdAtSameHeight (1 ms)
 [ RUN      ] LaneDecisionCoinShadowTest.ClosestPointLiesOnCurvedFit
 [       OK ] LaneDecisionCoinShadowTest.ClosestPointLiesOnCurvedFit (0 ms)
 [ RUN      ] LaneDecisionCoinShadowTest.ExplicitControlFlagAppliesValidCoinRoute
@@ -27,10 +27,10 @@ Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
 [       OK ] LaneDecisionCoinShadowTest.SelectsOnlyOneReachableSideAndHoldsItByFrames (1 ms)
 [ RUN      ] LaneDecisionCoinShadowTest.ChainsReachableCoinsOnlyOnSelectedSide
 [       OK ] LaneDecisionCoinShadowTest.ChainsReachableCoinsOnlyOnSelectedSide (0 ms)
-[----------] 11 tests from LaneDecisionCoinShadowTest (2 ms total)
+[----------] 11 tests from LaneDecisionCoinShadowTest (3 ms total)
 
 [----------] Global test environment tear-down
-[==========] 11 tests from 1 test suite ran. (2 ms total)
+[==========] 11 tests from 1 test suite ran. (4 ms total)
 [  PASSED  ] 11 tests.
 
 

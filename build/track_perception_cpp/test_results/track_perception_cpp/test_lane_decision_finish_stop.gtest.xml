@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites tests="3" failures="0" disabled="0" errors="0" time="0.001" timestamp="2026-08-23T04:00:24" name="AllTests">
-  <testsuite name="LaneDecisionFinishStopTest" tests="3" failures="0" disabled="0" errors="0" time="0.001" timestamp="2026-08-23T04:00:24">
-    <testcase name="LowConfidenceAndUnarmedStopDoNotCount" status="run" result="completed" time="0" timestamp="2026-08-23T04:00:24" classname="track_perception_cpp.LaneDecisionFinishStopTest" />
-    <testcase name="TwoCompletePassesTriggerOnceOnSecondPass" status="run" result="completed" time="0.001" timestamp="2026-08-23T04:00:24" classname="track_perception_cpp.LaneDecisionFinishStopTest" />
-    <testcase name="RequiredOccurrenceParameterSupportsOneAndThree" status="run" result="completed" time="0" timestamp="2026-08-23T04:00:24" classname="track_perception_cpp.LaneDecisionFinishStopTest" />
+<testsuites tests="3" failures="0" disabled="0" errors="0" time="0.002" timestamp="2026-08-23T05:06:26" name="AllTests">
+  <testsuite name="LaneDecisionFinishStopTest" tests="3" failures="0" disabled="0" errors="0" time="0.002" timestamp="2026-08-23T05:06:26">
+    <testcase name="LowConfidenceAndUnarmedStopDoNotCount" status="run" result="completed" time="0.001" timestamp="2026-08-23T05:06:26" classname="track_perception_cpp.LaneDecisionFinishStopTest" />
+    <testcase name="TwoCompletePassesTriggerOnceOnSecondPass" status="run" result="completed" time="0" timestamp="2026-08-23T05:06:26" classname="track_perception_cpp.LaneDecisionFinishStopTest" />
+    <testcase name="RequiredOccurrenceParameterSupportsOneAndThree" status="run" result="completed" time="0.001" timestamp="2026-08-23T05:06:26" classname="track_perception_cpp.LaneDecisionFinishStopTest" />
   </testsuite>
 </testsuites>

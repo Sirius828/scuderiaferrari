@@ -131,6 +131,8 @@ struct ControllerParameters
   double guideboard_reverse_encoder_max_age_sec{0.30};
   int64_t guideboard_reverse_encoder_jitter_counts{10};
   int64_t guideboard_reverse_encoder_max_step_counts{500};
+  double guideboard_reverse_settle_min_sec{0.25};
+  int64_t guideboard_reverse_settle_stable_samples{3};
   bool guideboard_reverse_require_single_encoder_publisher{true};
 };
 
@@ -277,6 +279,12 @@ public:
     declare_parameter<int64_t>(
       "guideboard_reverse_encoder_max_step_counts",
       params_.guideboard_reverse_encoder_max_step_counts);
+    declare_parameter<double>(
+      "guideboard_reverse_settle_min_sec",
+      params_.guideboard_reverse_settle_min_sec);
+    declare_parameter<int64_t>(
+      "guideboard_reverse_settle_stable_samples",
+      params_.guideboard_reverse_settle_stable_samples);
     declare_parameter<bool>(
       "guideboard_reverse_require_single_encoder_publisher",
       params_.guideboard_reverse_require_single_encoder_publisher);
@@ -435,6 +443,8 @@ private:
     config.encoder_max_age_sec = params_.guideboard_reverse_encoder_max_age_sec;
     config.encoder_jitter_counts = params_.guideboard_reverse_encoder_jitter_counts;
     config.encoder_max_step_counts = params_.guideboard_reverse_encoder_max_step_counts;
+    config.settle_min_sec = params_.guideboard_reverse_settle_min_sec;
+    config.settle_stable_samples = params_.guideboard_reverse_settle_stable_samples;
     return config;
   }
 
@@ -547,6 +557,10 @@ private:
       get_parameter("guideboard_reverse_encoder_jitter_counts").as_int();
     params_.guideboard_reverse_encoder_max_step_counts =
       get_parameter("guideboard_reverse_encoder_max_step_counts").as_int();
+    params_.guideboard_reverse_settle_min_sec =
+      get_parameter("guideboard_reverse_settle_min_sec").as_double();
+    params_.guideboard_reverse_settle_stable_samples =
+      get_parameter("guideboard_reverse_settle_stable_samples").as_int();
     params_.guideboard_reverse_require_single_encoder_publisher =
       get_parameter("guideboard_reverse_require_single_encoder_publisher").as_bool();
     steering_sign_ = get_parameter("steering_sign").as_double();
@@ -960,6 +974,14 @@ private:
       return fail(
         "guideboard_reverse_encoder_max_step_counts must be greater than jitter counts");
     }
+    if (!std::isfinite(parameters.guideboard_reverse_settle_min_sec) ||
+      parameters.guideboard_reverse_settle_min_sec < 0.0)
+    {
+      return fail("guideboard_reverse_settle_min_sec must be finite and >= 0");
+    }
+    if (parameters.guideboard_reverse_settle_stable_samples <= 0) {
+      return fail("guideboard_reverse_settle_stable_samples must be > 0");
+    }
     return true;
   }
 
@@ -1188,6 +1210,10 @@ private:
         pending.guideboard_reverse_encoder_jitter_counts = parameter.as_int();
       } else if (name == "guideboard_reverse_encoder_max_step_counts") {
         pending.guideboard_reverse_encoder_max_step_counts = parameter.as_int();
+      } else if (name == "guideboard_reverse_settle_min_sec") {
+        pending.guideboard_reverse_settle_min_sec = parameter.as_double();
+      } else if (name == "guideboard_reverse_settle_stable_samples") {
+        pending.guideboard_reverse_settle_stable_samples = parameter.as_int();
       } else if (name == "guideboard_reverse_require_single_encoder_publisher") {
         pending.guideboard_reverse_require_single_encoder_publisher = parameter.as_bool();
       } else if (name == "steering_sign") {
@@ -1941,18 +1967,17 @@ private:
     obstacle_resume_command_valid_ = false;
     cancel_geometry_stall_resume();
     invalid_since_.reset();
-    current_speed_mps_ = -params_.guideboard_reverse_speed_mps;
-    current_steering_ = params_.guideboard_reverse_steering;
-    stop_reason_ = "guideboard_reverse_reversing";
-    last_mode_ = "guideboard_reverse_reversing";
-    publish_chassis_enable(true);
-    publish_motion_command(current_speed_mps_, current_steering_);
+    current_speed_mps_ = 0.0;
+    current_steering_ = 0.0;
+    stop_reason_ = "guideboard_reverse_settling";
+    last_mode_ = "guideboard_reverse_settling";
+    publish_stop_state();
     RCLCPP_WARN(
       get_logger(),
-      "GuideBoard reverse started: speed=-%.3fm/s steering=%.3f target=%ld timeout=%.2fs",
-      params_.guideboard_reverse_speed_mps, params_.guideboard_reverse_steering,
-      static_cast<long>(params_.guideboard_reverse_encoder_counts),
-      params_.guideboard_reverse_timeout_sec);
+      "GuideBoard reverse settling: min=%.3fs stable_samples=%ld jitter=%ld; chassis stopped",
+      params_.guideboard_reverse_settle_min_sec,
+      static_cast<long>(params_.guideboard_reverse_settle_stable_samples),
+      static_cast<long>(params_.guideboard_reverse_encoder_jitter_counts));
   }
 
   void set_enabled_service_callback(
@@ -2003,11 +2028,34 @@ private:
           guideboard_reverse_state_.cancel("encoder_publisher_count_invalid");
         }
       }
+      const auto reverse_phase_before_update = guideboard_reverse_state_.phase();
       const auto reverse_snapshot = guideboard_reverse_state_.update(
         guideboard_reverse_config(), steady_seconds(now));
       if (reverse_snapshot.phase ==
+        line_follower_control_cpp::GuideboardReversePhase::Settling)
+      {
+        current_speed_mps_ = 0.0;
+        current_steering_ = 0.0;
+        auto_enabled_ = false;
+        safety_locked_ = false;
+        publish_stop_state();
+        last_mode_ = "guideboard_reverse_settling";
+        stop_reason_ = "guideboard_reverse_settling";
+      } else if (reverse_snapshot.phase ==
         line_follower_control_cpp::GuideboardReversePhase::Reversing)
       {
+        if (reverse_phase_before_update ==
+          line_follower_control_cpp::GuideboardReversePhase::Settling)
+        {
+          RCLCPP_WARN(
+            get_logger(),
+            "GuideBoard reverse started after settling: speed=-%.3fm/s steering=%.3f "
+            "baseline=%ld target=%ld timeout=%.2fs",
+            params_.guideboard_reverse_speed_mps, params_.guideboard_reverse_steering,
+            static_cast<long>(reverse_snapshot.encoder_start_count),
+            static_cast<long>(params_.guideboard_reverse_encoder_counts),
+            params_.guideboard_reverse_timeout_sec);
+        }
         current_speed_mps_ = -params_.guideboard_reverse_speed_mps;
         current_steering_ = params_.guideboard_reverse_steering;
         publish_chassis_enable(true);
@@ -2841,6 +2889,10 @@ private:
          << ",\"encoder_direction\":" << reverse.encoder_direction
          << ",\"encoder_delta\":" << reverse.encoder_delta
          << ",\"encoder_target\":" << reverse.encoder_target
+         << ",\"settle_elapsed_sec\":" << reverse.settle_elapsed_sec
+         << ",\"settle_stable_samples\":" << reverse.settle_stable_samples
+         << ",\"settle_stable_samples_target\":" <<
+      reverse.settle_stable_samples_target
          << ",\"elapsed_sec\":" << reverse.elapsed_sec
          << ",\"encoder_age_sec\":" << reverse.encoder_age_sec
          << ",\"reason\":\"" << reverse.reason << "\"}";
@@ -2974,6 +3026,12 @@ private:
          << " guideboard_reverse_direction=" << guideboard_reverse.encoder_direction
          << " guideboard_reverse_encoder_delta=" << guideboard_reverse.encoder_delta
          << " guideboard_reverse_encoder_target=" << guideboard_reverse.encoder_target
+         << " guideboard_reverse_settle_elapsed=" <<
+      guideboard_reverse.settle_elapsed_sec
+         << " guideboard_reverse_settle_samples=" <<
+      guideboard_reverse.settle_stable_samples
+         << " guideboard_reverse_settle_samples_target=" <<
+      guideboard_reverse.settle_stable_samples_target
          << " guideboard_reverse_elapsed=" << guideboard_reverse.elapsed_sec
          << " guideboard_reverse_encoder_age=" << guideboard_reverse.encoder_age_sec
          << " guideboard_reverse_reason=" << guideboard_reverse.reason
